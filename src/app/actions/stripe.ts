@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server'
 import { PackageId } from '@/lib/constants/creditPackages'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2024-12-18.acacia' as any,
+    apiVersion: '2024-12-18.acacia',
 })
 
 export async function createCheckoutSession(
@@ -34,10 +34,7 @@ export async function createCheckoutSession(
         const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
         const session = await stripe.checkout.sessions.create({
-            // @ts-ignore
-            automatic_payment_methods: {
-                enabled: true,
-            },
+            payment_method_types: ['card'],
             line_items: [
                 {
                     price_data: {
