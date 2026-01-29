@@ -1,0 +1,95 @@
+import { createClient } from '@/utils/supabase/server';
+import { VoucherProductManager } from '@/components/admin/VoucherProductManager';
+import { Package, Calendar, MoreHorizontal } from 'lucide-react';
+import styles from '@/components/admin/VoucherAdmin.module.css';
+
+export default async function AdminVouchersPage() {
+    const supabase = await createClient();
+
+    // Fetch existing products
+    const { data: products } = await supabase
+        .from('voucher_products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    return (
+        <div className={styles.container}>
+            <div className={styles.header}>
+                <div>
+                    <h1 className={styles.title}>Správa Voucherov</h1>
+                    <p className={styles.subtitle}>Vytvárajte a spravujte darčekové poukazy pre užívateľov.</p>
+                </div>
+            </div>
+
+            <VoucherProductManager />
+
+            <div className="space-y-4">
+                <div className={styles.sectionHeader}>
+                    <Package size={20} color="#9ca3af" />
+                    <h2 className={styles.sectionTitle}>Existujúce Produkty</h2>
+                    <span className={styles.countBadge}>
+                        {products?.length || 0}
+                    </span>
+                </div>
+
+                <div className={styles.tableContainer}>
+                    <table className={styles.table}>
+                        <thead className={styles.thead}>
+                            <tr>
+                                <th className={styles.th}>Názov</th>
+                                <th className={styles.th}>Kategória</th>
+                                <th className={styles.th} style={{ textAlign: 'right' }}>Cena</th>
+                                <th className={styles.th} style={{ textAlign: 'right' }}>Vstupy</th>
+                                <th className={styles.th} style={{ textAlign: 'center' }}>Status</th>
+                                <th className={styles.th} style={{ textAlign: 'right' }}>Dátum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {products?.map((product) => (
+                                <tr key={product.id} className={styles.tr}>
+                                    <td className={styles.td}>
+                                        <div style={{ fontWeight: 500 }}>{product.title}</div>
+                                        {product.description && (
+                                            <div style={{ fontSize: '0.8rem', color: '#6b7280', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {product.description}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className={styles.td}>
+                                        <span className={styles.categoryBadge}>
+                                            {product.category}
+                                        </span>
+                                    </td>
+                                    <td className={styles.td} style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                                        {Number(product.price).toFixed(2)} €
+                                    </td>
+                                    <td className={styles.td} style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                                        {product.credit_amount}
+                                    </td>
+                                    <td className={styles.td} style={{ textAlign: 'center' }}>
+                                        <span className={`${styles.statusBadge} ${product.is_active ? styles.active : styles.inactive}`}>
+                                            {product.is_active ? 'Aktívny' : 'Neaktívny'}
+                                        </span>
+                                    </td>
+                                    <td className={styles.td} style={{ textAlign: 'right', fontSize: '0.8rem', color: '#9ca3af' }}>
+                                        {new Date(product.created_at).toLocaleDateString()}
+                                    </td>
+                                </tr>
+                            ))}
+                            {(!products || products.length === 0) && (
+                                <tr>
+                                    <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Package size={32} color="#e5e7eb" />
+                                            <p>Zatiaľ žiadne produkty.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}

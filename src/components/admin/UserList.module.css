@@ -1,0 +1,128 @@
+.card {
+    background-color: #fff;
+    border-radius: 12px;
+    border: 1px solid #E5E0DD;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #E5E0DD;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.title {
+    font-family: serif;
+    font-size: 1.25rem;
+    color: #4A403A;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.searchContainer {
+    position: relative;
+    max-width: 300px;
+    width: 100%;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.searchInput:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.searchIcon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.thead {
+    background-color: #FCFBF9;
+    border-bottom: 1px solid #E5E0DD;
+}
+
+.th {
+    padding: 1rem 1.5rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #666;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.1s;
+}
+
+.tr:hover {
+    background-color: #fafafa;
+}
+
+.td {
+    padding: 1rem 1.5rem;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.tdSecondary {
+    padding: 1rem 1.5rem;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.emptyState {
+    padding: 3rem;
+    text-align: center;
+    color: #9ca3af;
+
+    .detailButton {
+        background-color: transparent !important;
+        border: 1px solid #E5E7EB !important;
+        color: #4B5563 !important;
+        font-size: 0.75rem !important;
+        height: 32px !important;
+        padding: 0 1rem !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        font-weight: 500 !important;
+        box-shadow: none !important;
+    }
+
+    .detailButton:hover {
+        background-color: #F9FAFB !important;
+        border-color: #D1D5DB !important;
+        color: #111827 !important;
+    }

@@ -1,0 +1,117 @@
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    padding: 0;
+    /* Table fills the card */
+}
+
+.header {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h3 {
+    font-family: var(--font-heading, "Playfair Display", serif);
+    color: #4A403A;
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1.25rem 2rem;
+    background-color: #FAFAF9;
+    /* Light beige header bg */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.table td {
+    padding: 1.5rem 2rem;
+    color: #374151;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #F3F4F6;
+    vertical-align: middle;
+    transition: background-color 0.2s ease;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.table tr:hover td {
+    background-color: #F9FAFB;
+}
+
+.invoiceNumber {
+    font-family: var(--font-heading, serif);
+    font-weight: 600;
+    color: #4A403A;
+    font-size: 1rem;
+}
+
+.amount {
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.date {
+    color: #6B7280;
+    font-size: 0.9rem;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #F0FDF4;
+    color: #166534;
+    border: 1px solid #BBF7D0;
+}
+
+.actionButton {
+    color: #6B7280;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actionButton:hover {
+    color: #4A403A;
+    background-color: #F3F4F6;
+}
+
+.pagination {
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: #9CA3AF;
+    text-align: right;
+}

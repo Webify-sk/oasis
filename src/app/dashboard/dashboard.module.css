@@ -1,0 +1,192 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.welcomeSection {
+    margin-bottom: 2.5rem;
+}
+
+.welcomeTitle {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    color: #4A403A;
+    margin-bottom: 0.5rem;
+    font-weight: normal;
+}
+
+.welcomeSubtitle {
+    color: #8C7568;
+    font-size: 1.1rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+/* Base Card Style */
+.card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+/* Feature Card (Next Session) */
+.featureCard {
+    grid-column: span 2;
+    background: linear-gradient(90deg, #8C7568 0%, #8C7568 30%, rgba(140, 117, 104, 0.85) 50%, transparent 100%),
+        url('/images/pilates-header.png');
+    background-size: cover;
+    background-position: center right;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+
+.featureTitle {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.8;
+    margin-bottom: 1rem;
+}
+
+.sessionInfo {
+    margin-bottom: 1.5rem;
+}
+
+.sessionTime {
+    font-size: 2.5rem;
+    font-family: var(--font-heading);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.sessionDate {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.sessionDetails {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+/* Credit Card */
+.creditCard {
+    background: #FDFBF9;
+    border-color: #E8E1DC;
+}
+
+.creditValue {
+    font-size: 3.5rem;
+    font-family: var(--font-heading);
+    color: #8C7568;
+    line-height: 1;
+    margin: 1rem 0;
+}
+
+.creditLabel {
+    font-size: 1rem;
+    color: #666;
+}
+
+/* Quick Actions */
+.actionsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+
+.actionButton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #E5E0DD;
+    color: #4A403A;
+    transition: all 0.2s;
+    text-align: center;
+    gap: 0.75rem;
+}
+
+.actionButton:hover {
+    background: #FAFAF9;
+    border-color: #D6D1CD;
+    transform: translateY(-2px);
+}
+
+.actionIcon {
+    color: #8C7568;
+}
+
+.actionLabel {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Quote Section */
+.quoteSection {
+    text-align: center;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px dashed #E5E0DD;
+    color: #888;
+    font-style: italic;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .welcomeTitle {
+        font-size: 2rem;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .featureCard {
+        grid-column: span 1;
+    }
+
+    .actionsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .actionButton {
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 1rem 1.5rem;
+    }
+}

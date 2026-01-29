@@ -1,0 +1,187 @@
+.container {
+    padding: 0 2rem 2rem 2rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.monthTitle {
+    font-family: serif;
+    font-size: 2rem;
+    color: #1a1a1a;
+    text-transform: capitalize;
+}
+
+.navButton {
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: #4b5563;
+}
+
+.navButton:hover {
+    background: #f9fafb;
+    color: #111827;
+    border-color: #d1d5db;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #e5e5e5;
+    gap: 1px;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.dayHeader {
+    background: #f9fafb;
+    padding: 1rem;
+    text-align: center;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+}
+
+.dayCell {
+    background: #fff;
+    min-height: 120px;
+    padding: 0.5rem;
+    transition: background 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.dayCell:hover {
+    background: #fafafa;
+}
+
+.dayCell.otherMonth {
+    background: #fcfcfc;
+    color: #ccc;
+}
+
+.dayNumber {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #374151;
+    margin-bottom: 0.25rem;
+    display: block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    border-radius: 50%;
+}
+
+.dayCell.today .dayNumber {
+    background: #111827;
+    color: #fff;
+}
+
+.event {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    border-left: 2px solid #3b82f6;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.event:hover {
+    background: #dbeafe;
+}
+
+.registered {
+    background: #ecfdf5;
+    color: #065f46;
+    border-left-color: #059669;
+}
+
+.registered:hover {
+    background: #d1fae5;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem 1rem 1rem;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .monthTitle {
+        font-size: 1.5rem;
+    }
+
+    /* Hide day headers (Mon, Tue...) on mobile list view */
+    .dayHeader {
+        display: none;
+    }
+
+    /* Change Grid to Block/List */
+    .grid {
+        display: block;
+        background: transparent;
+        border: none;
+        gap: 1rem;
+    }
+
+    .dayCell {
+        min-height: auto;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    /* Hide empty filler days from prev/next month on mobile */
+    .otherMonth {
+        display: none;
+    }
+
+    .dayNumber {
+        display: inline-block;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+    }
+
+    /* If a day has no events, maybe hide it or keep it small? 
+       For now, let's keep it but make it compact.
+    */
+
+    .event {
+        font-size: 0.85rem;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        white-space: normal;
+        /* Allow text wrap */
+        border-left-width: 4px;
+    }
+}

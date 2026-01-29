@@ -1,0 +1,58 @@
+
+> oasis-lounge-app@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\bkone\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\bkone\Desktop\Oasis Lounge\package-lock.json
+
+▲ Next.js 16.1.3 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 16.9s
+  Running TypeScript ...
+  Collecting page data using 13 workers ...
+  Generating static pages using 13 workers (0/23) ...
+  Generating static pages using 13 workers (5/23) 
+  Generating static pages using 13 workers (11/23) 
+  Generating static pages using 13 workers (17/23) 
+✓ Generating static pages using 13 workers (23/23) in 1712.8ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /admin/calendar
+├ ƒ /admin/trainers
+├ ƒ /admin/trainers/[id]
+├ ƒ /admin/trainers/new
+├ ƒ /admin/trainings
+├ ƒ /admin/trainings/[id]
+├ ƒ /admin/trainings/new
+├ ƒ /admin/users
+├ ƒ /admin/users/[id]
+├ ƒ /admin/users/new
+├ ƒ /admin/vouchers
+├ ƒ /api/webhook/stripe
+├ ƒ /auth/callback
+├ ƒ /dashboard
+├ ƒ /dashboard/calendar
+├ ƒ /dashboard/credit
+├ ƒ /dashboard/gift-vouchers
+├ ƒ /dashboard/invoices
+├ ƒ /dashboard/milestones
+├ ƒ /dashboard/profile
+├ ƒ /dashboard/trainings
+└ ○ /error
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -1,0 +1,145 @@
+.container {
+    max-width: 800px;
+    /* Limit width for readability */
+    margin: 0 auto;
+    padding: 2rem 0;
+}
+
+.header {
+    margin-bottom: 3rem;
+    text-align: center;
+}
+
+.header h3 {
+    font-family: var(--font-heading, "Playfair Display", serif);
+    color: #4A403A;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 3rem;
+    /* Space for the line */
+}
+
+/* Vertical Line */
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 15px;
+    /* Center of the 30px circle/marker space */
+    width: 2px;
+    background-color: #E5E0DD;
+}
+
+.step {
+    position: relative;
+    margin-bottom: 3rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.circleContainer {
+    position: absolute;
+    left: -3rem;
+    /* Align with padding-left of timeline */
+    width: 33px;
+    /* Slightly wider than line pos to center */
+    display: flex;
+    justify-content: center;
+    background-color: #F8F9FA;
+    /* Match page bg to mask line? Or just sit on top */
+    z-index: 10;
+}
+
+.circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #E5E0DD;
+    background-color: #fff;
+    color: #9CA3AF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.circle.completed {
+    background-color: #C4A484;
+    /* Gold/Bronze */
+    border-color: #C4A484;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(196, 164, 132, 0.2);
+}
+
+.circle.current {
+    background-color: #fff;
+    border-color: #4A403A;
+    color: #4A403A;
+    transform: scale(1.1);
+}
+
+.content {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease;
+}
+
+.step:hover .content {
+    transform: translateX(5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+}
+
+.title {
+    font-family: var(--font-heading, "Playfair Display", serif);
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: #1F2937;
+}
+
+.subtitle {
+    font-size: 0.95rem;
+    color: #4B5563;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+.desc {
+    font-size: 0.9rem;
+    color: #6B7280;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+/* Status badge inside content ? Maybe not needed if circle shows status */
+
+@media (max-width: 640px) {
+    .timeline {
+        padding-left: 2.5rem;
+    }
+
+    .circleContainer {
+        left: -2.5rem;
+    }
+}

@@ -1,0 +1,38 @@
+
+> oasis-lounge-app@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\bkone\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\bkone\Desktop\Oasis Lounge\package-lock.json
+
+▲ Next.js 16.1.3 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 11.2s
+  Running TypeScript ...
+Failed to compile.
+
+./src/components/admin/TrainerForm.tsx:14:33
+Type error: No overload matches this call.
+  Overload 1 of 2, '(action: (state: { message: string; }) => { message: string; } | Promise<{ message: string; }>, initialState: { message: string; }, permalink?: string | undefined): [state: { message: string; }, dispatch: () => void, isPending: boolean]', gave the following error.
+    Argument of type '(prevState: any, formData: FormData) => Promise<{ message: string; }>' is not assignable to parameter of type '(state: { message: string; }) => { message: string; } | Promise<{ message: string; }>'.
+      Target signature provides too few arguments. Expected 2 or more, but got 1.
+  Overload 2 of 2, '(action: (state: { message: string; }, payload: FormData) => { message: string; } | Promise<{ message: string; }>, initialState: { message: string; }, permalink?: string | undefined): [state: ...]', gave the following error.
+    Argument of type '{ message: null; }' is not assignable to parameter of type '{ message: string; }'.
+      Types of property 'message' are incompatible.
+        Type 'null' is not assignable to type 'string'.
+
+[0m [90m 12 |[39m [36mexport[39m [36mfunction[39m [33mTrainerForm[39m({ initialData }[33m:[39m { initialData[33m?[39m[33m:[39m any }) {
+ [90m 13 |[39m     [36mconst[39m [previewUrl[33m,[39m setPreviewUrl] [33m=[39m useState[33m<[39m[33mstring[39m [33m|[39m [36mnull[39m[33m>[39m(initialData[33m?[39m[33m.[39mavatar_url [33m||[39m [36mnull[39m)[33m;[39m
+[31m[1m>[22m[39m[90m 14 |[39m     [36mconst[39m [state[33m,[39m formAction] [33m=[39m useActionState(upsertTrainer[33m,[39m initialState)[33m;[39m
+ [90m    |[39m                                 [31m[1m^[22m[39m
+ [90m 15 |[39m
+ [90m 16 |[39m     [36mconst[39m handleFileChange [33m=[39m (e[33m:[39m [33mReact[39m[33m.[39m[33mChangeEvent[39m[33m<[39m[33mHTMLInputElement[39m[33m>[39m) [33m=>[39m {
+ [90m 17 |[39m         [36mconst[39m file [33m=[39m e[33m.[39mtarget[33m.[39mfiles[33m?[39m[33m.[39m[[35m0[39m][33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

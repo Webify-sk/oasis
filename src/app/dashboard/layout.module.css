@@ -1,0 +1,94 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--color-background);
+}
+
+.mainContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 
+  Actually, looking at the screenshot again:
+  The Sidebar is inside a container, and there is a bigger header above it?
+  
+  In "Dobit' kredit.png":
+  Top: Logo | Menu (Naše služby...) | Buttons (Mój profil)
+  Below Top: "Dobit' kredit" Large Heading.
+  Below Heading: 
+     Left: Dark Sidebar (Mój profil, Tréningy...)
+     Right: Content (Credits grid)
+     
+  So the structure is:
+  [Header] (Full width)
+  [Page Content Container] (Centered, max-width)
+    [Page Title]
+    [Flex Container]
+      [Sidebar]
+      [Content]
+      
+  So the Sidebar is NOT fixed to the left of the viewport like a typical admin dashboard.
+  It is part of the page content layout.
+  
+  This means `DashboardLayout` should probably render the Header, and then a centered container that holds the Sidebar and Children.
+*/
+
+.pageWrapper {
+    max-width: 1200px;
+    /* Guessing standard width */
+    margin: 0 auto;
+    padding: 2rem;
+    width: 100%;
+}
+
+.dashboardGrid {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.sidebarWrapper {
+    flex: 0 0 250px;
+}
+
+.contentArea {
+    flex: 1;
+    background-color: #fff;
+    /* White card background often used, or transparent? Screenshot shows white card for "Vyberte si..." in Credit page */
+    border-radius: 8px;
+    /* Matching screenshot rounded corners */
+    /* padding: 2rem;  Depending on the page, some have white card, some don't? 
+     "Dobit' kredit": Content IS a white card.
+     "Faktúry": Content IS a white card.
+     "Tréningy": Content IS a white card.
+  */
+    border: 1px solid var(--color-border);
+    min-height: 500px;
+}
+
+@media (max-width: 768px) {
+    .pageWrapper {
+        padding: 1rem;
+    }
+
+    .dashboardGrid {
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .sidebarWrapper {
+        flex: 0 0 auto;
+        width: 100%;
+        /* Take full width to show the toggle button */
+        margin-bottom: 1rem;
+    }
+
+    .contentArea {
+        width: 100%;
+        min-height: auto;
+    }
+}

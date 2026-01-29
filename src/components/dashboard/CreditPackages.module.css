@@ -1,0 +1,198 @@
+.container {
+    padding: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 4rem;
+    max-width: 800px;
+}
+
+.header h3 {
+    font-family: var(--font-heading, "Playfair Display", serif);
+    color: #4A403A;
+    /* Use dark brown for light mode page background */
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.header p {
+    color: #6B7280;
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 700px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.card {
+    background-color: #4A403A;
+    /* Deep premium brown */
+    color: #fff;
+    padding: 3rem 2.5rem;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 480px;
+    /* Taller card */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Subtle pattern overlay or gradient could go here */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    transform: translate(30%, -30%);
+}
+
+.cardHeader {
+    margin-bottom: 1rem;
+}
+
+.cardTitle {
+    font-family: var(--font-heading, "Playfair Display", serif);
+    font-size: 1.5rem;
+    /* Smaller than before to fit long names */
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: #ffffff !important;
+}
+
+.creditsCount {
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #C4A484;
+    /* Gold/Bronze accent */
+}
+
+.cardDesc {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    opacity: 0.9;
+    margin-bottom: 2.5rem;
+    font-weight: 300;
+    color: #f3f4f6 !important;
+    /* Force light grey */
+}
+
+.cardValidity {
+    font-weight: 500;
+    margin-bottom: auto;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.9;
+}
+
+.cardValidity::before {
+    content: '•';
+    color: #D1D5DB;
+}
+
+.cardFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 3rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1.5rem;
+}
+
+.priceContainer {
+    display: flex;
+    flex-direction: column;
+}
+
+.priceDetail {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.price {
+    font-family: var(--font-heading, "Playfair Display", serif);
+    font-size: 2.25rem;
+    font-weight: 500;
+}
+
+.buyButton {
+    background-color: #F9FAFB !important;
+    color: #4A403A !important;
+    font-size: 0.8rem !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.1em;
+    border-radius: 6px !important;
+    border: none !important;
+    transition: all 0.2s ease;
+}
+
+.buyButton:hover {
+    background-color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.highlightCard {
+    background-color: #38302C;
+    /* Slightly darker/richer for contrast or keep same? */
+    border: 1px solid #C4A484;
+    /* Gold/Bronze border */
+    transform: translateY(-8px);
+    /* Default lifted */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+.badge {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background-color: #fff;
+    color: #4A403A;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.4rem 0.8rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.highlightButton {
+    background-color: #C4A484 !important;
+    /* Goldish button */
+    color: #fff !important;
+}
+
+.highlightButton:hover {
+    background-color: #B08D69 !important;
+}
