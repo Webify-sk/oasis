@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server'
 import { PackageId } from '@/lib/constants/creditPackages'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-01-28.clover' as any, // Cast to any to avoid strict type checking if the type definition is slightly off, or just use the string if it matches.
+    apiVersion: '2024-12-18.acacia' as any,
 })
 
 export async function createCheckoutSession(
