@@ -24,7 +24,7 @@ import { CREDIT_PACKAGES, PackageId } from '@/lib/constants/creditPackages'
 import { Resend } from 'resend'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-01-28.clover' as any,
+    apiVersion: '2024-12-18.acacia' as any,
 })
 
 export async function POST(req: Request) {
@@ -43,9 +43,10 @@ export async function POST(req: Request) {
         return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
     }
 
+    // Use service role key to bypass RLS since webhook is not a logged-in user
     const supabase = createSupabaseClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY! // Vital for admin access
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     if (event.type === 'checkout.session.completed') {
