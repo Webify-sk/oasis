@@ -69,3 +69,63 @@ export async function createCheckoutSession(
         return { error: error.message || 'Unknown error occurred in checkout session creation' };
     }
 }
+
+export async function createVoucherCheckoutSession(
+    productId: string,
+    price: number, // in EUR
+    credits: number,
+    recipientEmail: string,
+    senderName: string,
+    message: string
+) {
+    const supabase = await createClient()
+    try {
+        const { data: { user } } = await supabase.auth.getUser()
+
+        // Vouchers can be bought by anonymous users? Ideally yes, but our system requires auth for now.
+        if (!user) {
+            redirect('/login')
+        }
+
+        const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: `Darčekový poukaz (${credits} vstupov)`,
+                            description: `Od: ${senderName}`,
+                        },
+                        unit_amount: Math.round(price * 100),
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: `${origin}/dashboard/vouchers?success=true`,
+            cancel_url: `${origin}/dashboard/vouchers?canceled=true`,
+            customer_email: user.email,
+            metadata: {
+                userId: user.id,
+                userEmail: user.email || '',
+                type: 'voucher',
+                productId: productId,
+                creditAmount: credits,
+                recipientEmail: recipientEmail,
+                senderName: senderName,
+                message: message
+            }
+        })
+
+        if (session.url) {
+            return { url: session.url };
+        }
+
+    } catch (error: any) {
+        console.error('Stripe Voucher Checkout Error:', error);
+        return { error: error.message || 'Unknown error occurred' };
+    }
+}

@@ -1,4 +1,4 @@
-create table public.bookings (
+create table if not exists public.bookings (
   id uuid not null default gen_random_uuid (),
   created_at timestamp with time zone not null default now(),
   user_id uuid not null references auth.users (id) on delete cascade,
