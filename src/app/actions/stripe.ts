@@ -105,8 +105,8 @@ export async function createVoucherCheckoutSession(
                 },
             ],
             mode: 'payment',
-            success_url: `${origin}/dashboard/vouchers?success=true`,
-            cancel_url: `${origin}/dashboard/vouchers?canceled=true`,
+            success_url: `${origin}/dashboard/gift-vouchers?success=true`,
+            cancel_url: `${origin}/dashboard/gift-vouchers?canceled=true`,
             customer_email: user.email,
             metadata: {
                 userId: user.id,

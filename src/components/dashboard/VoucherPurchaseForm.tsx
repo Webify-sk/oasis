@@ -25,9 +25,13 @@ export function VoucherPurchaseForm({ products }: { products: Product[] }) {
         try {
             const result = await buyVoucher(formData);
             if (result.success) {
-                setMessage({ type: 'success', text: result.message || 'Success' });
-                // Reset form optionally
-                (document.getElementById('purchaseForm') as HTMLFormElement).reset();
+                if (result.url) {
+                    // Redirect to Stripe
+                    window.location.href = result.url;
+                } else {
+                    setMessage({ type: 'success', text: result.message || 'Success' });
+                    (document.getElementById('purchaseForm') as HTMLFormElement).reset();
+                }
             } else {
                 setMessage({ type: 'error', text: result.message || 'Error' });
             }
