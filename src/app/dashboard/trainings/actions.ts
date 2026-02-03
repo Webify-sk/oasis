@@ -92,6 +92,31 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
 
     revalidatePath('/dashboard/trainings');
     revalidatePath('/admin/trainings'); // Refresh admin view too
+
+    // Send Booking Confirmation Email
+    try {
+        const { sendEmail } = await import('@/utils/email');
+        const formattedDate = new Date(startTimeISO).toLocaleString('sk-SK');
+        await sendEmail({
+            to: user.email || '',
+            subject: 'Potvrdenie rezervácie tréningu',
+            html: `
+                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h1 style="color: #5E715D;">Rezervácia potvrdená</h1>
+                    <p>Ahoj,</p>
+                    <p>úspešne sme rezervovali tvoje miesto na tréningu:</p>
+                    <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #5E715D; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingType.title}</p>
+                        <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDate}</p>
+                    </div>
+                    <p>Tešíme sa na teba!</p>
+                </div>
+            `
+        });
+    } catch (mailError) {
+        console.error('Failed to send booking email:', mailError);
+    }
+
     return { success: true, message: 'Úspešne ste sa prihlásili na tréning.' };
 }
 
@@ -129,5 +154,25 @@ export async function cancelBooking(bookingId: string) {
 
     revalidatePath('/dashboard/trainings');
     revalidatePath('/admin/trainings');
+
+    // Send Cancellation Email
+    try {
+        const { sendEmail } = await import('@/utils/email');
+        await sendEmail({
+            to: user.email || '',
+            subject: 'Zrušenie rezervácie',
+            html: `
+                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h1 style="color: #d9534f;">Rezervácia zrušená</h1>
+                    <p>Ahoj,</p>
+                    <p>tvoja rezervácia bola úspešne zrušená a 1 vstup ti bol vrátený na účet.</p>
+                    <p>Dúfame, že si čoskoro nájdeš iný termín.</p>
+                </div>
+            `
+        });
+    } catch (mailError) {
+        console.error('Failed to send cancellation email:', mailError);
+    }
+
     return { success: true, message: 'Rezervácia bola zrušená a vstup vrátený.' };
 }

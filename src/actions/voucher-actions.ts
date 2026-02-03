@@ -1,10 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
-import { Resend } from 'resend';
 
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 function generateVoucherCode(length: number = 8): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, 1, O, 0 for clarity
