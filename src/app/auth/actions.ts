@@ -90,37 +90,69 @@ export async function signOut() {
 }
 
 export async function resetPassword(email: string) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/callback?next=/dashboard/profile`,
+    // 1. Create Supabase Admin Client
+    const { createClient: createClientJs } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createClientJs(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+
+    // 2. Generate Recovery Link
+    // Note: redirectTo should point to the callback that handles the token exchange.
+    // Usually Supabase handles the magic link exchange on the client side if the link is clicked.
+    // But for 'recovery' type, it logs the user in and they should be redirected to a page where they can set a new password.
+    // standard flow: /auth/callback -> exchanges code -> session -> redirects to /dashboard/profile?reset=true
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+        options: {
+            redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}/auth/callback?next=/dashboard/profile?reset=true`,
+        }
     });
-
-    // Note: Supabase sends the email automatically if configured. 
-    // If we want to send a CUSTOM email *instead* (and disable Supabase mailer), we would generate a link manually.
-    // However, since we might be using Supabase's built-in mailer for auth, calling `resetPasswordForEmail` triggers it.
-    // If the user wants a notification that "Reset was requested" (less common) or if they want to OVERRIDE.
-    // Given the prompt "User will change password", it usually means notification of CHANGE.
-    // This function triggers the REQUEST. The actual change happens after they click the link.
-    // I will add a notification here that "Instructions were sent" if needed, but standard practice is to let Supabase handle the "Reset Password" email itself.
-    // BUT, since we are setting up custom SMTP in .env for Nodemailer, Supabase might NOT be using it unless configured in Supabase Dashboard.
-    // If Supabase Dashboard is NOT configured with these SMTP settings, the email won't go via WebSupport.
-    // CRITICAL: Supabase Auth emails are sent by Supabase servers unless "Custom SMTP" is on in Supabase.
-    // We cannot easily intercept the "token" here to send our own email without using Admin API to generate link.
-    // I will assume for now Supabase sends the logic. 
-    // IF we want to send a notification AFTER they change it (in the updateProfile or callback), that's different.
-
-    // START_CHANGE: Sending a separate "We received your request" email is redundant if Supabase sends one.
-    // I'll leave this as is for now implies "User will change password" -> Notification of SUCCESSFUL change is better.
-    // I will add that in `updateUser` (if I find it) or just rely on this flow for the "Reset" part.
-    // Let's stick to the plan: "User will change password" -> best place is likely after successful update.
-
-    // Let's NOT add code here that duplicates Supabase's job yet. 
-
 
     if (error) {
         console.error('Reset Password Error:', error);
-        return { success: false, message: error.message };
+        return { success: false, message: 'Nepodarilo sa vygenerovať link pre obnovu hesla. Skontrolujte email.' };
     }
 
-    return { success: true, message: 'Email na obnovenie hesla bol odoslaný.' };
+    // 3. Send Email via Nodemailer
+    if (data && data.properties?.action_link) {
+        try {
+            const { sendEmail } = await import('@/utils/email');
+            const { getEmailTemplate } = await import('@/utils/email-template');
+
+            const html = getEmailTemplate(
+                'Obnovenie hesla',
+                `
+                <p>Dobrý deň,</p>
+                <p>dostali sme žiadosť o obnovenie hesla pre váš účet.</p>
+                <p>Kliknite na tlačidlo nižšie pre nastavenie nového hesla:</p>
+                
+                <div style="text-align: center;">
+                    <a href="${data.properties.action_link}" class="button">Obnoviť heslo</a>
+                </div>
+
+                <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak ste o túto zmenu nežiadali, tento email môžete ignorovať.</p>
+                `
+            );
+
+            await sendEmail({
+                to: email,
+                subject: 'Obnovenie hesla - Oasis Lounge',
+                html: html
+            });
+            return { success: true, message: 'Email na obnovenie hesla bol odoslaný.' };
+        } catch (mailError) {
+            console.error('Failed to send reset email:', mailError);
+            return { success: false, message: 'Chyba pri odosielaní emailu.' };
+        }
+    }
+
+    return { success: false, message: 'Nepodarilo sa spracovať požiadavku.' };
 }
