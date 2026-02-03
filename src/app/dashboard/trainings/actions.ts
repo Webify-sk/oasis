@@ -113,7 +113,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
             
             <p>Tešíme sa na teba!</p>
             <div style="text-align: center; margin-top: 20px;">
-                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
             </div>
             `
         );
@@ -179,7 +179,7 @@ export async function cancelBooking(bookingId: string) {
             <p>Dúfame, že si čoskoro nájdeš iný termín.</p>
             
             <div style="text-align: center; margin-top: 20px;">
-                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}/dashboard/trainings" class="button">Rezervovať nový termín</a>
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}/dashboard/trainings" class="button">Rezervovať nový termín</a>
             </div>
             `
         );

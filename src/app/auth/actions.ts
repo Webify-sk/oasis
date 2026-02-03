@@ -50,7 +50,7 @@ export async function signup(formData: FormData) {
             const { sendEmail } = await import('@/utils/email'); // Dynamic import to avoid circular dep if any
             const { getEmailTemplate } = await import('@/utils/email-template');
 
-            const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}`;
+            const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}`;
 
             const html = getEmailTemplate(
                 'Vitajte v Oasis Lounge!',
@@ -108,8 +108,7 @@ export async function resetPassword(email: string) {
     // Usually Supabase handles the magic link exchange on the client side if the link is clicked.
     // But for 'recovery' type, it logs the user in and they should be redirected to a page where they can set a new password.
     // Hardcoded production URL to ensure correct redirect to Client Page handling hash
-    const redirectTo = `https://moja-zona.oasislounge.sk/auth/reset-password`;
-    console.log('DEBUG: Reset Password RedirectTo:', redirectTo);
+    const redirectTo = `https://moja-zona.facilitytest.sk/auth/reset-password`;
 
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
@@ -118,10 +117,6 @@ export async function resetPassword(email: string) {
             redirectTo: redirectTo,
         }
     });
-
-    if (data?.properties?.action_link) {
-        console.log('DEBUG: Generated Action Link:', data.properties.action_link);
-    }
 
     if (error) {
         console.error('Reset Password Error:', error);

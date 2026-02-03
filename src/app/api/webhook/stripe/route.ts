@@ -112,7 +112,7 @@ export async function POST(req: Request) {
                 ${message ? `<p style="font-style: italic; text-align: center; color: #666; margin-bottom: 30px;">"${message}"</p>` : ''}
 
                 <div style="text-align: center;">
-                    <a href="https://moja-zona.oasislounge.sk" class="button">Uplatniť voucher</a>
+                    <a href="https://moja-zona.facilitytest.sk" class="button">Uplatniť voucher</a>
                 </div>
                 `,
                 `Tvoj kód voucheru: ${code}`
@@ -205,7 +205,7 @@ export async function POST(req: Request) {
 
                     <p>Tešíme sa na vašu návštevu v Oasis Lounge.</p>
                     <div style="text-align: center; margin-top: 20px;">
-                        <a href="https://moja-zona.oasislounge.sk/dashboard" class="button">Prejsť do aplikácie</a>
+                        <a href="https://moja-zona.facilitytest.sk/dashboard" class="button">Prejsť do aplikácie</a>
                     </div>
                     `
                 );
