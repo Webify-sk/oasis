@@ -58,7 +58,7 @@ export async function signup(formData: FormData) {
                         <p>s radosťou vás vítame v našej komunite. Vaša registrácia prebehla úspešne.</p>
                         <p>Teraz sa môžete prihlásiť a rezervovať si svoje prvé tréningy.</p>
                         <br/>
-                        <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://oasis-lounge.sk'}/login" 
+                        <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://oasis-lounge.sk'}" 
                            style="background-color: #5E715D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                            Prihlásiť sa
                         </a>
