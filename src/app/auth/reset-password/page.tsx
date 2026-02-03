@@ -3,38 +3,56 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { sendPasswordChangedNotification } from '@/app/auth/actions';
 
 function ResetPasswordForm() {
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [sessionReady, setSessionReady] = useState(false);
     const router = useRouter();
     const supabase = createClient();
 
     useEffect(() => {
-        // Handle the hash fragment from Supabase (Implicit Grant)
-        const handleHash = async () => {
-            if (window.location.hash && window.location.hash.includes('access_token')) {
-                const { data, error } = await supabase.auth.getSession();
-                if (error) {
-                    console.error('Session error:', error);
-                    setError('Nepodarilo sa overiť reláciu. Skúste znova.');
+        // Robustly handle the session recovery
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+                if (session) {
+                    setSessionReady(true);
+                    console.log('Session recovered successfully');
                 }
             }
-        };
-        handleHash();
+        });
+        return () => subscription.unsubscribe();
     }, [supabase]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!sessionReady) {
+            setError('Nepodarilo sa obnoviť reláciu. Skúste kliknúť na link v emaile znova.');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError('Heslá sa nezhodujú.');
+            return;
+        }
+
         setLoading(true);
         setError('');
         setMessage('');
 
         try {
-            const { error } = await supabase.auth.updateUser({ password });
+            const { data: { user }, error } = await supabase.auth.updateUser({ password });
             if (error) throw error;
+
+            // Send notification email
+            if (user?.email) {
+                await sendPasswordChangedNotification(user.email);
+            }
 
             setMessage('Heslo bolo úspešne zmenené.');
             setTimeout(() => {
@@ -63,14 +81,26 @@ function ResetPasswordForm() {
                     required
                     minLength={6}
                     style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '4px' }}
+                    disabled={!sessionReady}
+                />
+
+                <input
+                    type="password"
+                    placeholder="Potvrdenie hesla"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '4px' }}
+                    disabled={!sessionReady}
                 />
 
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !sessionReady}
                     className="button"
                     style={{
-                        backgroundColor: '#5E715D',
+                        backgroundColor: sessionReady ? '#5E715D' : '#ccc',
                         color: 'white',
                         padding: '0.8rem',
                         border: 'none',
@@ -78,7 +108,7 @@ function ResetPasswordForm() {
                         cursor: 'pointer'
                     }}
                 >
-                    {loading ? 'Ukladám...' : 'Uložiť heslo'}
+                    {loading ? 'Ukladám...' : (sessionReady ? 'Uložiť heslo' : 'Načítavam reláciu...')}
                 </button>
             </form>
         </div>

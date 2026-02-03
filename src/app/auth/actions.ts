@@ -158,3 +158,38 @@ export async function resetPassword(email: string) {
 
     return { success: false, message: 'Nepodarilo sa spracovať požiadavku.' };
 }
+
+// 4. Send "Password Changed" success email
+export async function sendPasswordChangedNotification(email: string) {
+    try {
+        const { sendEmail } = await import('@/utils/email');
+        const { getEmailTemplate } = await import('@/utils/email-template');
+        const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}`;
+
+        const html = getEmailTemplate(
+            'Heslo bolo zmenené',
+            `
+            <h1 style="color: #5E715D; text-align: center;">Heslo úspešne zmenené</h1>
+            <p>Dobrý deň,</p>
+            <p>Vaše heslo do Oasis Lounge bolo úspešne zmenené.</p>
+            <p>Ak ste túto zmenu vykonali vy, všetko je v poriadku.</p>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="${loginLink}" class="button">Prihlásiť sa</a>
+            </div>
+
+            <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak ste túto zmenu nevykonali, okamžite nás kontaktujte.</p>
+            `
+        );
+
+        await sendEmail({
+            to: email,
+            subject: 'Zmena hesla - Oasis Lounge',
+            html: html
+        });
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to send password change notification:', error);
+        return { success: false, error: 'Failed to send email' };
+    }
+}
