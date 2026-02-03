@@ -16,13 +16,21 @@ function ResetPasswordForm() {
     const supabase = createClient();
 
     useEffect(() => {
-        // Robustly handle the session recovery
+        // check if we already have a session (e.g. from persistent storage or immediate hash parse)
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                console.log('Initial session found');
+                setSessionReady(true);
+            }
+        };
+        checkSession();
+
+        // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-                if (session) {
-                    setSessionReady(true);
-                    console.log('Session recovered successfully');
-                }
+            console.log('Auth Event:', event);
+            if (session) {
+                setSessionReady(true);
             }
         });
         return () => subscription.unsubscribe();
