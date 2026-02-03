@@ -48,25 +48,30 @@ export async function signup(formData: FormData) {
     if (data.email) {
         try {
             const { sendEmail } = await import('@/utils/email'); // Dynamic import to avoid circular dep if any
+            const { getEmailTemplate } = await import('@/utils/email-template');
+
+            const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}`;
+
+            const html = getEmailTemplate(
+                'Vitajte v Oasis Lounge!',
+                `
+                <p>Dobrý deň,</p>
+                <p>s radosťou vás vítame v našej komunite. Vaša registrácia prebehla úspešne.</p>
+                <p>Teraz sa môžete prihlásiť a rezervovať si svoje prvé tréningy.</p>
+                
+                <div style="text-align: center;">
+                    <a href="${loginLink}" class="button">Prihlásiť sa</a>
+                </div>
+
+                <p style="margin-top: 30px;">Tešíme sa na vašu návštevu!</p>
+                <p>Tím Oasis Lounge</p>
+                `
+            );
+
             await sendEmail({
                 to: data.email,
                 subject: 'Vitajte v Oasis Lounge!',
-                html: `
-                    <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h1 style="color: #5E715D;">Vitajte v Oasis Lounge!</h1>
-                        <p>Dobrý deň,</p>
-                        <p>s radosťou vás vítame v našej komunite. Vaša registrácia prebehla úspešne.</p>
-                        <p>Teraz sa môžete prihlásiť a rezervovať si svoje prvé tréningy.</p>
-                        <br/>
-                        <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://oasis-lounge.sk'}" 
-                           style="background-color: #5E715D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                           Prihlásiť sa
-                        </a>
-                        <br/><br/>
-                        <p>Tešíme sa na vašu návštevu!</p>
-                        <p>Tím Oasis Lounge</p>
-                    </div>
-                `
+                html: html
             });
         } catch (mailError) {
             console.error('Failed to send welcome email:', mailError);

@@ -94,45 +94,57 @@ export async function POST(req: Request) {
             }
 
             // Send Email (Voucher)
+            // Need to import template helper inside the function or file
+            const { getEmailTemplate } = await import('@/utils/email-template'); // Lazy import if needed, or top level. Top level is cleaner if used multiple times but let's stick to consistent pattern.
+
+            const voucherHtml = getEmailTemplate(
+                `Dostal si darček od ${senderName}!`,
+                `
+                <h1 style="color: #5E715D; text-align: center;">Máš darček!</h1>
+                <p style="font-size: 16px;">Ahoj,</p>
+                <p style="font-size: 16px;"><strong>${senderName}</strong> ti posiela ${creditAmount} vstupov do Oasis Lounge.</p>
+                
+                <div style="background-color: #f9f9f9; border: 2px dashed #5E715D; padding: 20px; text-align: center; margin: 30px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #666;">Tvoj kód voucheru:</p>
+                    <p style="margin: 10px 0; font-size: 32px; font-weight: bold; color: #333; letter-spacing: 2px;">${code}</p>
+                </div>
+
+                ${message ? `<p style="font-style: italic; text-align: center; color: #666; margin-bottom: 30px;">"${message}"</p>` : ''}
+
+                <div style="text-align: center;">
+                    <a href="https://moja-zona.oasislounge.sk" class="button">Uplatniť voucher</a>
+                </div>
+                `,
+                `Tvoj kód voucheru: ${code}`
+            );
+
             await sendEmail({
                 to: recipientEmail,
                 subject: `Dostal si darček od ${senderName}!`,
-                html: `
-                    <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e5e5; border-radius: 8px;">
-                        <h1 style="color: #5E715D; text-align: center;">Máš darček!</h1>
-                        <p style="font-size: 16px;">Ahoj,</p>
-                        <p style="font-size: 16px;"><strong>${senderName}</strong> ti posiela ${creditAmount} vstupov do Oasis Lounge.</p>
-                        
-                        <div style="background-color: #f9f9f9; border: 2px dashed #5E715D; padding: 20px; text-align: center; margin: 30px 0;">
-                            <p style="margin: 0; font-size: 14px; color: #666;">Tvoj kód voucheru:</p>
-                            <p style="margin: 10px 0; font-size: 32px; font-weight: bold; color: #333; letter-spacing: 2px;">${code}</p>
-                        </div>
-
-                        ${message ? `<p style="font-style: italic; text-align: center; color: #666;">"${message}"</p>` : ''}
-
-                        <p style="font-size: 14px; color: #888; text-align: center; margin-top: 30px;">
-                            Uplatniť na <a href="https://oasis-lounge.sk" style="color: #5E715D;">www.oasis-lounge.sk</a>
-                        </p>
-                    </div>
-                `
+                html: voucherHtml
             });
 
             // Send Email (Confirmation to Buyer)
             if (session.customer_details?.email) {
+                const { getEmailTemplate } = await import('@/utils/email-template'); // Ensure import available
+
+                const buyerHtml = getEmailTemplate(
+                    'Potvrdenie nákupu',
+                    `
+                    <h1 style="color: #5E715D;">Ďakujeme za nákup!</h1>
+                    <p>Váš darčekový poukaz bol úspešne vytvorený a odoslaný príjemcovi (${recipientEmail}).</p>
+                    <div class="highlight-box">
+                        <p style="margin: 5px 0;"><strong>Kód voucheru:</strong> ${code}</p>
+                        <p style="margin: 5px 0;"><strong>Hodnota:</strong> ${creditAmount} vstupov</p>
+                        <p style="margin: 5px 0;"><strong>Správa:</strong> "${message}"</p>
+                    </div>
+                    `
+                );
+
                 await sendEmail({
                     to: session.customer_details.email, // or session.customer_email
                     subject: `Potvrdenie nákupu - Darčekový poukaz`,
-                    html: `
-                        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h1 style="color: #5E715D;">Ďakujeme za nákup!</h1>
-                            <p>Váš darčekový poukaz bol úspešne vytvorený a odoslaný príjemcovi (${recipientEmail}).</p>
-                            <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #5E715D; margin: 20px 0;">
-                                <p style="margin: 5px 0;"><strong>Kód voucheru:</strong> ${code}</p>
-                                <p style="margin: 5px 0;"><strong>Hodnota:</strong> ${creditAmount} vstupov</p>
-                                <p style="margin: 5px 0;"><strong>Správa:</strong> "${message}"</p>
-                            </div>
-                        </div>
-                    `
+                    html: buyerHtml
                 });
             }
 
@@ -178,20 +190,30 @@ export async function POST(req: Request) {
             // const packageName = session.metadata?.packageName || 'Kreditný balíček'; // Already defined above
 
             if (userEmail) {
+                const { getEmailTemplate } = await import('@/utils/email-template');
+                const purchaseHtml = getEmailTemplate(
+                    'Ďakujeme za Váš nákup!',
+                    `
+                    <h1 style="color: #5E715D;">Nákup úspešný</h1>
+                    <p>Vaša objednávka bola úspešne spracovaná a kredity boli pripísané na vaše konto.</p>
+                    
+                    <div class="highlight-box">
+                        <p style="margin: 5px 0;"><strong>Zakúpený balíček:</strong> ${packageName || 'Kreditný balíček'}</p>
+                        <p style="margin: 5px 0;"><strong>Kredity:</strong> +${creditsToAdd} vstupov</p>
+                        <p style="margin: 5px 0;"><strong>Nový stav kreditov:</strong> ${newCredits}</p>
+                    </div>
+
+                    <p>Tešíme sa na vašu návštevu v Oasis Lounge.</p>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="https://moja-zona.oasislounge.sk/dashboard" class="button">Prejsť do aplikácie</a>
+                    </div>
+                    `
+                );
+
                 await sendEmail({
                     to: userEmail,
                     subject: `Potvrdenie objednávky - ${packageName || 'Kreditný balíček'}`,
-                    html: `
-                        <div style="font-family: sans-serif; color: #333;">
-                            <h1>Ďakujeme za Váš nákup!</h1>
-                            <p>Vaša objednávka bola úspešne spracovaná.</p>
-                            <p><strong>Zakúpený balíček:</strong> ${packageName || 'Kreditný balíček'}</p>
-                            <p><strong>Kredity:</strong> +${creditsToAdd} vstupov</p>
-                            <p><strong>Nový stav kreditov:</strong> ${newCredits}</p>
-                            <br/>
-                            <p>Tešíme sa na vašu návštevu v Oasis Lounge.</p>
-                        </div>
-                    `
+                    html: purchaseHtml
                 });
             }
         }

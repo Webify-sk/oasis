@@ -84,23 +84,33 @@ export async function GET(req: Request) {
                 minute: '2-digit'
             });
 
+            // Import template helper
+            const { getEmailTemplate } = await import('@/utils/email-template');
+
+            const html = getEmailTemplate(
+                `Pripomienka tréningu: ${trainingTitle}`,
+                `
+                <h1 style="color: #5E715D; text-align: center;">Nezabudni na tréning!</h1>
+                <p>Ahoj ${userName},</p>
+                <p>pripomíname ti, že už zajtra máš rezervovaný tréning.</p>
+                
+                <div class="highlight-box">
+                    <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Čas:</strong> ${formattedDate}</p>
+                </div>
+                
+                <p>Tešíme sa na teba!</p>
+                <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak sa nemôžeš zúčastniť, prosím zruš rezerváciu včas.</p>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="https://moja-zona.oasislounge.sk/dashboard/trainings" class="button">Moje rezervácie</a>
+                </div>
+                `
+            );
+
             await sendEmail({
                 to: userEmail,
                 subject: `Pripomienka tréningu: ${trainingTitle}`,
-                html: `
-                    <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h1 style="color: #5E715D;">Nezabudni na tréning!</h1>
-                        <p>Ahoj ${userName},</p>
-                        <p>pripomíname ti, že už zajtra máš rezervovaný tréning.</p>
-                        <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #5E715D; margin: 20px 0;">
-                            <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingTitle}</p>
-                            <p style="margin: 5px 0;"><strong>Čas:</strong> ${formattedDate}</p>
-                        </div>
-                        <p>Tešíme sa na teba!</p>
-                        <br/>
-                        <p style="font-size: 12px; color: #888;">Ak sa nemôžeš zúčastniť, prosím zruš rezerváciu včas.</p>
-                    </div>
-                `
+                html: html
             });
             sentCount++;
         }

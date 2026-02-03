@@ -96,22 +96,32 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
     // Send Booking Confirmation Email
     try {
         const { sendEmail } = await import('@/utils/email');
+        const { getEmailTemplate } = await import('@/utils/email-template');
+
         const formattedDate = new Date(startTimeISO).toLocaleString('sk-SK');
+        const html = getEmailTemplate(
+            'Potvrdenie rezervácie',
+            `
+            <h1 style="color: #5E715D; text-align: center;">Rezervácia potvrdená</h1>
+            <p>Ahoj,</p>
+            <p>úspešne sme rezervovali tvoje miesto na tréningu:</p>
+            
+            <div class="highlight-box">
+                <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingType.title}</p>
+                <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDate}</p>
+            </div>
+            
+            <p>Tešíme sa na teba!</p>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
+            </div>
+            `
+        );
+
         await sendEmail({
             to: user.email || '',
             subject: 'Potvrdenie rezervácie tréningu',
-            html: `
-                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h1 style="color: #5E715D;">Rezervácia potvrdená</h1>
-                    <p>Ahoj,</p>
-                    <p>úspešne sme rezervovali tvoje miesto na tréningu:</p>
-                    <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #5E715D; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingType.title}</p>
-                        <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDate}</p>
-                    </div>
-                    <p>Tešíme sa na teba!</p>
-                </div>
-            `
+            html: html
         });
     } catch (mailError) {
         console.error('Failed to send booking email:', mailError);
@@ -158,17 +168,26 @@ export async function cancelBooking(bookingId: string) {
     // Send Cancellation Email
     try {
         const { sendEmail } = await import('@/utils/email');
+        const { getEmailTemplate } = await import('@/utils/email-template');
+
+        const html = getEmailTemplate(
+            'Zrušenie rezervácie',
+            `
+            <h1 style="color: #d9534f; text-align: center;">Rezervácia zrušená</h1>
+            <p>Ahoj,</p>
+            <p>tvoja rezervácia bola úspešne zrušená a 1 vstup ti bol vrátený na účet.</p>
+            <p>Dúfame, že si čoskoro nájdeš iný termín.</p>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}/dashboard/trainings" class="button">Rezervovať nový termín</a>
+            </div>
+            `
+        );
+
         await sendEmail({
             to: user.email || '',
             subject: 'Zrušenie rezervácie',
-            html: `
-                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h1 style="color: #d9534f;">Rezervácia zrušená</h1>
-                    <p>Ahoj,</p>
-                    <p>tvoja rezervácia bola úspešne zrušená a 1 vstup ti bol vrátený na účet.</p>
-                    <p>Dúfame, že si čoskoro nájdeš iný termín.</p>
-                </div>
-            `
+            html: html
         });
     } catch (mailError) {
         console.error('Failed to send cancellation email:', mailError);
