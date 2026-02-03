@@ -107,14 +107,21 @@ export async function resetPassword(email: string) {
     // Note: redirectTo should point to the callback that handles the token exchange.
     // Usually Supabase handles the magic link exchange on the client side if the link is clicked.
     // But for 'recovery' type, it logs the user in and they should be redirected to a page where they can set a new password.
-    // standard flow: /auth/callback -> exchanges code -> session -> redirects to /dashboard/profile?reset=true
+    // Hardcoded production URL to ensure correct redirect
+    const redirectTo = `https://moja-zona.oasislounge.sk/auth/callback?next=/dashboard/profile?reset=true`;
+    console.log('DEBUG: Reset Password RedirectTo:', redirectTo);
+
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: email,
         options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.oasislounge.sk'}/auth/callback?next=/dashboard/profile?reset=true`,
+            redirectTo: redirectTo,
         }
     });
+
+    if (data?.properties?.action_link) {
+        console.log('DEBUG: Generated Action Link:', data.properties.action_link);
+    }
 
     if (error) {
         console.error('Reset Password Error:', error);
