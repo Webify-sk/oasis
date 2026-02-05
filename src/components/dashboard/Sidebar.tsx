@@ -85,12 +85,13 @@ export function Sidebar() {
                 <React.Fragment key={group.title || groupIndex}>
                     {group.title && (
                         <li className={styles.groupTitle} style={{
-                            padding: '1rem 1.5rem 0.5rem',
+                            padding: '0.75rem 1.5rem 0.25rem',
                             fontSize: '0.75rem',
                             fontWeight: 'bold',
                             color: '#9ca3af',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.05em'
+                            letterSpacing: '0.05em',
+                            marginTop: '0.5rem'
                         }}>
                             {group.title}
                         </li>
@@ -110,8 +111,6 @@ export function Sidebar() {
                             </li>
                         );
                     })}
-                    {/* Add separator if needed */}
-                    <div style={{ height: '0.5rem' }} />
                 </React.Fragment>
             );
         });
@@ -185,10 +184,7 @@ export function Sidebar() {
                 </ul>
 
                 <div className={styles.footer}>
-                    {/* Debug Info */}
-                    <div style={{ fontSize: '0.7rem', color: '#ccc', marginBottom: '0.5rem', textAlign: 'center' }}>
-                        Role: {role || 'loading...'}
-                    </div>
+
 
                     <form action={signOut}>
                         <button className={styles.logoutButton}>

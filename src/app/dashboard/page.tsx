@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     const [profileRes, bookingsRes, appointmentsRes] = await Promise.all([
         supabase
             .from('profiles')
-            .select('full_name, credits, role')
+            .select('full_name, credits, role, email_verified')
             .eq('id', user.id)
             .single(),
         supabase
@@ -55,6 +55,7 @@ export default async function DashboardPage() {
     const profile = profileRes.data;
     const nextBooking = bookingsRes.data;
     const nextAppointment = appointmentsRes.data;
+    const isVerified = profile?.email_verified === true;
 
     // Check if Employee or Admin
     if (profile?.role === 'employee' || profile?.role === 'admin') {
@@ -89,14 +90,35 @@ export default async function DashboardPage() {
     return (
         <div className={`${styles.container} animate-fadeInUp`}>
 
-            {/* Welcome Section */}
-            <div className={styles.welcomeSection}>
-                <h1 className={styles.welcomeTitle}>
-                    Vitajte späť, {profile?.full_name?.split(' ')[0] || 'Oasis Member'}
-                </h1>
-                <p className={styles.welcomeSubtitle}>
-                    Váš priestor pre zdravie a relax.
-                </p>
+            {/* Header Section (Welcome + Credits) */}
+            <div className={styles.headerContainer}>
+                <div className={styles.welcomeSection}>
+                    <h1 className={styles.welcomeTitle}>
+                        Vitajte späť, {profile?.full_name?.split(' ')[0] || 'Oasis Member'}
+                    </h1>
+                    <p className={styles.welcomeSubtitle}>
+                        Váš priestor pre zdravie a relax.
+                    </p>
+                </div>
+
+                {/* Compact Credits Widget */}
+                <div className={styles.headerCreditWidget}>
+                    <div>
+                        <div className={styles.headerCreditLabel}>Zostatok vstupov</div>
+                        <div className={styles.headerCreditValue}>{profile?.credits || 0}</div>
+                    </div>
+                    <Link href={isVerified ? "/dashboard/credit" : "#"} aria-disabled={!isVerified}>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            style={{ backgroundColor: '#F5F5F4', color: '#5E715D', border: '1px solid #E7E5E4', opacity: isVerified ? 1 : 0.5, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                            disabled={!isVerified}
+                            title={!isVerified ? "Overte svoj email pre dobitie kreditov" : ""}
+                        >
+                            <Plus size={16} />
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <div className={styles.grid}>
@@ -119,8 +141,13 @@ export default async function DashboardPage() {
                                     <span>{nextBooking.training_types?.title}</span>
                                 </div>
                             </div>
-                            <Link href="/dashboard/trainings">
-                                <Button variant="secondary" size="sm" style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff' }}>
+                            <Link href={isVerified ? "/dashboard/trainings" : "#"} aria-disabled={!isVerified}>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', opacity: isVerified ? 1 : 0.5, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                                    disabled={!isVerified}
+                                >
                                     Zobraziť detaily <ArrowRight size={16} style={{ marginLeft: '8px' }} />
                                 </Button>
                             </Link>
@@ -133,8 +160,14 @@ export default async function DashboardPage() {
                                     Čas na pohyb?
                                 </span>
                             </div>
-                            <Link href="/dashboard/trainings">
-                                <Button variant="secondary" size="sm" style={{ backgroundColor: '#fff', color: '#8C7568', border: 'none' }}>
+                            <Link href={isVerified ? "/dashboard/trainings" : "#"} aria-disabled={!isVerified}>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{ backgroundColor: '#fff', color: '#8C7568', border: 'none', opacity: isVerified ? 1 : 0.7, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                                    disabled={!isVerified}
+                                    title={!isVerified ? "Overte svoj email pre rezerváciu" : ""}
+                                >
                                     Rezervovať tréning <Plus size={16} style={{ marginLeft: '8px' }} />
                                 </Button>
                             </Link>
@@ -160,8 +193,13 @@ export default async function DashboardPage() {
                                     <span>{nextAppointment.cosmetic_services?.title}</span>
                                 </div>
                             </div>
-                            <Link href="/dashboard/cosmetics/appointments">
-                                <Button variant="secondary" size="sm" style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff' }}>
+                            <Link href={isVerified ? "/dashboard/cosmetics/appointments" : "#"} aria-disabled={!isVerified}>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', opacity: isVerified ? 1 : 0.5, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                                    disabled={!isVerified}
+                                >
                                     Spravovať <ArrowRight size={16} style={{ marginLeft: '8px' }} />
                                 </Button>
                             </Link>
@@ -174,53 +212,20 @@ export default async function DashboardPage() {
                                     Doprajte si relax.
                                 </span>
                             </div>
-                            <Link href="/dashboard/cosmetics">
-                                <Button variant="secondary" size="sm" style={{ backgroundColor: '#fff', color: '#5E715D', border: 'none' }}>
+                            <Link href={isVerified ? "/dashboard/cosmetics" : "#"} aria-disabled={!isVerified}>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{ backgroundColor: '#fff', color: '#5E715D', border: 'none', opacity: isVerified ? 1 : 0.7, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                                    disabled={!isVerified}
+                                    title={!isVerified ? "Overte svoj email pre rezerváciu" : ""}
+                                >
                                     Rezervovať <Plus size={16} style={{ marginLeft: '8px' }} />
                                 </Button>
                             </Link>
                         </>
                     )}
                 </div>
-
-                {/* Credits Card */}
-                <div className={`${styles.card} ${styles.creditCard}`}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className={styles.creditLabel}>Zostatok vstupov</span>
-                        <CreditCard size={20} color="#8C7568" />
-                    </div>
-                    <div className={styles.creditValue}>
-                        {profile?.credits || 0}
-                    </div>
-                    <Link href="/dashboard/credit">
-                        <Button variant="outline" size="sm" style={{ width: '100%' }}>
-                            Dobiť vstupy
-                        </Button>
-                    </Link>
-                </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className={styles.actionsGrid}>
-                <Link href="/dashboard/trainings" className={styles.actionButton}>
-                    <Calendar size={28} className={styles.actionIcon} />
-                    <span className={styles.actionLabel}>Rozvrh Tréningov</span>
-                </Link>
-
-                <Link href="/dashboard/milestones" className={styles.actionButton}> {/* Assuming milestones/history is here */}
-                    <History size={28} className={styles.actionIcon} />
-                    <span className={styles.actionLabel}>Moja História</span>
-                </Link>
-
-                <Link href="/dashboard/profile" className={styles.actionButton}>
-                    <User size={28} className={styles.actionIcon} />
-                    <span className={styles.actionLabel}>Váš Profil</span>
-                </Link>
-            </div>
-
-            {/* Daily Quote */}
-            <div className={styles.quoteSection}>
-                "Pohyb je oslavou toho, čo tvoje telo dokáže."
             </div>
         </div>
     );

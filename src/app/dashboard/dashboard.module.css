@@ -4,8 +4,17 @@
     padding: 2rem;
 }
 
-.welcomeSection {
+.headerContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.welcomeSection {
+    /* No margin needed if handled by container, but keeping for safety/flow */
 }
 
 .welcomeTitle {
@@ -19,6 +28,34 @@
 .welcomeSubtitle {
     color: #8C7568;
     font-size: 1.1rem;
+}
+
+/* Compact Credit Widget for Header */
+.headerCreditWidget {
+    background: #fff;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid #E8E1DC;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.headerCreditValue {
+    font-size: 2rem;
+    font-family: var(--font-heading);
+    color: #8C7568;
+    line-height: 1;
+    font-weight: bold;
+}
+
+.headerCreditLabel {
+    font-size: 0.8rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
 }
 
 .grid {
@@ -49,7 +86,6 @@
 
 /* Feature Card (Next Session) */
 .featureCard {
-    grid-column: span 2;
     background: linear-gradient(90deg, #8C7568 0%, #8C7568 30%, rgba(140, 117, 104, 0.85) 50%, transparent 100%),
         url('/images/pilates-header.png');
     background-size: cover;
@@ -60,7 +96,6 @@
 }
 
 .procedureCard {
-    grid-column: span 2;
     background: linear-gradient(90deg, #5E715D 0%, #5E715D 30%, rgba(94, 113, 93, 0.85) 50%, transparent 100%),
         url('/images/wellness-header.png');
     background-size: cover;
