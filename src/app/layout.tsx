@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Oasis Lounge",
   description: "Váš priestor pre zdravie a relax.",
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({
