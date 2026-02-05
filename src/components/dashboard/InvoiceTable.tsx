@@ -1,3 +1,5 @@
+'use client';
+
 import { Invoice } from '@/app/dashboard/invoices/actions';
 import styles from './InvoiceTable.module.css';
 import { Download, FileText } from 'lucide-react';
@@ -57,7 +59,12 @@ export function InvoiceTable({ invoices }: InvoiceTableProps) {
                                         </span>
                                     </td>
                                     <td style={{ textAlign: 'right' }}>
-                                        <button className={styles.actionButton} title="Stiahnuť PDF" disabled={true} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                                        <button
+                                            className={styles.actionButton}
+                                            title="Stiahnuť PDF"
+                                            onClick={() => window.open(`/api/invoices/${invoice.id}/download`, '_blank')}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <Download size={18} />
                                         </button>
                                     </td>

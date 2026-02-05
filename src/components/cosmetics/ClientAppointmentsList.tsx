@@ -32,15 +32,20 @@ interface Appointment {
 export function ClientAppointmentsList({ initialAppointments, isEmployeeView = false }: { initialAppointments: Appointment[], isEmployeeView?: boolean }) {
     const [appointments, setAppointments] = useState(initialAppointments);
     const [loadingId, setLoadingId] = useState<string | null>(null);
+    const [cancelModalId, setCancelModalId] = useState<string | null>(null);
 
     // Reschedule State
     const [rescheduleData, setRescheduleData] = useState<{ id: string, date: string, start: string, duration: number } | null>(null);
     const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
     const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
-    const handleCancel = async (id: string) => {
-        // ... (existing code)
-        if (!confirm('Naozaj chcete zrušiť túto rezerváciu?')) return;
+    const handleCancel = (id: string) => {
+        setCancelModalId(id);
+    };
+
+    const confirmCancelAction = async () => {
+        if (!cancelModalId) return;
+        const id = cancelModalId;
 
         setLoadingId(id);
         const res = await cancelAppointment(id);
@@ -53,6 +58,7 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
             alert('Nepodarilo sa zrušiť rezerváciu.');
         }
         setLoadingId(null);
+        setCancelModalId(null);
     };
 
     const handleOpenReschedule = (appointment: Appointment) => {
@@ -137,6 +143,35 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
                     </div>
                 </div>
             )}
+
+            {/* Cancel Confirmation Modal */}
+            <Modal
+                isOpen={!!cancelModalId}
+                onClose={() => setCancelModalId(null)}
+                title="Zrušiť rezerváciu?"
+            >
+                <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
+                        Naozaj chcete zrušiť túto rezerváciu? <br />
+                        Táto akcia je nevratná.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setCancelModalId(null)}
+                        >
+                            Ponechať
+                        </Button>
+                        <Button
+                            onClick={confirmCancelAction}
+                            disabled={!!loadingId}
+                            style={{ backgroundColor: '#DC2626', color: 'white' }}
+                        >
+                            {loadingId === cancelModalId ? 'Ruším...' : 'Áno, zrušiť'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             {/* Reschedule Modal */}
             <Modal

@@ -136,7 +136,7 @@ export function CreditPackages({ userProfile }: CreditPackagesProps) {
         }
 
         // Basic validation
-        if (!formData.billing_name || !formData.billing_street || !formData.billing_city || !formData.billing_zip) {
+        if (!formData.full_name || !formData.billing_name || !formData.billing_street || !formData.billing_city || !formData.billing_zip) {
             alert('Prosím vyplňte všetky povinné fakturačné údaje.');
             return;
         }
@@ -251,14 +251,9 @@ export function CreditPackages({ userProfile }: CreditPackagesProps) {
 
                             <div style={{ display: 'grid', gap: '0.8rem' }}>
                                 <input
-                                    name="full_name" placeholder="Meno a priezvisko (Osoba)"
+                                    name="full_name" placeholder="Meno a priezvisko (Povinné)"
                                     value={formData.full_name} onChange={handleInputChange}
-                                    style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
-                                />
-                                <input
-                                    name="phone" placeholder="Telefón"
-                                    value={formData.phone} onChange={handleInputChange}
-                                    style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                                    style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: formData.full_name ? 'white' : '#fff5f5' }}
                                 />
 
                                 <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '0.5rem 0' }} />

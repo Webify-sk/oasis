@@ -174,191 +174,314 @@ export function AvailabilityManager({
         setIsAddingException(false);
     };
 
-    const handleRemoveException = async (id: string) => {
-        if (!confirm('Odstrániť túto výnimku?')) return;
-        await removeAvailabilityException(id);
+    // Modal State
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
+
+    const initiateRemoveException = (id: string) => {
+        setConfirmModal({ isOpen: true, id });
+    };
+
+    const confirmRemoveException = async () => {
+        if (!confirmModal.id) return;
+        await removeAvailabilityException(confirmModal.id);
         await loadExceptions();
+        setConfirmModal({ isOpen: false, id: null });
     };
 
     return (
-        <div style={{ maxWidth: '800px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Týždenná dostupnosť</h2>
+        <div style={{ maxWidth: '900px', margin: '0 auto', fontFamily: 'var(--font-sans, sans-serif)' }}>
+
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '2rem',
+                paddingBottom: '1rem',
+                borderBottom: '1px solid #eee'
+            }}>
+                <div>
+                    <h2 style={{ fontSize: '1.8rem', fontFamily: 'Georgia, serif', color: '#2c3e50', margin: 0 }}>
+                        Moja dostupnosť
+                    </h2>
+                    <p style={{ color: '#888', margin: '0.5rem 0 0 0' }}>
+                        Nastavte si pravidelný týždenný rozvrh a výnimky.
+                    </p>
+                </div>
+
                 <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="button"
                     style={{
                         backgroundColor: '#5E715D',
                         color: 'white',
                         padding: '0.8rem 1.5rem',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '30px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem',
-                        opacity: loading ? 0.7 : 1
+                        gap: '0.6rem',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 12px rgba(94, 113, 93, 0.3)',
+                        opacity: loading ? 0.8 : 1,
+                        transition: 'transform 0.2s'
                     }}
                 >
-                    {loading ? 'Ukladám...' : (
-                        <>
-                            <Check size={18} /> Uložiť rozvrh
-                        </>
+                    {loading ? (
+                        <>Ukladám...</>
+                    ) : (
+                        <><Check size={18} /> Uložiť zmeny</>
                     )}
                 </button>
             </div>
 
-            {message && <div style={{ marginBottom: '1rem', color: 'green', fontWeight: 'bold' }}>{message}</div>}
+            {message && (
+                <div style={{
+                    marginBottom: '1.5rem',
+                    padding: '1rem',
+                    backgroundColor: '#f0fdf4',
+                    color: '#166534',
+                    borderRadius: '8px',
+                    border: '1px solid #bbf7d0',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem'
+                }}>
+                    <Check size={18} /> {message}
+                </div>
+            )}
 
-            <div style={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #eee', overflow: 'hidden' }}>
-                {DAYS.map((dayName, dayIndex) => {
-                    // Get all slots for this day from schedule state
-                    // We need their indices in the main schedule array to update them
-                    const daySlotIndices = schedule
-                        .map((slot, idx) => (slot.day_of_week === dayIndex ? idx : -1))
-                        .filter(idx => idx !== -1);
+            {/* Weekly Schedule Card */}
+            <div style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                border: '1px solid #f0f0f0',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                overflow: 'hidden',
+                marginBottom: '3rem'
+            }}>
+                <div style={{ padding: '1.5rem', backgroundColor: '#fafafa', borderBottom: '1px solid #eee' }}>
+                    <h3 style={{ margin: 0, color: '#444', fontSize: '1.1rem' }}>Týždenný rozvrh</h3>
+                </div>
 
-                    const isDayAvailable = daySlotIndices.some(idx => schedule[idx].is_available);
+                <div>
+                    {DAYS.map((dayName, dayIndex) => {
+                        const daySlotIndices = schedule
+                            .map((slot, idx) => (slot.day_of_week === dayIndex ? idx : -1))
+                            .filter(idx => idx !== -1);
 
-                    return (
-                        <div key={dayIndex} style={{
-                            padding: '1rem 1.5rem',
-                            borderBottom: dayIndex === 6 ? 'none' : '1px solid #f0f0f0',
-                            backgroundColor: isDayAvailable ? 'white' : '#FAFAFA'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                {/* Day Label & Toggle */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '150px', paddingTop: '0.5rem' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={isDayAvailable}
-                                        onChange={(e) => toggleDayAvailability(dayIndex, e.target.checked)}
-                                        style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                                    />
-                                    <span style={{ fontWeight: '500', color: isDayAvailable ? '#333' : '#999' }}>
-                                        {dayName}
-                                    </span>
-                                </div>
+                        const isDayAvailable = daySlotIndices.some(idx => schedule[idx].is_available);
 
-                                {/* Slots List */}
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {isDayAvailable ? (
-                                        <>
-                                            {daySlotIndices.map((scheduleIdx, localIdx) => {
-                                                const slot = schedule[scheduleIdx];
-                                                return (
-                                                    <div key={`${dayIndex}-${localIdx}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <Clock size={16} color="#666" />
-                                                            <input
-                                                                type="time"
-                                                                value={slot.start_time || '09:00'}
-                                                                onChange={(e) => updateSlot(scheduleIdx, { start_time: e.target.value })}
-                                                                style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                            />
-                                                            <span>-</span>
-                                                            <input
-                                                                type="time"
-                                                                value={slot.end_time || '17:00'}
-                                                                onChange={(e) => updateSlot(scheduleIdx, { end_time: e.target.value })}
-                                                                style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                                                            />
+                        return (
+                            <div key={dayIndex} style={{
+                                padding: '1.2rem 1.5rem',
+                                borderBottom: dayIndex === 6 ? 'none' : '1px solid #f5f5f5',
+                                backgroundColor: isDayAvailable ? 'white' : '#fcfcfc',
+                                transition: 'background-color 0.2s'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '2rem' }}>
+
+                                    {/* Left: Day Label & Switch */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '1rem',
+                                        minWidth: '160px', paddingTop: '0.5rem'
+                                    }}>
+                                        <div
+                                            onClick={() => toggleDayAvailability(dayIndex, !isDayAvailable)}
+                                            style={{
+                                                width: '44px', height: '24px',
+                                                backgroundColor: isDayAvailable ? '#5E715D' : '#e5e7eb',
+                                                borderRadius: '99px',
+                                                position: 'relative',
+                                                cursor: 'pointer',
+                                                transition: 'background-color 0.2s'
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: '18px', height: '18px',
+                                                backgroundColor: 'white',
+                                                borderRadius: '50%',
+                                                position: 'absolute',
+                                                top: '3px',
+                                                left: isDayAvailable ? '23px' : '3px',
+                                                transition: 'left 0.2s',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                            }} />
+                                        </div>
+                                        <span style={{
+                                            fontWeight: 600,
+                                            color: isDayAvailable ? '#2c3e50' : '#a0aec0',
+                                            fontSize: '1rem'
+                                        }}>
+                                            {dayName}
+                                        </span>
+                                    </div>
+
+                                    {/* Right: Time Slots */}
+                                    <div style={{ flex: 1 }}>
+                                        {isDayAvailable ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                                {daySlotIndices.map((scheduleIdx, localIdx) => {
+                                                    const slot = schedule[scheduleIdx];
+                                                    return (
+                                                        <div key={`${dayIndex}-${localIdx}`} style={{
+                                                            display: 'flex', alignItems: 'center', gap: '1rem',
+                                                            animation: 'fadeIn 0.2s ease-out'
+                                                        }}>
+                                                            <div style={{
+                                                                display: 'flex', alignItems: 'center', gap: '0.8rem',
+                                                                backgroundColor: '#f8f9fa', padding: '0.4rem 0.8rem',
+                                                                borderRadius: '8px', border: '1px solid #eee'
+                                                            }}>
+                                                                <Clock size={15} color="#888" />
+                                                                <input
+                                                                    type="time"
+                                                                    value={slot.start_time || '09:00'}
+                                                                    onChange={(e) => updateSlot(scheduleIdx, { start_time: e.target.value })}
+                                                                    style={{
+                                                                        padding: '0.2rem',
+                                                                        borderRadius: '4px',
+                                                                        border: 'none',
+                                                                        background: 'transparent',
+                                                                        fontWeight: 500,
+                                                                        color: '#333'
+                                                                    }}
+                                                                />
+                                                                <span style={{ color: '#ccc' }}>—</span>
+                                                                <input
+                                                                    type="time"
+                                                                    value={slot.end_time || '17:00'}
+                                                                    onChange={(e) => updateSlot(scheduleIdx, { end_time: e.target.value })}
+                                                                    style={{
+                                                                        padding: '0.2rem',
+                                                                        borderRadius: '4px',
+                                                                        border: 'none',
+                                                                        background: 'transparent',
+                                                                        fontWeight: 500,
+                                                                        color: '#333'
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            <button
+                                                                onClick={() => removeSlot(scheduleIdx)}
+                                                                title="Odstrániť časové okno"
+                                                                style={{
+                                                                    border: 'none', background: '#fee2e2', color: '#ef4444',
+                                                                    cursor: 'pointer', padding: '6px', borderRadius: '50%',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
                                                         </div>
+                                                    );
+                                                })}
 
-                                                        {/* Remove Slot Button */}
-                                                        <button
-                                                            onClick={() => removeSlot(scheduleIdx)}
-                                                            title="Odstrániť časové okno"
-                                                            style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {/* Add Slot Button */}
-                                            <button
-                                                onClick={() => addSlot(dayIndex)}
-                                                style={{
-                                                    alignSelf: 'flex-start',
-                                                    marginTop: '0.5rem',
-                                                    border: '1px dashed #ccc',
-                                                    background: 'none',
-                                                    borderRadius: '4px',
-                                                    padding: '0.4rem 0.8rem',
-                                                    fontSize: '0.8rem',
-                                                    color: '#666',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.3rem'
-                                                }}
-                                            >
-                                                <Plus size={14} /> Pridať pauzu / interval
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <span style={{ color: '#ccc', fontStyle: 'italic', padding: '0.5rem 0' }}>Voľno</span>
-                                    )}
+                                                <button
+                                                    onClick={() => addSlot(dayIndex)}
+                                                    style={{
+                                                        alignSelf: 'flex-start',
+                                                        marginTop: '0.2rem',
+                                                        background: 'none',
+                                                        border: '1px dashed #cbd5e0',
+                                                        borderRadius: '6px',
+                                                        padding: '0.5rem 1rem',
+                                                        fontSize: '0.85rem',
+                                                        color: '#718096',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.4rem',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseOver={(e) => { e.currentTarget.style.borderColor = '#5E715D'; e.currentTarget.style.color = '#5E715D'; }}
+                                                    onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e0'; e.currentTarget.style.color = '#718096'; }}
+                                                >
+                                                    <Plus size={14} /> Pridať interval
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: '0.5rem 0', color: '#a0aec0', fontStyle: 'italic', fontSize: '0.95rem' }}>
+                                                Zatvorené
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
             </div>
 
-            <p style={{ marginTop: '1rem', color: '#888', fontSize: '0.9rem' }}>
-                * Tu nastavujete pravidelný týždenný rozvrh. Použite "Pridať interval" pre vytvorenie prestávky (napr. 09:00-12:00 a 13:00-17:00).
-            </p>
+            {/* Exceptions Section Card */}
+            <div style={{ marginTop: '3rem' }}>
+                <h3 style={{ fontSize: '1.4rem', fontFamily: 'Georgia, serif', color: '#2c3e50', marginBottom: '1.5rem' }}>
+                    Výnimky (Dovolenky / Zmena času)
+                </h3>
 
-            <div style={{ marginTop: '3rem', borderTop: '1px solid #eee', paddingTop: '2rem' }}>
-                <h3 style={{ margin: '0 0 1rem 0' }}>Výnimky (Dovolenky / Zmena času)</h3>
-                <div style={{ padding: '1.5rem', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div style={{
+                    backgroundColor: 'white', borderRadius: '16px', padding: '2rem',
+                    border: '1px solid #f0f0f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
+                }}>
 
-                    {/* Add Exception Form */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end', marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #f0f0f0' }}>
+                    {/* Add Form */}
+                    <div style={{
+                        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: '1.5rem', alignItems: 'end', marginBottom: '2.5rem',
+                        paddingBottom: '2rem', borderBottom: '1px solid #f0f0f0'
+                    }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Dátum</label>
+                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Dátum</label>
                             <input
                                 type="date"
                                 value={newExceptionDate}
                                 onChange={(e) => setNewExceptionDate(e.target.value)}
-                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
+                                style={{
+                                    width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
+                                    borderRadius: '8px', fontSize: '0.95rem'
+                                }}
                             />
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Stav</label>
+                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Dostupnosť</label>
                             <select
                                 value={isExceptionAvailable ? 'available' : 'unavailable'}
                                 onChange={(e) => setIsExceptionAvailable(e.target.value === 'available')}
-                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
+                                style={{
+                                    width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
+                                    borderRadius: '8px', fontSize: '0.95rem', backgroundColor: 'white'
+                                }}
                             >
-                                <option value="unavailable">Voľno / Dovolenka</option>
-                                <option value="available">Dostupný (Iný čas)</option>
+                                <option value="unavailable">🏖️ Voľno / Dovolenka</option>
+                                <option value="available">✅ Dostupný (Iný čas)</option>
                             </select>
                         </div>
 
                         {isExceptionAvailable && (
                             <>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Od</label>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Od</label>
                                     <input
                                         type="time"
                                         value={exceptionStart}
                                         onChange={(e) => setExceptionStart(e.target.value)}
-                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
+                                        style={{
+                                            width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
+                                            borderRadius: '8px', fontSize: '0.95rem'
+                                        }}
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Do</label>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Do</label>
                                     <input
                                         type="time"
                                         value={exceptionEnd}
                                         onChange={(e) => setExceptionEnd(e.target.value)}
-                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
+                                        style={{
+                                            width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
+                                            borderRadius: '8px', fontSize: '0.95rem'
+                                        }}
                                     />
                                 </div>
                             </>
@@ -367,66 +490,84 @@ export function AvailabilityManager({
                         <button
                             onClick={handleAddException}
                             disabled={!newExceptionDate || isAddingException}
-                            className="button"
                             style={{
-                                backgroundColor: '#5E715D',
+                                backgroundColor: isAddingException ? '#cbd5e0' : '#5E715D',
                                 color: 'white',
-                                padding: '0.6rem 1rem',
+                                padding: '0.7rem 1.5rem',
                                 border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                height: '40px',
-                                fontWeight: 500
+                                borderRadius: '8px',
+                                cursor: isAddingException ? 'not-allowed' : 'pointer',
+                                height: '44px',
+                                fontWeight: 600,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                transition: 'background-color 0.2s',
+                                width: '100%'
                             }}
                         >
-                            {isAddingException ? '...' : 'Pridať'}
+                            {isAddingException ? '...' : <><Plus size={18} /> Pridať</>}
                         </button>
                     </div>
 
-                    {/* Exceptions List */}
+                    {/* Exceptions Grid */}
                     {exceptions.length === 0 ? (
-                        <p style={{ textAlign: 'center', color: '#999', fontStyle: 'italic', margin: '2rem 0' }}>Žiadne nadchádzajúce výnimky.</p>
+                        <div style={{ textAlign: 'center', padding: '3rem', backgroundColor: '#f9fafb', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
+                            <Calendar size={40} color="#cbd5e0" style={{ marginBottom: '1rem' }} />
+                            <p style={{ color: '#718096', margin: 0 }}>Zatiaľ nemáte pridané žiadne výnimky.</p>
+                        </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                             {exceptions.map(exc => (
                                 <div key={exc.id} style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    padding: '1rem',
-                                    backgroundColor: exc.is_available ? '#f0fdf4' : '#fef2f2',
-                                    border: `1px solid ${exc.is_available ? '#bbf7d0' : '#fecaca'}`,
-                                    borderRadius: '8px'
+                                    padding: '1.2rem',
+                                    backgroundColor: 'white',
+                                    border: exc.is_available ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: '#333' }}>
-                                            <Calendar size={16} />
+                                    {/* Color Strip */}
+                                    <div style={{
+                                        position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
+                                        backgroundColor: exc.is_available ? '#22c55e' : '#ef4444'
+                                    }} />
+
+                                    <div style={{ paddingLeft: '0.8rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: '#2c3e50', marginBottom: '0.3rem' }}>
+                                            <Calendar size={16} color="#718096" />
                                             {format(new Date(exc.exception_date), 'd. MMMM yyyy', { locale: sk })}
                                         </div>
-                                        <span style={{
+                                        <div style={{
                                             fontSize: '0.85rem',
-                                            padding: '2px 8px',
-                                            borderRadius: '99px',
-                                            backgroundColor: exc.is_available ? '#dcfce7' : '#fee2e2',
                                             color: exc.is_available ? '#166534' : '#991b1b',
-                                            fontWeight: 500
+                                            display: 'flex', alignItems: 'center', gap: '0.4rem'
                                         }}>
-                                            {exc.is_available
-                                                ? `Dostupný: ${exc.start_time?.slice(0, 5)} - ${exc.end_time?.slice(0, 5)}`
-                                                : 'Voľno'}
-                                        </span>
+                                            {exc.is_available ? (
+                                                <><Clock size={12} /> {exc.start_time?.slice(0, 5)} - {exc.end_time?.slice(0, 5)}</>
+                                            ) : (
+                                                '🏖️ Voľno'
+                                            )}
+                                        </div>
                                     </div>
 
                                     <button
-                                        onClick={() => handleRemoveException(exc.id)}
+                                        onClick={() => initiateRemoveException(exc.id)}
                                         style={{
-                                            background: 'none',
+                                            background: '#fff1f2',
                                             border: 'none',
-                                            color: '#ef4444',
+                                            color: '#fb7185',
                                             cursor: 'pointer',
-                                            padding: '4px'
+                                            padding: '0.5rem',
+                                            borderRadius: '8px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'all 0.2s'
                                         }}
                                         title="Odstrániť"
+                                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fff1f2'; e.currentTarget.style.color = '#fb7185'; }}
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -436,6 +577,48 @@ export function AvailabilityManager({
                     )}
                 </div>
             </div>
+
+            {/* Confirmation Modal */}
+            {confirmModal.isOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(3px)'
+                }} onClick={() => setConfirmModal({ isOpen: false, id: null })}>
+                    <div style={{
+                        backgroundColor: 'white', padding: '2rem', borderRadius: '16px',
+                        width: '90%', maxWidth: '380px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#1f2937' }}>Odstrániť výnimku?</h4>
+                        <p style={{ color: '#4b5563', marginBottom: '2rem', lineHeight: '1.5' }}>
+                            Naozaj chcete odstrániť túto výnimku z dostupnosti?
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <button
+                                onClick={() => setConfirmModal({ isOpen: false, id: null })}
+                                style={{
+                                    padding: '0.7rem 1.2rem', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                    background: 'white', color: '#374151', cursor: 'pointer', fontWeight: 500
+                                }}
+                            >
+                                Zrušiť
+                            </button>
+                            <button
+                                onClick={confirmRemoveException}
+                                style={{
+                                    padding: '0.7rem 1.2rem', borderRadius: '8px', border: 'none',
+                                    background: '#ef4444', color: 'white', cursor: 'pointer', fontWeight: 500
+                                }}
+                            >
+                                Odstrániť
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

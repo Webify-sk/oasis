@@ -35,9 +35,31 @@ interface TrainingCalendarProps {
     userCredits: number;
 }
 
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+
 export function TrainingCalendar({ schedule, userCredits }: TrainingCalendarProps) {
+    const searchParams = useSearchParams();
+    const highlightId = searchParams.get('highlightId');
+
+    useEffect(() => {
+        if (highlightId) {
+            const element = document.getElementById(`session-${highlightId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.style.animation = 'highlightPulse 2s ease-in-out';
+            }
+        }
+    }, [highlightId, schedule]); // Depend on schedule to ensure elements are rendered
+
     return (
         <div className={styles.container}>
+            <style jsx global>{`
+                @keyframes highlightPulse {
+                    0% { background-color: rgba(94, 113, 93, 0.2); }
+                    100% { background-color: transparent; }
+                }
+            `}</style>
             {schedule.map((day, index) => (
                 <div
                     key={day.date}
@@ -56,7 +78,11 @@ export function TrainingCalendar({ schedule, userCredits }: TrainingCalendarProp
 
                     <div className={styles.sessionList}>
                         {day.sessions.map((session) => (
-                            <div key={session.id} className={styles.sessionRow}>
+                            <div
+                                key={session.id}
+                                id={`session-${session.id}`}
+                                className={styles.sessionRow}
+                            >
                                 <div className={styles.colTime}>{session.time}</div>
                                 <div className={styles.colName}>{session.name}</div>
                                 <div className={styles.colTrainer}>{session.trainer}</div>

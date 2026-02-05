@@ -9,8 +9,9 @@ import pageStyles from './page.module.css';
 
 import { MyBookings } from '@/components/dashboard/MyBookings';
 
-export default async function TrainingsPage() {
+export default async function TrainingsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const supabase = await createClient();
+    const params = await searchParams;
 
     // 1. Fetch Training Types (with schedule)
     const { data: trainingTypes } = await supabase
@@ -24,14 +25,23 @@ export default async function TrainingsPage() {
 
     const trainersMap = new Map(trainers?.map(t => [t.id, t.full_name]) || []);
 
-    // 3. Generate Schedule for CURRENT WEEK
-    const today = new Date();
-    const currentDay = today.getDay();
+    // 3. Generate Schedule for SELECTED WEEK (Default: Current Week)
+    const dateParam = typeof params?.date === 'string' ? params.date : undefined;
+    const anchorDate = dateParam ? new Date(dateParam) : new Date();
+
+    // Validate anchorDate
+    if (isNaN(anchorDate.getTime())) {
+        // Fallback to today if invalid
+        // anchorDate = new Date(); // Re-assignment not possible with const, handle logic below
+    }
+    const safeAnchorDate = isNaN(anchorDate.getTime()) ? new Date() : anchorDate;
+
+    const currentDay = safeAnchorDate.getDay();
     const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
 
     // Get start and end of week for query range
-    const mondayDate = new Date(today);
-    mondayDate.setDate(today.getDate() + diffToMon);
+    const mondayDate = new Date(safeAnchorDate);
+    mondayDate.setDate(safeAnchorDate.getDate() + diffToMon);
     mondayDate.setHours(0, 0, 0, 0);
 
     const sundayDate = new Date(mondayDate);
@@ -46,7 +56,7 @@ export default async function TrainingsPage() {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Fetch My Future Bookings
+    // Fetch My Future Bookings (Limit to future relative to NOW, not view)
     let myUpcomingBookings: any[] = [];
     if (user) {
         const { data } = await supabase
@@ -120,7 +130,7 @@ export default async function TrainingsPage() {
                     const isUserRegistered = !!userBooking;
 
                     sessionsForDay.push({
-                        id: `${tt.id}-${term.id}`,
+                        id: `${tt.id}-${term.id}-${wd.dateObj.getDate()}`, // Include Day of Month to match MonthlyCalendar ID
                         trainingTypeId: tt.id, // Needed for action
                         startTimeISO: sessionStartISO, // Needed for action
                         time: term.time,
@@ -146,7 +156,16 @@ export default async function TrainingsPage() {
             sessions: sessionsForDay,
             originalDate: wd.dateObj // For checking if it's in the past if needed
         };
-    }); // Removed filter(day => day.sessions.length > 0) to allow viewing empty days or at least debug
+    });
+
+    // Filter out past days (keep today and future)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const filteredScheduleData = scheduleData.filter(day => {
+        const dayDate = new Date(day.originalDate);
+        return dayDate >= todayStart;
+    });
 
     // 4. Fetch User Credits (for instant client-side validation)
     let userCredits = 0;
@@ -176,7 +195,7 @@ export default async function TrainingsPage() {
 
             <MyBookings bookings={myUpcomingBookings} />
 
-            <TrainingCalendar schedule={scheduleData} userCredits={userCredits} />
+            <TrainingCalendar schedule={filteredScheduleData} userCredits={userCredits} />
         </div>
     );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, Clock, User, Plus, Sparkles, Settings } from 'lucide-react';
+import { Calendar, Clock, User, Plus, Sparkles, Settings, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
@@ -40,12 +40,28 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
         console.log('Dashboard mounted. Selected app:', selectedApp);
     }, [selectedApp]);
 
-    const handleCancel = async (id: string) => {
-        if (!confirm('Naozaj chcete zrušiť túto rezerváciu?')) return;
+    const handleConfirm = async (id: string) => {
+        setIsUpdating(true);
+        await updateAppointmentStatus(id, 'confirmed');
+        setIsUpdating(false);
+        router.refresh();
+    };
+
+
+    // State for cancellation modal
+    const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; appId: string | null }>({ isOpen: false, appId: null });
+
+    const initiateCancel = (id: string) => {
+        setCancelModal({ isOpen: true, appId: id });
+    };
+
+    const confirmCancel = async () => {
+        if (!cancelModal.appId) return;
 
         setIsUpdating(true);
-        await updateAppointmentStatus(id, 'cancelled');
+        await updateAppointmentStatus(cancelModal.appId, 'cancelled');
         setIsUpdating(false);
+        setCancelModal({ isOpen: false, appId: null });
         router.refresh();
     };
 
@@ -230,7 +246,7 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                                                     📅
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleCancel(app.id)}
+                                                                    onClick={() => initiateCancel(app.id)}
                                                                     style={{
                                                                         padding: '0.3rem 0.6rem', border: '1px solid #fecaca', borderRadius: '6px',
                                                                         background: '#fef2f2', cursor: 'pointer', fontSize: '0.8rem', color: '#dc2626'
@@ -242,18 +258,20 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                                             </>
                                                         )}
 
-                                                        <span style={{
-                                                            padding: '0.3rem 0.8rem',
-                                                            borderRadius: '20px',
-                                                            fontSize: '0.75rem',
-                                                            backgroundColor: app.status === 'confirmed' ? '#e8f5e9' : (app.status === 'cancelled' ? '#fee2e2' : '#fff3e0'),
-                                                            color: app.status === 'confirmed' ? '#2e7d32' : (app.status === 'cancelled' ? '#991b1b' : '#f57c00'),
-                                                            fontWeight: 600,
-                                                            display: 'flex',
-                                                            alignItems: 'center'
-                                                        }}>
-                                                            {app.status === 'confirmed' ? 'Potvrdené' : (app.status === 'cancelled' ? 'Zrušené' : 'Čaká')}
-                                                        </span>
+                                                        {(app.status === 'cancelled') && (
+                                                            <span style={{
+                                                                padding: '0.3rem 0.8rem',
+                                                                borderRadius: '20px',
+                                                                fontSize: '0.75rem',
+                                                                backgroundColor: '#fee2e2',
+                                                                color: '#991b1b',
+                                                                fontWeight: 600,
+                                                                display: 'flex',
+                                                                alignItems: 'center'
+                                                            }}>
+                                                                Zrušené
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div style={{ color: '#666', fontSize: '0.95rem' }}>
@@ -275,12 +293,109 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                 </div>
             </div>
 
+            {/* Style */}
             <style jsx>{`
                 @media (min-width: 1024px) {
                     .lg-col-span-8 { grid-column: span 8 !important; }
                     .lg-col-span-4 { grid-column: span 4 !important; }
                 }
             `}</style>
+
+            {/* Cancel Modal */}
+            {cancelModal.isOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 3000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(3px)'
+                }} onClick={() => setCancelModal({ isOpen: false, appId: null })}>
+                    <div style={{
+                        backgroundColor: 'white', padding: '2rem', borderRadius: '12px',
+                        width: '90%', maxWidth: '400px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: '1rem', color: '#2c3e50' }}>Zrušiť rezerváciu?</h3>
+                        <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
+                            Naozaj chcete zrušiť túto rezerváciu? Táto akcia je nevratná a klientovi bude odoslaná notifikácia.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <button
+                                onClick={() => setCancelModal({ isOpen: false, appId: null })}
+                                style={{
+                                    padding: '0.8rem 1.5rem', borderRadius: '8px', border: '1px solid #eee',
+                                    background: 'white', color: '#555', cursor: 'pointer', fontWeight: 500
+                                }}
+                            >
+                                Ponechať
+                            </button>
+                            <button
+                                onClick={confirmCancel}
+                                disabled={isUpdating}
+                                style={{
+                                    padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none',
+                                    background: '#dc2626', color: 'white', cursor: 'pointer', fontWeight: 500,
+                                    opacity: isUpdating ? 0.7 : 1
+                                }}
+                            >
+                                {isUpdating ? 'Ruším...' : 'Áno, zrušiť'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reschedule Modal (Simplified for now - kept existing logic roughly) */}
+            {selectedApp && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 3000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(3px)'
+                }} onClick={() => setSelectedApp(null)}>
+                    <div style={{
+                        backgroundColor: 'white', padding: '2rem', borderRadius: '12px',
+                        width: '90%', maxWidth: '400px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.1)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: '1.5rem', color: '#2c3e50' }}>Prebookovať termín</h3>
+
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontSize: '0.9rem' }}>Nový dátum a čas</label>
+                        <input
+                            type="datetime-local"
+                            value={newDate}
+                            onChange={(e) => setNewDate(e.target.value)}
+                            style={{
+                                width: '100%', padding: '0.8rem', borderRadius: '8px',
+                                border: '1px solid #ddd', fontSize: '1rem', marginBottom: '2rem'
+                            }}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <button
+                                onClick={() => setSelectedApp(null)}
+                                style={{
+                                    padding: '0.8rem 1.5rem', borderRadius: '8px', border: '1px solid #eee',
+                                    background: 'white', color: '#555', cursor: 'pointer', fontWeight: 500
+                                }}
+                            >
+                                Zrušiť
+                            </button>
+                            <button
+                                onClick={handleRescheduleSubmit}
+                                disabled={isUpdating}
+                                style={{
+                                    padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none',
+                                    background: '#5E715D', color: 'white', cursor: 'pointer', fontWeight: 500,
+                                    opacity: isUpdating ? 0.7 : 1
+                                }}
+                            >
+                                {isUpdating ? 'Ukladám...' : 'Uložiť zmenu'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

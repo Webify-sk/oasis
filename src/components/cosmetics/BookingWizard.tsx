@@ -66,7 +66,22 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
         if (selectedEmployee && selectedService) {
             setLoading(true);
             const availSlots = await getAvailableSlots(selectedEmployee.id, selectedService.id, date);
-            setSlots(availSlots);
+
+            // Filter past times if selecting today
+            const now = new Date();
+            const selectedDateObj = new Date(date);
+            const isToday = selectedDateObj.toDateString() === now.toDateString();
+
+            let filteredSlots = availSlots;
+            if (isToday) {
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                filteredSlots = availSlots.filter(time => {
+                    const [h, m] = time.split(':').map(Number);
+                    return (h * 60 + m) > currentMinutes;
+                });
+            }
+
+            setSlots(filteredSlots);
             setLoading(false);
         }
     };
@@ -290,16 +305,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                         Termín: <strong>{new Date(selectedDate).toLocaleDateString()} o {selectedTime}</strong><br />
                         Služba: {selectedService?.title} ({selectedEmployee?.name})
                     </p>
-                    <button
-                        onClick={() => router.push('/dashboard/cosmetics/calendar')}
-                        className="button"
-                        style={{
-                            backgroundColor: '#5E715D', color: 'white', padding: '0.8rem 2rem',
-                            border: 'none', borderRadius: '6px', cursor: 'pointer'
-                        }}
-                    >
-                        Prejsť na kalendár
-                    </button>
+
                 </div>
             )}
         </div>

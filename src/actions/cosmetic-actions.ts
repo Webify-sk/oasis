@@ -450,7 +450,7 @@ export async function createAppointment(data: {
             start_time: data.start_time,
             end_time: data.end_time,
             notes: data.notes,
-            status: 'pending' // Default status
+            status: 'confirmed' // Default status now confirmed
         })
 
     // Fetch details for email

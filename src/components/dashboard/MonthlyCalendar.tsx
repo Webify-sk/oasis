@@ -182,7 +182,7 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                             >
                                 Zavrieť
                             </button>
-                            <Link href="/dashboard/trainings">
+                            <Link href={`/dashboard/trainings?date=${selectedEvent.date.toISOString().split('T')[0]}&highlightId=${selectedEvent.id}`}>
                                 <button style={{
                                     padding: '0.75rem 1.5rem',
                                     borderRadius: '8px',

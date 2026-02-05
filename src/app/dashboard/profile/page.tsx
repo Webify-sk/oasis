@@ -25,7 +25,12 @@ export default async function ProfilePage() {
         phone: profile?.phone,
         date_of_birth: profile?.date_of_birth,
         credits: profile?.credits || 0,
-        role: profile?.role
+        role: profile?.role,
+        billing_name: profile?.billing_name,
+        billing_street: profile?.billing_street,
+        billing_city: profile?.billing_city,
+        billing_zip: profile?.billing_zip,
+        billing_country: profile?.billing_country
     };
 
     return (
