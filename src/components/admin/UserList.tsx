@@ -49,8 +49,9 @@ export function UserList({ users }: { users: Profile[] }) {
                         <th className={styles.th}>Meno a priezvisko</th>
                         <th className={styles.th}>Email</th>
                         <th className={styles.th}>Telefón</th>
+                        <th className={styles.th}>Rola</th>
                         <th className={styles.th}>Vstupy</th>
-                        <th className={styles.th}>Akcie</th>
+                        <th className={styles.th} style={{ width: '80px', textAlign: 'center' }}>Akcie</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,13 +60,24 @@ export function UserList({ users }: { users: Profile[] }) {
                             <td className={styles.td}>{user.full_name || 'Nezadané'}</td>
                             <td className={styles.tdSecondary}>{user.email}</td>
                             <td className={styles.tdSecondary}>{user.phone || '-'}</td>
+                            <td className={styles.tdSecondary}>
+                                <span style={{
+                                    textTransform: 'capitalize',
+                                    padding: '2px 8px',
+                                    borderRadius: '99px',
+                                    backgroundColor: user.role === 'admin' ? '#eef2ff' : user.role === 'employee' ? '#f0fdf4' : 'transparent',
+                                    color: user.role === 'admin' ? '#4338ca' : user.role === 'employee' ? '#166534' : 'inherit',
+                                    fontSize: '0.85rem'
+                                }}>
+                                    {user.role === 'user' ? 'Klient' : (user.role || '-')}
+                                </span>
+                            </td>
                             <td className={styles.tdSecondary}>{user.credits}</td>
-                            <td className={styles.td}>
-                                <div className={styles.actions}>
-                                    <Link href={`/admin/users/${user.id}`} style={{ textDecoration: 'none' }}>
-                                        <Button className={styles.detailButton} size="sm">
-                                            <Eye size={14} />
-                                            Zobraziť detail
+                            <td className={styles.td} style={{ textAlign: 'center' }}>
+                                <div className={styles.actions} style={{ justifyContent: 'center' }}>
+                                    <Link href={`/admin/users/${user.id}`} style={{ textDecoration: 'none' }} title="Zobraziť detail">
+                                        <Button className={styles.detailButton} size="sm" style={{ padding: '0.4rem', height: 'auto', minWidth: 'auto' }}>
+                                            <Eye size={18} />
                                         </Button>
                                     </Link>
                                     {/* 
@@ -79,7 +91,7 @@ export function UserList({ users }: { users: Profile[] }) {
                     ))}
                     {filteredUsers.length === 0 && (
                         <tr>
-                            <td colSpan={5} className={styles.emptyState}>
+                            <td colSpan={6} className={styles.emptyState}>
                                 {searchTerm ? 'Nenašli sa žiadne výsledky.' : 'Žiadni užívatelia.'}
                             </td>
                         </tr>

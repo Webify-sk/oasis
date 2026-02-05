@@ -7,6 +7,8 @@ import clsx from 'clsx';
 import { createClient } from '@/utils/supabase/server';
 import pageStyles from './page.module.css';
 
+import { MyBookings } from '@/components/dashboard/MyBookings';
+
 export default async function TrainingsPage() {
     const supabase = await createClient();
 
@@ -43,6 +45,26 @@ export default async function TrainingsPage() {
         .lte('start_time', sundayDate.toISOString());
 
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Fetch My Future Bookings
+    let myUpcomingBookings: any[] = [];
+    if (user) {
+        const { data } = await supabase
+            .from('bookings')
+            .select(`
+                id,
+                start_time,
+                training_type:training_types (
+                    title,
+                    level
+                )
+            `)
+            .eq('user_id', user.id)
+            .gte('start_time', new Date().toISOString())
+            .order('start_time', { ascending: true });
+
+        myUpcomingBookings = data || [];
+    }
 
     const weekDates = [];
     const dayNames = ['Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota', 'Nedeľa'];
@@ -151,6 +173,8 @@ export default async function TrainingsPage() {
                     </Link>
                 </div>
             </div>
+
+            <MyBookings bookings={myUpcomingBookings} />
 
             <TrainingCalendar schedule={scheduleData} userCredits={userCredits} />
         </div>

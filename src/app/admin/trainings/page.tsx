@@ -14,27 +14,68 @@ export default async function AdminTrainingsPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-    // Fetch booking counts for each training type
-    // We'll count all active/future bookings to be useful.
-    // Or just all bookings? Let's do all for now to be safe, or start_time > now()
-    const { data: allBookings, error: bookingsError } = await supabase
+    // Fetch all active/future bookings with user details
+    const now = new Date();
+    // Show sessions from today onwards (or maybe just all active ones?)
+    // Let's show from start of today to keep it relevant.
+    now.setHours(0, 0, 0, 0);
+    const fromDate = now.toISOString();
+
+    const { data: bookingsData } = await supabase
         .from('bookings')
-        .select('training_type_id'); // Removed .is('status', 'confirmed') temporarily to check if we get ANYTHING
+        .select(`
+            start_time,
+            training_type_id,
+            profiles (
+                full_name,
+                email
+            )
+        `)
+        .gte('start_time', fromDate)
+        .order('start_time', { ascending: true });
 
-    console.log('Admin Page Debug - All Bookings:', allBookings);
-    console.log('Admin Page Debug - Bookings Error:', bookingsError);
+    // Group bookings by TrainingType -> Session (StartTime)
+    // Structure: Map<TrainingId, Map<StartTime, Attendee[]>>
+    const trainingSessions = new Map<string, Map<string, any[]>>();
+    const totalCounts = new Map<string, number>();
 
-    const counts = new Map();
-    allBookings?.forEach((b: any) => {
-        counts.set(b.training_type_id, (counts.get(b.training_type_id) || 0) + 1);
+    bookingsData?.forEach((b: any) => {
+        const tid = b.training_type_id;
+        const time = b.start_time;
+        const attendee = b.profiles;
+
+        // Total Count
+        totalCounts.set(tid, (totalCounts.get(tid) || 0) + 1);
+
+        // Session Grouping
+        if (!trainingSessions.has(tid)) {
+            trainingSessions.set(tid, new Map());
+        }
+        const sessions = trainingSessions.get(tid)!;
+
+        if (!sessions.has(time)) {
+            sessions.set(time, []);
+        }
+        if (attendee) {
+            sessions.get(time)!.push(attendee);
+        }
     });
 
-    console.log('Admin Page Debug - Counts Map:', Object.fromEntries(counts));
+    const trainings = trainingsData?.map(t => {
+        const sessionsMap = trainingSessions.get(t.id);
+        const sessions = sessionsMap
+            ? Array.from(sessionsMap.entries()).map(([start, attendees]) => ({ start, attendees }))
+            : [];
 
-    const trainings = trainingsData?.map(t => ({
-        ...t,
-        bookingCount: counts.get(t.id) || 0
-    }));
+        // Sort sessions by date
+        sessions.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+        return {
+            ...t,
+            bookingCount: totalCounts.get(t.id) || 0,
+            upcomingSessions: sessions
+        };
+    });
 
     return (
         <div style={{ padding: '0rem' }} >

@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { bookTraining, cancelBooking } from '@/app/dashboard/trainings/actions';
 import styles from './TrainingCalendar.module.css';
+import { useVerification } from '@/components/auth/VerificationContext';
 
 interface Session {
     id: string | number;
+    trainingTypeId: string;
+    startTimeISO: string;
     time: string;
     name: string;
     trainer: string;
@@ -19,6 +22,7 @@ interface Session {
         max: number;
     };
     isUserRegistered?: boolean;
+    bookingId?: string;
 }
 
 interface DaySchedule {
@@ -82,18 +86,41 @@ export function TrainingCalendar({ schedule, userCredits }: TrainingCalendarProp
     );
 }
 
-function ActionButton({ session, userCredits }: { session: any, userCredits: number }) {
+function ActionButton({ session, userCredits }: { session: Session, userCredits: number }) {
+    const { isVerified } = useVerification();
     const [isLoading, setIsLoading] = React.useState(false);
 
-    // State for feedback modal
+    // State for feedback modal (Success/Error)
     const [modal, setModal] = React.useState<{ isOpen: boolean; title: string; message: string; isError?: boolean } | null>(null);
 
-    const handleAction = async (e: React.MouseEvent) => {
+    // State for confirmation modal
+    const [confirmModalOpen, setConfirmModalOpen] = React.useState(false);
+    const [isLateCancellation, setIsLateCancellation] = React.useState(false);
+
+    const isPast = new Date(session.startTimeISO) < new Date();
+
+    const handleActionClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('ActionButton click', { isUserRegistered: session.isUserRegistered, userCredits });
-        // Client-side credit check for smoother UX (no flicker)
+        if (isPast) return;
+
+        // If registered -> Show confirmation modal
+        if (session.isUserRegistered) {
+            const start = new Date(session.startTimeISO);
+            const now = new Date();
+            const diffHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
+            setIsLateCancellation(diffHours < 24);
+            setConfirmModalOpen(true);
+            return;
+        }
+
+        // If not registered -> Book immediately (with credit check)
+        executeBooking();
+    };
+
+    const executeBooking = async () => {
+        // Client-side credit check
         if (!session.isUserRegistered && userCredits < 1) {
             setModal({
                 isOpen: true,
@@ -106,26 +133,42 @@ function ActionButton({ session, userCredits }: { session: any, userCredits: num
 
         setIsLoading(true);
         try {
-            let res;
-            if (session.isUserRegistered) {
-                if (!confirm('Naozaj sa chcete odhlásiť z tréningu?')) {
-                    setIsLoading(false);
-                    return;
-                }
-                if (!session.bookingId) {
-                    alert('Chyba: ID rezervácie sa nenašlo.');
-                    setIsLoading(false);
-                    return;
-                }
-                res = await cancelBooking(session.bookingId);
-            } else {
-                res = await bookTraining(session.trainingTypeId, session.startTimeISO);
-            }
-
+            const res = await bookTraining(session.trainingTypeId, session.startTimeISO);
             if (res) {
                 setModal({
                     isOpen: true,
-                    title: res.success ? (session.isUserRegistered ? 'Odhlásenie úspešné' : 'Rezervácia úspešná') : 'Chyba',
+                    title: res.success ? 'Rezervácia úspešná' : 'Chyba',
+                    message: res.message,
+                    isError: !res.success
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            setModal({
+                isOpen: true,
+                title: 'Chyba',
+                message: 'Nastala neočakávaná chyba.',
+                isError: true
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const executeCancellation = async () => {
+        setConfirmModalOpen(false);
+        if (!session.bookingId) {
+            alert('Chyba: ID rezervácie sa nenašlo.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await cancelBooking(session.bookingId);
+            if (res) {
+                setModal({
+                    isOpen: true,
+                    title: res.success ? 'Odhlásenie úspešné' : 'Chyba',
                     message: res.message,
                     isError: !res.success
                 });
@@ -145,26 +188,37 @@ function ActionButton({ session, userCredits }: { session: any, userCredits: num
 
     const isFull = session.occupancy.current >= session.occupancy.max;
     // Don't disable button just because of credits, so they can click and see the specific error message
-    const isDisabled = isLoading || (isFull && !session.isUserRegistered);
+    // But disable for verification as requested
+    const isDisabled = isLoading || (isFull && !session.isUserRegistered) || isPast || (!isVerified && !session.isUserRegistered);
+
+    let buttonText = session.isUserRegistered ? 'Odhlásiť sa' : 'Prihlásiť sa';
+    if (!isVerified && !session.isUserRegistered) buttonText = 'Overte email';
+    if (isLoading) buttonText = '...';
+    if (isPast) buttonText = 'Ukončené';
 
     return (
         <>
             <Button
                 size="sm"
-                onClick={handleAction}
+                onClick={handleActionClick}
                 className={clsx(styles.actionButton, {
                     [styles.disabled]: isDisabled,
-                    [styles.registered]: session.isUserRegistered
+                    [styles.registered]: session.isUserRegistered,
+                    'opacity-50 cursor-not-allowed': !isVerified && !session.isUserRegistered
                 })}
                 disabled={isDisabled}
+                title={(!isVerified && !session.isUserRegistered) ? "Pre prihlásenie musíte mať overený email" : ""}
                 variant={session.isUserRegistered ? "secondary" : "primary"}
                 style={{
-                    minWidth: '100px'
+                    minWidth: '100px',
+                    opacity: (isPast || (!isVerified && !session.isUserRegistered)) ? 0.6 : 1,
+                    cursor: (isPast || (!isVerified && !session.isUserRegistered)) ? 'not-allowed' : 'pointer'
                 }}
             >
-                {isLoading ? '...' : (session.isUserRegistered ? 'Odhlásiť sa' : 'Prihlásiť sa')}
+                {buttonText}
             </Button>
 
+            {/* Success/Error Modal */}
             {modal && (
                 <Modal
                     isOpen={modal.isOpen}
@@ -222,6 +276,47 @@ function ActionButton({ session, userCredits }: { session: any, userCredits: num
                     </div>
                 </Modal>
             )}
+
+            {/* Confirmation Modal */}
+            <Modal
+                isOpen={confirmModalOpen}
+                onClose={() => setConfirmModalOpen(false)}
+                title="Zrušiť rezerváciu?"
+            >
+                <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    {isLateCancellation ? (
+                        <div style={{ backgroundColor: '#FEF2F2', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                            <p style={{ fontWeight: 'bold', color: '#DC2626', marginBottom: '0.5rem' }}>
+                                UPOZORNENIE
+                            </p>
+                            <p style={{ color: '#7F1D1D', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                                Odhlasujete sa menej ako 24 hodín pred začiatkom tréningu.<br />
+                                <strong>Váš vstup NEBUDE vrátený.</strong>
+                            </p>
+                        </div>
+                    ) : (
+                        <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
+                            Naozaj chcete zrušiť túto rezerváciu?<br />
+                            Vstup Vám bude automaticky vrátený na účet.
+                        </p>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmModalOpen(false)}
+                        >
+                            Ponechať
+                        </Button>
+                        <Button
+                            onClick={executeCancellation}
+                            style={{ backgroundColor: '#DC2626', color: 'white' }}
+                        >
+                            {isLateCancellation ? 'Rozumiem, zrušiť' : 'Áno, zrušiť'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </>
     );
 }

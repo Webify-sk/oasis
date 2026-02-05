@@ -14,6 +14,13 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, actions }: ModalProps) {
+    const [mounted, setMounted] = React.useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -21,7 +28,7 @@ export function Modal({ isOpen, onClose, title, children, actions }: ModalProps)
 
         if (isOpen) {
             document.addEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'hidden'; // Prevent scrolling
+            document.body.style.overflow = 'hidden';
         }
 
         return () => {
@@ -30,23 +37,21 @@ export function Modal({ isOpen, onClose, title, children, actions }: ModalProps)
         };
     }, [isOpen, onClose]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
-    // Use createPortal to render outside parent DOM hierarchy if possible, 
-    // but without a dedicated portal root in App Router layout, straight render works often enough or document.body check.
-    // For simplicity in this stack, we'll try straight render but ensure high Z-index.
-    // Ideally: return createPortal(..., document.body) if we are sure document exists (client side).
+    // Fallback if document is somehow missing (rare on client)
+    if (typeof document === 'undefined') return null;
 
     return createPortal(
         <div className={styles.overlay} onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
         }}>
             <div className={styles.modal}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <h2 className={styles.title}>{title}</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h2 className={styles.title} style={{ margin: 0 }}>{title}</h2>
                     <button
                         onClick={onClose}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '0.25rem' }}
                     >
                         <X size={20} />
                     </button>

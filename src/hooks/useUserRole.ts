@@ -8,30 +8,36 @@ export function useUserRole() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // 1. Try to load from cache first for instant UI
+        const cachedRole = localStorage.getItem('user_role');
+        if (cachedRole) {
+            setRole(cachedRole);
+            setLoading(false); // Optimistic success
+        }
+
         const supabase = createClient();
 
         async function checkRole() {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
-                console.log('Checking role for user ID:', user.id);
-                // Try fetching all fields to debug RLS/Column issues
+                // Check if our cache is stale or if we need to fetch
+                // We fetch anyway to be secure, but UI is already stable from cache
                 const { data: profile, error } = await supabase
                     .from('profiles')
-                    .select('*')
+                    .select('role')
                     .eq('id', user.id)
                     .maybeSingle();
 
-                if (error) {
-                    console.error('Error fetching user role FULL OBJECT:', JSON.stringify(error, null, 2));
-                    console.error('Error details:', error.message, error.details, error.hint);
-                } else if (!profile) {
-                    console.warn('No profile found for this user ID (checked * columns).');
-                } else {
-                    console.log('Profile found:', profile);
+                if (profile) {
+                    const newRole = profile.role || 'user';
+                    setRole(newRole);
+                    localStorage.setItem('user_role', newRole);
                 }
-
-                setRole(profile?.role || 'user');
+            } else {
+                // Logged out
+                setRole(null);
+                localStorage.removeItem('user_role');
             }
             setLoading(false);
         }

@@ -18,10 +18,38 @@ export default async function MilestonesPage() {
     }
 
     // 2. Fetch Milestones Definition
-    const { data: milestones } = await supabase
+    const { data: milestonesData } = await supabase
         .from('milestones')
         .select('*')
         .order('training_count_required', { ascending: true });
+
+    // Fallback if DB is empty or permissions fail
+    const milestones = (milestonesData && milestonesData.length > 0) ? milestonesData : [
+        {
+            id: 1,
+            title: 'Začiatočník',
+            subtitle: 'Prvý krok k cieľu',
+            description: 'Vaša cesta sa práve začína. Prvý tréning je za vami!',
+            training_count_required: 1,
+            reward: 'Odznak začiatku'
+        },
+        {
+            id: 2,
+            title: 'Pravidelný Návštevník',
+            subtitle: 'Udržiavate tempo',
+            description: '10 tréningov! Vaša vytrvalosť prináša ovocie.',
+            training_count_required: 10,
+            reward: '1 kredit zdarma'
+        },
+        {
+            id: 3,
+            title: 'Oasis Master',
+            subtitle: 'Ikona klubu',
+            description: '50 tréningov. Ste inšpiráciou pre ostatných.',
+            training_count_required: 50,
+            reward: 'Master masáž'
+        }
+    ];
 
     return (
         <div style={{ padding: '0rem' }}>
@@ -39,7 +67,7 @@ export default async function MilestonesPage() {
 
             <div style={{ padding: '0 2rem' }}>
                 <MilestoneList
-                    milestones={milestones || []}
+                    milestones={milestones}
                     currentProgress={bookingCount}
                 />
             </div>

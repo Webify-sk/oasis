@@ -102,7 +102,7 @@ export async function GET(req: Request) {
                 <p>Tešíme sa na teba!</p>
                 <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak sa nemôžeš zúčastniť, prosím zruš rezerváciu včas.</p>
                 <div style="text-align: center; margin-top: 15px;">
-                    <a href="https://moja-zona.facilitytest.sk/dashboard/trainings" class="button">Moje rezervácie</a>
+                    <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
                 </div>
                 `
             );

@@ -17,15 +17,33 @@ export async function updateProfile(formData: FormData) {
     const phone = formData.get('phone') as string
     const date_of_birth = formData.get('date_of_birth') as string || null
 
+    // Helper to add if present
+    const updateData: any = {
+        id: user.id,
+        full_name,
+        phone,
+        date_of_birth,
+        updated_at: new Date().toISOString(),
+    }
+
+    const billing_name = formData.get('billing_name') as string;
+    if (billing_name !== null) updateData.billing_name = billing_name;
+
+    const billing_street = formData.get('billing_street') as string;
+    if (billing_street !== null) updateData.billing_street = billing_street;
+
+    const billing_city = formData.get('billing_city') as string;
+    if (billing_city !== null) updateData.billing_city = billing_city;
+
+    const billing_zip = formData.get('billing_zip') as string;
+    if (billing_zip !== null) updateData.billing_zip = billing_zip;
+
+    const billing_country = formData.get('billing_country') as string;
+    if (billing_country !== null) updateData.billing_country = billing_country;
+
     const { error } = await supabase
         .from('profiles')
-        .upsert({
-            id: user.id,
-            full_name,
-            phone,
-            date_of_birth,
-            updated_at: new Date().toISOString(),
-        })
+        .upsert(updateData)
 
     if (error) {
         console.error('Profile Update Error:', error)

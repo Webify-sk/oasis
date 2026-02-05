@@ -18,6 +18,14 @@ export default async function GiftVouchersPage({
         .eq('is_active', true)
         .order('price', { ascending: true });
 
+    // Fetch User Profile for billing pre-fill
+    const { data: { user } } = await supabase.auth.getUser();
+    let userProfile = null;
+    if (user) {
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        userProfile = data;
+    }
+
     return (
         <div className={styles.container}>
             <h1 className={styles.pageTitle}>Darčekové Poukazy</h1>
@@ -45,7 +53,7 @@ export default async function GiftVouchersPage({
                 </div>
             )}
 
-            <VoucherPurchaseForm products={products || []} />
+            <VoucherPurchaseForm products={products || []} userProfile={userProfile} />
         </div>
     );
 }

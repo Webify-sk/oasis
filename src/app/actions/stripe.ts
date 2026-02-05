@@ -23,6 +23,18 @@ export async function createCheckoutSession(
             redirect('/login')
         }
 
+        // Check Verification (Skip for staff)
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('email_verified, role')
+            .eq('id', user.id)
+            .single()
+
+        const isStaff = profile?.role === 'employee' || profile?.role === 'admin'
+        if (!isStaff && profile?.email_verified === false) {
+            return { error: 'Pre nákup kreditov musíte mať overený email.' }
+        }
+
         // Parse price string to number (cents)
         // Example: "27 €" -> 2700
         const amount = parseInt(price.replace(/[^0-9]/g, '')) * 100

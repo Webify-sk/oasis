@@ -1,14 +1,28 @@
+import { createClient } from '@/utils/supabase/server'; // Add import
 import { CreditPackages } from '@/components/dashboard/CreditPackages';
 import { CreditCounter } from '@/components/dashboard/CreditCounter';
 import { VoucherRedemption } from '@/components/dashboard/VoucherRedemption';
-import styles from '../trainings/page.module.css'; // Reusing styles if compatible, or just inline
+import styles from '../trainings/page.module.css';
 
 interface CreditPageProps {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function CreditPage({ searchParams }: CreditPageProps) {
-    // Await searchParams before accessing properties
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Fetch profile for billing details
+    let userProfile = null;
+    if (user) {
+        const { data } = await supabase
+            .from('profiles')
+            .select('*') // Simplify to select all for now to get billing cols
+            .eq('id', user.id)
+            .single();
+        userProfile = data;
+    }
+
     const params = await searchParams;
     const success = params?.success === 'true';
     const canceled = params?.canceled === 'true';
@@ -54,7 +68,7 @@ export default async function CreditPage({ searchParams }: CreditPageProps) {
             )}
 
             <div style={{ padding: '0 2rem 4rem 2rem' }}>
-                <CreditPackages />
+                <CreditPackages userProfile={userProfile} />
                 <div style={{ marginTop: '3rem', maxWidth: '600px' }}>
                     <VoucherRedemption />
                 </div>

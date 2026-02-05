@@ -16,6 +16,12 @@ interface ProfileFormProps {
         full_name: string | null;
         phone: string | null;
         date_of_birth?: string | null;
+        role?: string;
+        billing_name?: string;
+        billing_street?: string;
+        billing_city?: string;
+        billing_zip?: string;
+        billing_country?: string;
     }
 }
 
@@ -117,6 +123,36 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         </div>
                     </div>
 
+                    {user.role !== 'employee' && (
+                        <>
+                            <h4 style={{ fontSize: '1.1rem', marginTop: '1.5rem', marginBottom: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>Fakturačné údaje</h4>
+                            <div className={styles.grid}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Fakturačné meno / Firma</label>
+                                    <input name="billing_name" defaultValue={user.billing_name || ''} placeholder="Názov firmy alebo Meno" className={styles.input} />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Ulica a číslo</label>
+                                    <input name="billing_street" defaultValue={user.billing_street || ''} placeholder="Ulica 123" className={styles.input} />
+                                </div>
+                                <div className={styles.formGroup} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label className={styles.label}>Mesto</label>
+                                        <input name="billing_city" defaultValue={user.billing_city || ''} placeholder="Mesto" className={styles.input} />
+                                    </div>
+                                    <div>
+                                        <label className={styles.label}>PSČ</label>
+                                        <input name="billing_zip" defaultValue={user.billing_zip || ''} placeholder="000 00" className={styles.input} />
+                                    </div>
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Štát</label>
+                                    <input name="billing_country" defaultValue={user.billing_country || 'Slovensko'} placeholder="Slovensko" className={styles.input} />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
                     <div className={styles.actions}>
                         <div className={styles.editActions}>
                             <Button type="submit" variant="primary" disabled={isLoading}>
@@ -165,6 +201,32 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     </div>
                 </div>
 
+                {user.role !== 'employee' && (
+                    <>
+                        <h4 style={{ fontSize: '1.2rem', marginTop: '2rem', marginBottom: '1rem', color: '#4A403A' }}>Fakturačné údaje</h4>
+                        <div className={styles.grid}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Fakturačné meno / Firma</label>
+                                <div className={styles.staticValue}>{user.billing_name || <span className={styles.placeholder}>Nezadané</span>}</div>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Ulica a číslo</label>
+                                <div className={styles.staticValue}>{user.billing_street || <span className={styles.placeholder}>Nezadané</span>}</div>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Mesto a PSČ</label>
+                                <div className={styles.staticValue}>
+                                    {user.billing_city ? `${user.billing_city}, ${user.billing_zip}` : <span className={styles.placeholder}>Nezadané</span>}
+                                </div>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Štát</label>
+                                <div className={styles.staticValue}>{user.billing_country || 'Slovensko'}</div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
                 <div className={styles.actions}>
                     <Button variant="primary" onClick={() => setIsEditing(true)}>Upraviť profil</Button>
 
@@ -211,35 +273,37 @@ export function ProfileForm({ user }: ProfileFormProps) {
             </div>
 
             {/* Voucher Card */}
-            <div className={styles.card}>
-                <h3 className={styles.title}>Uplatniť darčekový voucher</h3>
-                <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                    Máte darčekový kód? Zadajte ho nižšie a vstupy sa Vám automaticky pripočítajú.
-                </p>
-                <form onSubmit={handleRedeemVoucher} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1 }}>
-                        <input
-                            type="text"
-                            placeholder="Zadajte kód (napr. ABC123ZY)"
-                            className={styles.input}
-                            value={voucherCode}
-                            onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}
-                        />
-                        {voucherMessage && (
-                            <div className={clsx(styles.message, {
-                                [styles.success]: voucherMessage.type === 'success',
-                                [styles.error]: voucherMessage.type === 'error'
-                            })} style={{ marginTop: '0.5rem', display: 'block' }}>
-                                {voucherMessage.text}
-                            </div>
-                        )}
-                    </div>
-                    <Button type="submit" variant="primary" disabled={paramVoucherLoading || !voucherCode}>
-                        {paramVoucherLoading ? 'Overujem...' : 'Uplatniť'}
-                    </Button>
-                </form>
-            </div>
+            {user.role !== 'employee' && (
+                <div className={styles.card}>
+                    <h3 className={styles.title}>Uplatniť darčekový voucher</h3>
+                    <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                        Máte darčekový kód? Zadajte ho nižšie a vstupy sa Vám automaticky pripočítajú.
+                    </p>
+                    <form onSubmit={handleRedeemVoucher} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                            <input
+                                type="text"
+                                placeholder="Zadajte kód (napr. ABC123ZY)"
+                                className={styles.input}
+                                value={voucherCode}
+                                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                                style={{ textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}
+                            />
+                            {voucherMessage && (
+                                <div className={clsx(styles.message, {
+                                    [styles.success]: voucherMessage.type === 'success',
+                                    [styles.error]: voucherMessage.type === 'error'
+                                })} style={{ marginTop: '0.5rem', display: 'block' }}>
+                                    {voucherMessage.text}
+                                </div>
+                            )}
+                        </div>
+                        <Button type="submit" variant="primary" disabled={paramVoucherLoading || !voucherCode}>
+                            {paramVoucherLoading ? 'Overujem...' : 'Uplatniť'}
+                        </Button>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }

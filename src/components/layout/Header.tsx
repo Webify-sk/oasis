@@ -8,12 +8,6 @@ import styles from './Header.module.css';
 import clsx from 'clsx';
 
 export function Header() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    const toggleMenu = () => {
-        setIsMenuOpen(!isMenuOpen);
-    };
-
     return (
         <header className={styles.header}>
             <div className={styles.container}>
@@ -31,32 +25,21 @@ export function Header() {
                     </Link>
                 </div>
 
-                {/* Hamburger Button (Mobile Only) */}
-                <button
-                    className={styles.hamburger}
-                    onClick={toggleMenu}
-                    aria-label="Toggle menu"
-                >
-                    {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-
-                {/* Navigation Links */}
-                <nav className={clsx(styles.nav, { [styles.navOpen]: isMenuOpen })}>
-                    <ul className={styles.navList}>
-                        <li><Link href="/#services" className={styles.navLink} onClick={() => setIsMenuOpen(false)}>Naše služby</Link></li>
-                        <li><Link href="/#trainers" className={styles.navLink} onClick={() => setIsMenuOpen(false)}>Tréneri</Link></li>
-                        <li><Link href="/#about" className={styles.navLink} onClick={() => setIsMenuOpen(false)}>O štúdiu</Link></li>
-                        <li><Link href="/#gallery" className={styles.navLink} onClick={() => setIsMenuOpen(false)}>Galéria</Link></li>
-                        <li><Link href="/#contact" className={styles.navLink} onClick={() => setIsMenuOpen(false)}>Kontakt</Link></li>
-                    </ul>
-                </nav>
-
-                {/* User Actions */}
-                <div className={styles.userActions}>
-                    <Link href="/dashboard/profile" className={styles.profileLink}>
-                        <User size={20} />
-                        <span className={styles.profileText}>Môj profil</span>
+                {/* Right Side Actions */}
+                <div className={styles.userActions} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {/* Return to Web CTA */}
+                    <Link href="/" style={{
+                        fontSize: '0.9rem',
+                        fontWeight: 500,
+                        color: '#5E715D',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        borderBottom: '1px solid transparent',
+                        transition: 'border-color 0.2s'
+                    }} className="hover:border-current">
+                        Návrat na web
                     </Link>
+
                 </div>
             </div>
         </header>

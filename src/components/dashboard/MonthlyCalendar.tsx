@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import styles from './Calendar.module.css';
@@ -80,6 +81,8 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
             today.getFullYear() === year;
     };
 
+    const [selectedEvent, setSelectedEvent] = useState<TrainingSession | null>(null);
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -109,6 +112,8 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                     key={i}
                                     className={`${styles.event} ${evt.isRegistered ? styles.registered : ''}`}
                                     title={`${evt.time} - ${evt.title} (${evt.trainer})${evt.isRegistered ? ' - ZAREGISTROVANÉ' : ''}`}
+                                    onClick={() => setSelectedEvent(evt)}
+                                    style={{ cursor: 'pointer' }}
                                 >
                                     <strong>{evt.time}</strong> {evt.title}
                                 </div>
@@ -117,6 +122,82 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                     );
                 })}
             </div>
+
+            {/* Simple Modal */}
+            {selectedEvent && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    backdropFilter: 'blur(4px)'
+                }} onClick={() => setSelectedEvent(null)}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '2rem',
+                        borderRadius: '16px',
+                        width: '90%',
+                        maxWidth: '400px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
+                        animation: 'fadeInUp 0.3s ease-out'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ fontFamily: 'serif', fontSize: '1.5rem', marginBottom: '0.5rem', color: '#8C7568' }}>
+                            {selectedEvent.title}
+                        </h3>
+                        <div style={{ marginBottom: '1.5rem', color: '#666' }}>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                🕒 <strong style={{ color: '#333' }}>{selectedEvent.time}</strong>
+                            </p>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                📅 {selectedEvent.date.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </p>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                👤 Tréner: <strong>{selectedEvent.trainer}</strong>
+                            </p>
+                        </div>
+
+                        {selectedEvent.isRegistered && (
+                            <div style={{ backgroundColor: '#ecfdf5', color: '#059669', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                ✅ Na tento tréning ste prihlásený.
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <button
+                                onClick={() => setSelectedEvent(null)}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid #ddd',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    color: '#666'
+                                }}
+                            >
+                                Zavrieť
+                            </button>
+                            <Link href="/dashboard/trainings">
+                                <button style={{
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: '#8C7568',
+                                    cursor: 'pointer',
+                                    color: 'white'
+                                }}>
+                                    Prejsť na rezervácie
+                                </button>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

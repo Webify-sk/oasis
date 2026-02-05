@@ -11,6 +11,25 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         return { success: false, message: 'Musíte byť prihlásený.' };
     }
 
+    // Check Verification (Skip for staff)
+    const { data: profileCheck } = await supabase
+        .from('profiles')
+        .select('email_verified, role')
+        .eq('id', user.id)
+        .single();
+
+    const isStaff = profileCheck?.role === 'employee' || profileCheck?.role === 'admin';
+    if (!isStaff && profileCheck?.email_verified === false) {
+        return { success: false, message: 'Pre prihlásenie na tréning musíte mať overený email.' };
+    }
+
+    // Check if training is in the past
+    const trainingDate = new Date(startTimeISO);
+    const now = new Date();
+    if (trainingDate < now) {
+        return { success: false, message: 'Na tento tréning sa už nedá prihlásiť (termín uplynul).' };
+    }
+
     // Check if training type exists and get capacity
     const { data: trainingType, error: typeError } = await supabase
         .from('training_types')
@@ -113,7 +132,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
             
             <p>Tešíme sa na teba!</p>
             <div style="text-align: center; margin-top: 20px;">
-                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
             </div>
             `
         );
@@ -136,50 +155,70 @@ export async function cancelBooking(bookingId: string) {
 
     if (!user) return { success: false, message: 'Musíte byť prihlásený.' };
 
-    const { error, count } = await supabase
+    // 1. Fetch booking details *before* deletion to get start_time
+    const { data: booking, error: fetchError } = await supabase
         .from('bookings')
-        .delete({ count: 'exact' })
+        .select('start_time, training_type:training_type_id(title)')
         .eq('id', bookingId)
-        .eq('user_id', user.id); // Security check to ensure own booking
+        .eq('user_id', user.id)
+        .single();
 
-    if (error) {
-        console.error('Cancel error:', error);
-        return { success: false, message: 'Chyba pri rušení rezervácie: ' + error.message };
-    }
-
-    if (count === 0) {
+    if (fetchError || !booking) {
         return { success: false, message: 'Rezervácia sa nenašla.' };
     }
 
-    // Refund credit
-    // Fetch current first to be safe or use increment RPC if available. 
-    // We will do select-update for now.
-    const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
-    if (profile) {
-        await supabase
-            .from('profiles')
-            .update({ credits: (profile.credits || 0) + 1 })
-            .eq('id', user.id);
+    // 2. Check 24h rule
+    const startTime = new Date(booking.start_time);
+    const now = new Date();
+    const diffMs = startTime.getTime() - now.getTime();
+    const hoursValues = diffMs / (1000 * 60 * 60);
+    const shouldRefund = hoursValues >= 24;
+
+    // 3. Delete booking
+    const { error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingId);
+
+    if (deleteError) {
+        console.error('Cancel error:', deleteError);
+        return { success: false, message: 'Chyba pri rušení rezervácie: ' + deleteError.message };
+    }
+
+    // 4. Refund credit if eligible
+    if (shouldRefund) {
+        const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
+        if (profile) {
+            await supabase
+                .from('profiles')
+                .update({ credits: (profile.credits || 0) + 1 })
+                .eq('id', user.id);
+        }
     }
 
     revalidatePath('/dashboard/trainings');
     revalidatePath('/admin/trainings');
 
-    // Send Cancellation Email
+    // 5. Send Cancellation Email
     try {
         const { sendEmail } = await import('@/utils/email');
         const { getEmailTemplate } = await import('@/utils/email-template');
+
+        const refundMessage = shouldRefund
+            ? 'a 1 vstup ti bol vrátený na účet.'
+            : 'ale keďže je to menej ako 24h pred tréningom, <strong>vstup nebol vrátený</strong>.';
 
         const html = getEmailTemplate(
             'Zrušenie rezervácie',
             `
             <h1 style="color: #d9534f; text-align: center;">Rezervácia zrušená</h1>
             <p>Ahoj,</p>
-            <p>tvoja rezervácia bola úspešne zrušená a 1 vstup ti bol vrátený na účet.</p>
+            <p>tvoja rezervácia na tréning <strong>${// @ts-ignore
+            booking.training_type?.title || 'Tréning'}</strong> bola zrušená ${refundMessage}</p>
             <p>Dúfame, že si čoskoro nájdeš iný termín.</p>
             
             <div style="text-align: center; margin-top: 20px;">
-                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}/dashboard/trainings" class="button">Rezervovať nový termín</a>
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Rezervovať nový termín</a>
             </div>
             `
         );
@@ -193,5 +232,8 @@ export async function cancelBooking(bookingId: string) {
         console.error('Failed to send cancellation email:', mailError);
     }
 
-    return { success: true, message: 'Rezervácia bola zrušená a vstup vrátený.' };
+    return {
+        success: true,
+        message: shouldRefund ? 'Rezervácia zrušená, vstup bol vrátený.' : 'Rezervácia zrušená (bez vrátenia kreditu, < 24h).'
+    };
 }

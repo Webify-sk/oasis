@@ -22,6 +22,7 @@ import { createClient } from '@/utils/supabase/server' // Note: This uses cookie
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { CREDIT_PACKAGES, PackageId } from '@/lib/constants/creditPackages'
 import { sendEmail } from '@/utils/email';
+import { generateVoucherPDF } from '@/utils/pdf-generator';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2024-12-18.acacia' as any,
@@ -88,14 +89,49 @@ export async function POST(req: Request) {
                     status: 'active'
                 });
 
+            // ... (inside voucher block)
             if (insertError) {
                 console.error('Error inserting voucher:', insertError);
                 return new NextResponse('Database Error', { status: 500 });
             }
 
+            // CREATE INVOICE FOR VOUCHER
+            const invNum = generateInvoiceNumber();
+            const { error: invoiceError } = await supabase.from('invoices').insert({
+                user_id: userId,
+                invoice_number: invNum,
+                description: `Nákup: Darčekový poukaz (${creditAmount} vstupov)`,
+                amount: (session.amount_total || 0) / 100,
+                currency: session.currency || 'eur',
+                stripe_payment_id: session.payment_intent as string,
+                status: 'paid'
+            });
+            if (invoiceError) console.error('Error creating invoice for voucher:', invoiceError);
+
             // Send Email (Voucher)
             // Need to import template helper inside the function or file
-            const { getEmailTemplate } = await import('@/utils/email-template'); // Lazy import if needed, or top level. Top level is cleaner if used multiple times but let's stick to consistent pattern.
+            const { getEmailTemplate } = await import('@/utils/email-template'); // Lazy import
+            // const { generateVoucherPDF } = await import('@/utils/pdf-generator'); // Removed dynamic import
+
+            // Generate PDF
+            let pdfBuffer: Buffer | undefined;
+            try {
+                // Ensure creditAmount is a valid number
+                const amount = parseInt(creditAmount);
+                if (isNaN(amount)) {
+                    console.error('Invalid credit amount for PDF:', creditAmount);
+                }
+
+                pdfBuffer = await generateVoucherPDF({
+                    code: code,
+                    amount: isNaN(amount) ? 0 : amount,
+                    sender: senderName || 'Neznámy odosielateľ',
+                    message: message || ''
+                });
+                console.log('PDF Generated Successfully inside webhook. Buffer length:', pdfBuffer.length);
+            } catch (pdfError) {
+                console.error('CRITICAL: Error generating PDF in webhook:', pdfError);
+            }
 
             const voucherHtml = getEmailTemplate(
                 `Dostal si darček od ${senderName}!`,
@@ -112,7 +148,7 @@ export async function POST(req: Request) {
                 ${message ? `<p style="font-style: italic; text-align: center; color: #666; margin-bottom: 30px;">"${message}"</p>` : ''}
 
                 <div style="text-align: center;">
-                    <a href="https://moja-zona.facilitytest.sk" class="button">Uplatniť voucher</a>
+                    <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}" class="button">Uplatniť voucher</a>
                 </div>
                 `,
                 `Tvoj kód voucheru: ${code}`
@@ -121,7 +157,11 @@ export async function POST(req: Request) {
             await sendEmail({
                 to: recipientEmail,
                 subject: `Dostal si darček od ${senderName}!`,
-                html: voucherHtml
+                html: voucherHtml,
+                attachments: pdfBuffer ? [{
+                    filename: `voucher-oasis-${code}.pdf`,
+                    content: pdfBuffer
+                }] : []
             });
 
             // Send Email (Confirmation to Buyer)
@@ -144,7 +184,11 @@ export async function POST(req: Request) {
                 await sendEmail({
                     to: session.customer_details.email, // or session.customer_email
                     subject: `Potvrdenie nákupu - Darčekový poukaz`,
-                    html: buyerHtml
+                    html: buyerHtml,
+                    attachments: pdfBuffer ? [{
+                        filename: `voucher-oasis-${code}.pdf`,
+                        content: pdfBuffer
+                    }] : []
                 });
             }
 
@@ -185,6 +229,19 @@ export async function POST(req: Request) {
                 return new NextResponse('Database Update Error', { status: 500 })
             }
 
+            // CREATE INVOICE FOR CREDITS
+            const invNum = generateInvoiceNumber();
+            const { error: invoiceError } = await supabase.from('invoices').insert({
+                user_id: userId,
+                invoice_number: invNum,
+                description: `Nákup: ${packageName || 'Kreditný balíček'}`,
+                amount: (session.amount_total || 0) / 100,
+                currency: session.currency || 'eur',
+                stripe_payment_id: session.payment_intent as string,
+                status: 'paid'
+            });
+            if (invoiceError) console.error('Error creating invoice for credits:', invoiceError);
+
             // 4. Send confirmation email
             const userEmail = session.customer_details?.email || session.customer_email || session.metadata?.userEmail;
             // const packageName = session.metadata?.packageName || 'Kreditný balíček'; // Already defined above
@@ -205,7 +262,7 @@ export async function POST(req: Request) {
 
                     <p>Tešíme sa na vašu návštevu v Oasis Lounge.</p>
                     <div style="text-align: center; margin-top: 20px;">
-                        <a href="https://moja-zona.facilitytest.sk/dashboard" class="button">Prejsť do aplikácie</a>
+                        <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard" class="button">Prejsť do aplikácie</a>
                     </div>
                     `
                 );
@@ -220,4 +277,13 @@ export async function POST(req: Request) {
     }
 
     return new NextResponse(null, { status: 200 })
+}
+
+function generateInvoiceNumber() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `FA-${year}${month}${day}-${random}`;
 }

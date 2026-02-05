@@ -1,0 +1,166 @@
+.container {
+    margin-bottom: 3rem;
+    animation: fadeIn 0.6s ease-out;
+    padding: 0 2rem;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #4A403A;
+    font-family: var(--font-serif, sans-serif);
+    /* Assuming a serif font var exists or falling back */
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.icon {
+    color: #5E715D;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+}
+
+.card {
+    background-color: #ffffff;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #5E715D;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    border-color: #5E715D;
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.cardContent {
+    flex: 1;
+    min-width: 0;
+    /* Prevents text overflow issues */
+}
+
+.trainingTitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1F2937;
+    margin: 0 0 0.5rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.detailRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.925rem;
+    color: #6B7280;
+}
+
+.timeHighlight {
+    color: #5E715D;
+    font-weight: 600;
+    background-color: #F3F8F3;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+}
+
+.levelBadge {
+    display: inline-flex;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    background-color: #F3F4F6;
+    color: #4B5563;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.cancelButton {
+    margin-left: 1rem;
+    color: #9CA3AF;
+    transition: all 0.2s;
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+
+.cancelButton:hover {
+    color: #DC2626;
+    background-color: #FEF2F2;
+    border-color: #FEE2E2;
+}
+
+.cancelButton:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 640px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+}

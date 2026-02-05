@@ -33,8 +33,19 @@ export async function upsertUser(prevState: any, formData: FormData) {
             return { message: 'Chyba pri ukladaní užívateľa: ' + error.message };
         }
 
+
     } catch (e) {
         return { message: 'Nastala neočakávaná chyba.' };
+    }
+
+    // Handle Employee Promotion
+    if (role === 'employee') {
+        // We need email. For existing users, it was passed via readOnly input.
+        const email = formData.get('email') as string;
+        if (email) {
+            const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
+            await promoteToEmployee(id, full_name, email);
+        }
     }
 
     revalidatePath('/admin/users');
@@ -107,9 +118,36 @@ export async function createUser(fromState: any, formData: FormData) {
             // But let's assume update is fine.
         }
 
+        // Handle Employee Promotion
+        if (role === 'employee') {
+            const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
+            await promoteToEmployee(user.id, full_name, email);
+        }
+
     } catch (e) {
         console.error(e);
         return { message: 'Nastala neočakávaná chyba.' };
+    }
+
+    // Handle Employee Promotion
+    if (role === 'employee') {
+        // In createUser, email is definitely in formData
+        const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
+        // We reuse the new user.id (which was fetched from auth creation) not just formData? 
+        // Wait, createUser uses `user.id` from auth response.
+        // We need to pass THAT id.
+        // But `createUser` function implementation:
+        // `step 1: const { data: { user } ... }`
+        // So we should capture `user.id` inside the try/catch or ensure it's available here.
+        // The snippet above is outside try/catch? No, previous implementation had try/catch wrapping everything.
+        // Let's look at the original file structure provided in context. 
+        // Ah, I need to be careful where I insert this.
+        // The previous `replace_file_content` was targeting `upsertUser` end block. 
+        // Now `createUser` is huge.
+        // I should target the end of `createUser` before redirect, but make sure `user` object is accessible or use `id` if available.
+        // Actually `createUser` returns early if error. 
+        // But `user` variable scope is inside `try`.
+        // I should put this logic INSIDE the `try` block after profile update.
     }
 
     revalidatePath('/admin/users');

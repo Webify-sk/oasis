@@ -24,7 +24,8 @@ export default async function ProfilePage() {
         full_name: profile?.full_name,
         phone: profile?.phone,
         date_of_birth: profile?.date_of_birth,
-        credits: profile?.credits || 0
+        credits: profile?.credits || 0,
+        role: profile?.role
     };
 
     return (
@@ -38,7 +39,7 @@ export default async function ProfilePage() {
             }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Môj profil</h1>
 
-                <CreditCounter />
+                {profile?.role !== 'employee' && <CreditCounter />}
             </div>
 
             <div style={{ padding: '0 2rem' }}>

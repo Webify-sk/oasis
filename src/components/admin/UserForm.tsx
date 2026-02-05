@@ -61,8 +61,8 @@ export function UserForm({ initialData }: UserFormProps) {
                     defaultValue={initialData?.email || ''}
                     icon={Mail}
                     required
-                    // Assuming we might not want to edit email easily if it's auth-linked, currently leaving it editable but it won't change auth email unless we add specific logic
-                    disabled={!!initialData?.id} // Disable email editing for existing users for now to avoid auth sync issues
+                    // Use readOnly so it is submitted in formData, allowing backend to access email for promotion logic
+                    readOnly={!!initialData?.id}
                 />
 
                 <Input
@@ -104,6 +104,7 @@ export function UserForm({ initialData }: UserFormProps) {
                                 }}
                             >
                                 <option value="user">User</option>
+                                <option value="employee">Employee</option>
                                 <option value="admin">Admin</option>
                             </select>
                         </div>

@@ -1,5 +1,5 @@
 export function getEmailTemplate(title: string, bodyContent: string, previewText: string = '') {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
     const logoUrl = `${baseUrl}/logo-new.png`;
 
     return `

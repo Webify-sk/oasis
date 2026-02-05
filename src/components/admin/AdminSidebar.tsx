@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { Users, Dumbbell, UserCheck, LogOut, Gift, Calendar } from 'lucide-react';
+import { Users, Dumbbell, UserCheck, LogOut, Gift, Calendar, List } from 'lucide-react';
 import { signOut } from '@/app/auth/actions';
 import styles from '@/components/dashboard/Sidebar.module.css'; // Reusing dashboard sidebar styles for consistency
 
@@ -13,10 +13,17 @@ const navItems = [
     { name: 'Tréneri', href: '/admin/trainers', icon: UserCheck },
     { name: 'Vouchery', href: '/admin/vouchers', icon: Gift },
     { name: 'Kalendár', href: '/admin/calendar', icon: Calendar },
+    { name: 'Kozmetika - Služby', href: '/admin/cosmetics/services', icon: List },
+    { name: 'Kozmetika - Staff', href: '/admin/cosmetics/staff', icon: Users },
 ];
+
+import { useUserRole } from '@/hooks/useUserRole';
+
+// ...
 
 export function AdminSidebar() {
     const pathname = usePathname();
+    const { role } = useUserRole();
 
     return (
         <aside className={styles.sidebar}>
@@ -25,7 +32,13 @@ export function AdminSidebar() {
                     Admin Panel
                 </div>
                 <ul className={styles.navList}>
-                    {navItems.map((item) => {
+                    {navItems.filter(item => {
+                        if (role === 'employee') {
+                            // Employees only see Cosmetics
+                            return item.href.startsWith('/admin/cosmetics');
+                        }
+                        return true;
+                    }).map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href;
                         return (

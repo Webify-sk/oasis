@@ -1,7 +1,10 @@
 import { InvoiceTable } from '@/components/dashboard/InvoiceTable';
 import { CreditCounter } from '@/components/dashboard/CreditCounter';
+import { getUserInvoices } from './actions';
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+    const invoices = await getUserInvoices();
+
     return (
         <div style={{ padding: '0rem' }}>
             <div style={{
@@ -17,7 +20,7 @@ export default function InvoicesPage() {
             </div>
 
             <div style={{ padding: '0 2rem' }}>
-                <InvoiceTable />
+                <InvoiceTable invoices={invoices} />
             </div>
         </div>
     );

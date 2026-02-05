@@ -37,45 +37,66 @@ export async function signup(formData: FormData) {
         }
     }
 
-    const { error } = await supabase.auth.signUp(data)
+    // 1. Sign Up
+    const { data: authData, error } = await supabase.auth.signUp(data)
 
     if (error) {
         console.error('Signup Error:', error)
         return { error: error.message }
     }
 
-    // Send Welcome Email
-    if (data.email) {
+    // 2. Soft Verification Setup
+    if (authData.user && authData.user.email) {
         try {
-            const { sendEmail } = await import('@/utils/email'); // Dynamic import to avoid circular dep if any
+            // Generate simple token (or use uuid if available, but random string is fine for this)
+            const token = crypto.randomUUID();
+
+            // Update Profile with Token
+            // We assume profile exists due to Trigger. If trigger is slow, this might fail or we might need a small delay/retry?
+            // Usually trigger is sync or very fast.
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    verification_token: token,
+                    email_verified: false
+                })
+                .eq('id', authData.user.id);
+
+            if (updateError) {
+                console.error('Failed to set verification token:', updateError);
+            }
+
+            // Send Verification Email
+            const { sendEmail } = await import('@/utils/email');
             const { getEmailTemplate } = await import('@/utils/email-template');
 
-            const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}`;
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
+            const verifyLink = `${baseUrl}/auth/verify-email?token=${token}`;
 
             const html = getEmailTemplate(
-                'Vitajte v Oasis Lounge!',
+                'Overenie emailu - Oasis Lounge',
                 `
                 <p>Dobrý deň,</p>
-                <p>s radosťou vás vítame v našej komunite. Vaša registrácia prebehla úspešne.</p>
-                <p>Teraz sa môžete prihlásiť a rezervovať si svoje prvé tréningy.</p>
+                <p>ďakujeme za registráciu v Oasis Lounge.</p>
+                <p>Pre plný prístup k rezerváciám a službám prosím potvrďte svoj email kliknutím na tlačidlo nižšie.</p>
                 
-                <div style="text-align: center;">
-                    <a href="${loginLink}" class="button">Prihlásiť sa</a>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${verifyLink}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Overiť email</a>
                 </div>
 
-                <p style="margin-top: 30px;">Tešíme sa na vašu návštevu!</p>
+                <p>Ak ste sa neregistrovali, tento email môžete ignorovať.</p>
                 <p>Tím Oasis Lounge</p>
                 `
             );
 
             await sendEmail({
-                to: data.email,
-                subject: 'Vitajte v Oasis Lounge!',
+                to: authData.user.email,
+                subject: 'Overenie emailu - Oasis Lounge',
                 html: html
             });
-        } catch (mailError) {
-            console.error('Failed to send welcome email:', mailError);
-            // Don't block flow
+
+        } catch (e) {
+            console.error('Error in verification flow:', e);
         }
     }
 
@@ -108,7 +129,8 @@ export async function resetPassword(email: string) {
     // Usually Supabase handles the magic link exchange on the client side if the link is clicked.
     // But for 'recovery' type, it logs the user in and they should be redirected to a page where they can set a new password.
     // Hardcoded production URL to ensure correct redirect to Client Page handling hash
-    const redirectTo = `https://moja-zona.facilitytest.sk/auth/reset-password`;
+    // Updated to live domain
+    const redirectTo = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/auth/reset-password`;
 
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
@@ -164,7 +186,7 @@ export async function sendPasswordChangedNotification(email: string) {
     try {
         const { sendEmail } = await import('@/utils/email');
         const { getEmailTemplate } = await import('@/utils/email-template');
-        const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://moja-zona.facilitytest.sk'}`;
+        const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}`;
 
         const html = getEmailTemplate(
             'Heslo bolo zmenené',

@@ -23,8 +23,8 @@ export default async function AdminLayout({
         .eq('id', user.id)
         .single();
 
-    if (profile?.role !== 'admin') {
-        redirect('/dashboard/trainings'); // Redirect non-admins to user dashboard
+    if (profile?.role !== 'admin' && profile?.role !== 'employee') {
+        redirect('/dashboard/trainings'); // Redirect non-admins/non-employees
     }
 
     return (

@@ -30,6 +30,11 @@ export async function sendEmail({
             attachments,
         });
         console.log('Message sent: %s', info.messageId);
+        if (attachments && attachments.length > 0) {
+            console.log(`Email sent with ${attachments.length} attachments`);
+        } else {
+            console.log('Email sent without attachments');
+        }
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('Error sending email:', error);
