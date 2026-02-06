@@ -113,9 +113,50 @@ export async function createUser(fromState: any, formData: FormData) {
 
         if (profileError) {
             console.error('Profile update error:', profileError);
-            // Non-critical? Or critical? User exists but profile empty.
-            // We can try valid insertion if update failed (e.g. trigger failed).
-            // But let's assume update is fine.
+        }
+
+        // 3. Send Verification Email (Soft Verification)
+        try {
+            const token = crypto.randomUUID();
+
+            await supabaseAdmin
+                .from('profiles')
+                .update({
+                    verification_token: token,
+                    email_verified: false
+                })
+                .eq('id', user.id);
+
+            const { sendEmail } = await import('@/utils/email');
+            const { getEmailTemplate } = await import('@/utils/email-template');
+
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
+            const verifyLink = `${baseUrl}/auth/verify-email?token=${token}`;
+
+            const html = getEmailTemplate(
+                'Overenie emailu - Oasis Lounge',
+                `
+                <p>Dobrý deň,</p>
+                <p>bol vám vytvorený nový účet v Oasis Lounge.</p>
+                <p>Pre plný prístup k rezerváciám a službám prosím potvrďte svoj email kliknutím na tlačidlo nižšie.</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${verifyLink}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Overiť email</a>
+                </div>
+
+                <p>Vaše prihlasovacie meno je tento email a heslo vám bolo nastavené administrátorom.</p>
+                <p>Tím Oasis Lounge</p>
+                `
+            );
+
+            await sendEmail({
+                to: email,
+                subject: 'Vitajte v Oasis Lounge - Overenie emailu',
+                html: html
+            });
+
+        } catch (mailError) {
+            console.error('Failed to send verification email:', mailError);
         }
 
         // Handle Employee Promotion
@@ -152,4 +193,23 @@ export async function createUser(fromState: any, formData: FormData) {
 
     revalidatePath('/admin/users');
     redirect('/admin/users');
+}
+
+export async function deleteUser(userId: string) {
+    const supabaseAdmin = createAdminClient();
+
+    try {
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+        if (error) {
+            console.error('Delete User Error:', error);
+            return { success: false, message: 'Nepodarilo sa vymazať užívateľa: ' + error.message };
+        }
+
+        revalidatePath('/admin/users');
+        return { success: true };
+    } catch (e) {
+        console.error('Delete User Exception:', e);
+        return { success: false, message: 'Nastala neočakávaná chyba.' };
+    }
 }

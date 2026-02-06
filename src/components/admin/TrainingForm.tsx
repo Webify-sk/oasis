@@ -2,7 +2,8 @@
 
 import { useState, useActionState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Plus, Trash2, Edit2, ChevronDown, Save } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Trash2, Edit2, ChevronDown, Save, ChevronLeft } from 'lucide-react';
 import { upsertTrainingType } from '@/app/admin/trainings/actions';
 import styles from './TrainingForm.module.css';
 
@@ -20,7 +21,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
     const defaultTerm = {
         id: Date.now(),
         day: 'Pondelok',
-        time: '18:00 - 19:00',
+        time: '18:00',
         trainer_id: trainers[0]?.id || '',
         active: true
     };
@@ -38,7 +39,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
         setTerms([...terms, {
             id: Date.now(),
             day: 'Pondelok',
-            time: '18:00 - 19:00',
+            time: '18:00',
             trainer_id: trainers[0]?.id || '',
             active: true
         }]);
@@ -58,17 +59,24 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
             {initialData?.id && <input type="hidden" name="id" value={initialData.id} />}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontFamily: 'serif', color: '#4A403A', margin: 0 }}>
-                    {initialData ? initialData.title : 'Nový tréning'}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <Link href="/admin/trainings" style={{ color: '#4A403A', display: 'flex', alignItems: 'center' }}>
+                        <ChevronLeft size={24} />
+                    </Link>
+                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'serif', color: '#4A403A', margin: 0 }}>
+                        {initialData ? initialData.title : 'Nový tréning'}
+                    </h2>
+                </div>
                 {/* Header Action could be here */}
             </div>
 
-            {state?.message && (
-                <div style={{ padding: '1rem', backgroundColor: '#fee2e2', color: '#dc2626', marginBottom: '1rem', borderRadius: '4px' }}>
-                    {state.message}
-                </div>
-            )}
+            {
+                state?.message && (
+                    <div style={{ padding: '1rem', backgroundColor: '#fee2e2', color: '#dc2626', marginBottom: '1rem', borderRadius: '4px' }}>
+                        {state.message}
+                    </div>
+                )
+            }
 
             <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '8px', border: '1px solid #E5E0DD' }}>
                 <h3 style={{ fontSize: '1.1rem', fontFamily: 'serif', color: '#4A403A', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -151,15 +159,27 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                                 <div>
                                     <label className={styles.label}>Deň</label>
-                                    <input
-                                        value={term.day}
-                                        onChange={(e) => updateTerm(term.id, 'day', e.target.value)}
-                                        className={styles.input}
-                                    />
+                                    <div className={styles.selectWrapper}>
+                                        <select
+                                            value={term.day}
+                                            onChange={(e) => updateTerm(term.id, 'day', e.target.value)}
+                                            className={`${styles.input} ${styles.select}`}
+                                        >
+                                            <option value="Pondelok">Pondelok</option>
+                                            <option value="Utorok">Utorok</option>
+                                            <option value="Streda">Streda</option>
+                                            <option value="Štvrtok">Štvrtok</option>
+                                            <option value="Piatok">Piatok</option>
+                                            <option value="Sobota">Sobota</option>
+                                            <option value="Nedeľa">Nedeľa</option>
+                                        </select>
+                                        <ChevronDown size={16} className={styles.selectIcon} />
+                                    </div>
 
-                                    <label className={styles.label}>Čas</label>
+                                    <label className={styles.label}>Čas začiatku</label>
                                     <input
-                                        value={term.time}
+                                        type="time"
+                                        value={term.time.replace(/ - .*/, '')} // Strip end time if exists for migration
                                         onChange={(e) => updateTerm(term.id, 'time', e.target.value)}
                                         className={styles.input}
                                     />

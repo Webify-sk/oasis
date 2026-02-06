@@ -18,7 +18,9 @@ export async function buyVoucher(formData: FormData) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
+    // Check user auth UNLESS isGuest is true
+    const isGuest = formData.get('isGuest') === 'true';
+    if (!user && !isGuest) {
         return { success: false, message: 'Musíte byť prihlásený.' };
     }
 
@@ -26,6 +28,17 @@ export async function buyVoucher(formData: FormData) {
     const recipientEmail = formData.get('recipientEmail') as string;
     const senderName = formData.get('senderName') as string;
     const message = formData.get('message') as string;
+
+    // Billing Data (Optional, but usually present)
+    const billingData = {
+        billing_name: formData.get('billing_name') as string,
+        billing_street: formData.get('billing_street') as string,
+        billing_city: formData.get('billing_city') as string,
+        billing_zip: formData.get('billing_zip') as string,
+        billing_country: formData.get('billing_country') as string,
+        customer_email: formData.get('customer_email') as string, // Crucial for guests
+        full_name: formData.get('full_name') as string
+    };
 
     // 1. Fetch Product
     const { data: product, error: productError } = await supabase
@@ -45,7 +58,8 @@ export async function buyVoucher(formData: FormData) {
         product.credit_amount,
         recipientEmail,
         senderName,
-        message
+        message,
+        billingData // NEW: Pass billing data
     );
 
     if (sessionRes?.error) {
@@ -90,4 +104,92 @@ export async function createVoucherProduct(formData: FormData) {
     }
 
     return { success: true, message: 'Produkt vytvorený.' };
+}
+
+export async function checkVoucher(code: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Basic Auth Check
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    // Check role
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['admin', 'employee'].includes(profile?.role)) {
+        return { success: false, message: 'Unauthorized access' };
+    }
+
+    const { data: voucher, error: codeError } = await supabase
+        .from('vouchers') // Correct table name
+        .select(`
+            *,
+            voucher_products (
+                title,
+                category,
+                price
+            )
+        `)
+        .eq('code', code)
+        .single();
+
+    if (codeError || !voucher) {
+        return { success: false, message: 'Voucher s týmto kódom neexistuje.' };
+    }
+
+    // Map status from DB to frontend boolean
+    const isRedeemed = voucher.status === 'redeemed';
+
+    // Return safe details
+    return {
+        success: true,
+        data: {
+            code: voucher.code,
+            is_redeemed: isRedeemed,
+            redeemed_at: voucher.updated_at,
+            product: voucher.voucher_products,
+            created_at: voucher.created_at
+        }
+    };
+}
+
+export async function redeemBeautyVoucher(code: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    // Check role
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['admin', 'employee'].includes(profile?.role)) {
+        return { success: false, message: 'Unauthorized access' };
+    }
+
+    // 1. Check current status
+    const { data: voucher, error: codeError } = await supabase
+        .from('vouchers')
+        .select('*')
+        .eq('code', code)
+        .single();
+
+    if (codeError || !voucher) {
+        return { success: false, message: 'Voucher neexistuje.' };
+    }
+
+    if (voucher.status === 'redeemed') {
+        return { success: false, message: 'Voucher už bol použitý.' };
+    }
+
+    // 2. Mark as redeemed
+    const { error: updateError } = await supabase
+        .from('vouchers')
+        .update({
+            status: 'redeemed'
+        })
+        .eq('id', voucher.id);
+
+    if (updateError) {
+        return { success: false, message: 'Chyba pri aktualizácii statusu.' };
+    }
+
+    return { success: true, message: 'Voucher bol úspešne uplatnený.' };
 }

@@ -28,17 +28,19 @@ export function Header() {
                 {/* Right Side Actions */}
                 <div className={styles.userActions} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     {/* Return to Web CTA */}
-                    <Link href="/" style={{
+                    {/* Return to Web CTA */}
+                    <a href="https://oasislounge.sk/" style={{
                         fontSize: '0.9rem',
                         fontWeight: 500,
                         color: '#5E715D',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         borderBottom: '1px solid transparent',
-                        transition: 'border-color 0.2s'
+                        transition: 'border-color 0.2s',
+                        textDecoration: 'none'
                     }} className="hover:border-current">
                         Návrat na web
-                    </Link>
+                    </a>
 
                 </div>
             </div>

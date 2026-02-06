@@ -7,69 +7,80 @@ import { redirect } from 'next/navigation';
 export async function upsertTrainer(prevState: any, formData: FormData) {
     const supabase = await createClient();
 
-    const id = formData.get('id') as string;
-    const full_name = formData.get('full_name') as string;
-    const specialtiesString = formData.get('specialties') as string; // Comma separated
-    const bio = formData.get('bio') as string;
-    const email = formData.get('email') as string;
-    const phone = formData.get('phone') as string;
-    const photo = formData.get('photo') as File;
+    try {
+        const id = formData.get('id') as string;
+        const full_name = formData.get('full_name') as string;
+        const specialtiesString = formData.get('specialties') as string; // Comma separated
+        const bio = formData.get('bio') as string;
+        const email = formData.get('email') as string;
+        const phone = formData.get('phone') as string;
+        const photo = formData.get('photo') as File;
 
-    const specialties = specialtiesString.split(',').map(s => s.trim()).filter(Boolean);
+        const specialties = specialtiesString ? specialtiesString.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-    let avatar_url = undefined;
+        let avatar_url = undefined;
 
-    // Handle Photo Upload
-    if (photo && photo.size > 0) {
-        // Unique filename or overwrite id-based
-        // Using timestamp to avoid caching issues on update
-        const filename = `${Date.now()}_${photo.name.replace(/\s+/g, '-')}`;
+        // Handle Photo Upload
+        if (photo && photo.size > 0) {
+            // Unique filename or overwrite id-based
+            // Using timestamp to avoid caching issues on update
+            const filename = `${Date.now()}_${photo.name.replace(/\s+/g, '-')}`;
 
-        const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filename, photo, {
-                upsert: true
-            });
+            // Ensure filename is safe
+            const safeFilename = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
 
-        if (uploadError) {
-            return { message: 'Error uploading photo: ' + uploadError.message };
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(safeFilename, photo, {
+                    upsert: true
+                });
+
+            if (uploadError) {
+                console.error('Upload Error:', uploadError);
+                return { message: 'Error uploading photo: ' + uploadError.message };
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(safeFilename);
+
+            avatar_url = publicUrl;
         }
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filename);
+        const data: any = {
+            full_name,
+            specialties,
+            bio,
+        };
 
-        avatar_url = publicUrl;
-    }
+        // Only update avatar_url if a new one was uploaded
+        if (avatar_url) {
+            data.avatar_url = avatar_url;
+        }
 
-    const data: any = {
-        full_name,
-        specialties,
-        bio,
-    };
+        let error;
 
-    // Only update avatar_url if a new one was uploaded
-    if (avatar_url) {
-        data.avatar_url = avatar_url;
-    }
+        if (id) {
+            const { error: updateError } = await supabase
+                .from('trainers')
+                .update(data)
+                .eq('id', id);
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabase
+                .from('trainers')
+                .insert(data);
+            error = insertError;
+        }
 
-    let error;
+        if (error) {
+            console.error('DB Error:', error);
+            return { message: 'Error saving trainer: ' + error.message };
+        }
 
-    if (id) {
-        const { error: updateError } = await supabase
-            .from('trainers')
-            .update(data)
-            .eq('id', id);
-        error = updateError;
-    } else {
-        const { error: insertError } = await supabase
-            .from('trainers')
-            .insert(data);
-        error = insertError;
-    }
-
-    if (error) {
-        return { message: 'Error saving trainer: ' + error.message };
+    } catch (e) {
+        console.error('Unexpected Error:', e);
+        return { message: 'Nastala neočakávaná chyba: ' + (e as Error).message };
     }
 
     revalidatePath('/admin/trainers');

@@ -10,7 +10,7 @@ export default async function AvailabilityPage({ params }: { params: Promise<{ i
     return (
         <div>
             <Link
-                href="/dashboard/cosmetics/staff"
+                href="/admin/cosmetics/staff"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: '#666', textDecoration: 'none' }}
             >
                 <ArrowLeft size={18} />

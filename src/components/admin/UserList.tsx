@@ -51,7 +51,7 @@ export function UserList({ users }: { users: Profile[] }) {
                         <th className={styles.th}>Telefón</th>
                         <th className={styles.th}>Rola</th>
                         <th className={styles.th}>Vstupy</th>
-                        <th className={styles.th} style={{ width: '80px', textAlign: 'center' }}>Akcie</th>
+                        <th className={styles.th} style={{ width: '120px', textAlign: 'center' }}>Akcie</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -76,8 +76,24 @@ export function UserList({ users }: { users: Profile[] }) {
                             <td className={styles.td} style={{ textAlign: 'center' }}>
                                 <div className={styles.actions} style={{ justifyContent: 'center' }}>
                                     <Link href={`/admin/users/${user.id}`} style={{ textDecoration: 'none' }} title="Zobraziť detail">
-                                        <Button className={styles.detailButton} size="sm" style={{ padding: '0.4rem', height: 'auto', minWidth: 'auto' }}>
-                                            <Eye size={18} />
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            style={{
+                                                fontSize: '0.75rem',
+                                                height: '32px',
+                                                backgroundColor: 'transparent',
+                                                border: '1px solid #E5E7EB',
+                                                color: '#4B5563',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                boxShadow: 'none',
+                                                padding: '0 0.75rem'
+                                            }}
+                                        >
+                                            <Eye size={14} />
+                                            Detail
                                         </Button>
                                     </Link>
                                     {/* 

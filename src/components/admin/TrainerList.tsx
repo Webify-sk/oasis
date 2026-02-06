@@ -48,11 +48,8 @@ export function TrainerList({ trainers }: { trainers: Trainer[] }) {
                                                 boxShadow: 'none'
                                             }}
                                         >
-                                            <Trash2 size={14} style={{ display: 'none' }} /> {/* Wrong icon import fallback prevention if needed */}
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                {/* I need to import Eye first, currently only Trash2 is imported */}
-                                                Zobraziť detail
-                                            </span>
+                                            <Eye size={14} />
+                                            Detail
                                         </Button>
                                     </Link>
                                     <Button variant="primary" size="sm" style={{ backgroundColor: '#8C4848', height: '32px', padding: '0 0.5rem' }}>

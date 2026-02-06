@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, X, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { createCosmeticService, updateCosmeticService, deleteCosmeticService } from '@/actions/cosmetic-actions';
+import { Plus, Edit2, Trash2, Clock, CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import { deleteCosmeticService } from '@/actions/cosmetic-actions';
 import styles from '@/app/dashboard/cosmetics/cosmetics.module.css';
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button'; // Assuming we want standard buttons here too
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Service {
     id: string;
@@ -14,35 +17,9 @@ interface Service {
     is_active: boolean;
 }
 
-import { useUserRole } from '@/hooks/useUserRole';
-
-// ...
-
 export function ServiceManager({ initialServices }: { initialServices: Service[] }) {
     const { role } = useUserRole();
     const [services, setServices] = useState<Service[]>(initialServices);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingService, setEditingService] = useState<Service | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    // ... handlers ...
-
-    const handleCreate = async (formData: FormData) => {
-        setLoading(true);
-        await createCosmeticService(formData);
-        setLoading(false);
-        setIsModalOpen(false);
-        window.location.reload();
-    };
-
-    const handleUpdate = async (formData: FormData) => {
-        if (!editingService) return;
-        setLoading(true);
-        await updateCosmeticService(editingService.id, formData);
-        setLoading(false);
-        setEditingService(null);
-        window.location.reload();
-    };
 
     const handleDelete = async (id: string) => {
         if (confirm('Naozaj chcete vymazať túto službu?')) {
@@ -51,28 +28,17 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
         }
     };
 
-    const openCreateModal = () => {
-        setEditingService(null);
-        setIsModalOpen(true);
-    };
-
-    const openEditModal = (service: Service) => {
-        setEditingService(service);
-        setIsModalOpen(true);
-    };
-
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: '500', color: '#333' }}>Zoznam služieb ({services.length})</h2>
                 {role === 'admin' && (
-                    <button
-                        onClick={openCreateModal}
-                        className={styles.primaryButton}
-                    >
-                        <Plus size={18} />
-                        Pridať službu
-                    </button>
+                    <Link href="/admin/cosmetics/services/new">
+                        <button className={styles.primaryButton}>
+                            <Plus size={18} />
+                            Pridať službu
+                        </button>
+                    </Link>
                 )}
             </div>
 
@@ -115,20 +81,44 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
                                 </span>
                                 {role === 'admin' && (
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button
-                                            onClick={() => openEditModal(service)}
-                                            className={`${styles.actionButton} ${styles.editBtn}`}
-                                            title="Upraviť"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button
+                                        <Link href={`/admin/cosmetics/services/${service.id}`} style={{ textDecoration: 'none' }}>
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                style={{
+                                                    fontSize: '0.75rem',
+                                                    height: '32px',
+                                                    backgroundColor: 'transparent',
+                                                    border: '1px solid #E5E7EB',
+                                                    color: '#4B5563',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    boxShadow: 'none',
+                                                    padding: '0 0.8rem'
+                                                }}
+                                            >
+                                                <Eye size={14} />
+                                                Detail
+                                            </Button>
+                                        </Link>
+                                        <Button
                                             onClick={() => handleDelete(service.id)}
-                                            className={`${styles.actionButton} ${styles.deleteBtn}`}
+                                            variant="primary"
+                                            size="sm"
+                                            style={{
+                                                backgroundColor: '#8C4848',
+                                                height: '32px',
+                                                width: '32px',
+                                                padding: 0,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
                                             title="Vymazať"
                                         >
                                             <Trash2 size={16} />
-                                        </button>
+                                        </Button>
                                     </div>
                                 )}
                             </div>
@@ -136,99 +126,6 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
                     </div>
                 ))}
             </div>
-
-            {/* Modal */}
-            {(isModalOpen || editingService) && role === 'admin' && (
-                <div className={styles.modalOverlay} onClick={() => { setIsModalOpen(false); setEditingService(null); }}>
-                    <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-                        <button
-                            onClick={() => { setIsModalOpen(false); setEditingService(null); }}
-                            style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '0.5rem' }}
-                        >
-                            <X size={24} />
-                        </button>
-
-                        <h2 style={{ marginTop: 0, marginBottom: '2rem', fontFamily: 'var(--font-heading, serif)', fontSize: '1.8rem', color: '#2c3e50' }}>
-                            {editingService ? 'Upraviť službu' : 'Nová služba'}
-                        </h2>
-
-                        <form action={editingService ? handleUpdate : handleCreate}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Názov služby</label>
-                                <input
-                                    name="title"
-                                    defaultValue={editingService?.title}
-                                    required
-                                    className={styles.input}
-                                    placeholder="napr. Masáž tváre"
-                                />
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Popis</label>
-                                <textarea
-                                    name="description"
-                                    defaultValue={editingService?.description || ''}
-                                    className={styles.textarea}
-                                    rows={3}
-                                    placeholder="Krátky popis procedúry..."
-                                />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <label className={styles.label}>Trvanie (min)</label>
-                                    <input
-                                        type="number"
-                                        name="duration_minutes"
-                                        defaultValue={editingService?.duration_minutes}
-                                        required
-                                        min="5"
-                                        step="5"
-                                        className={styles.input}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={styles.label}>Cena (€)</label>
-                                    <input
-                                        type="number"
-                                        name="price"
-                                        defaultValue={editingService?.price}
-                                        required
-                                        min="0"
-                                        step="0.01"
-                                        className={styles.input}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '1rem', border: '1px solid #f0f0f0', borderRadius: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        name="is_active"
-                                        id="is_active"
-                                        defaultChecked={editingService ? editingService.is_active : true}
-                                        style={{ width: '1.2rem', height: '1.2rem', accentColor: '#5E715D' }}
-                                    />
-                                    <label htmlFor="is_active" style={{ cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500 }}>
-                                        Aktívna (zobrazovať v ponuke)
-                                    </label>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className={styles.primaryButton}
-                                style={{ width: '100%', justifyContent: 'center', marginTop: '1rem', padding: '1rem' }}
-                            >
-                                {loading ? 'Ukladám...' : (editingService ? 'Uložiť zmeny' : 'Vytvoriť službu')}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

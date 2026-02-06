@@ -62,6 +62,30 @@ export async function redeemVoucher(code: string) {
         return { success: false, message: 'Musíte byť prihlásený.' }
     }
 
+    // 1. Check Voucher Category BEFORE attempting redemption
+    const { data: voucherCode, error: codeError } = await supabase
+        .from('vouchers')
+        .select('product_id')
+        .eq('code', code)
+        .single();
+
+    // If code exists, check category
+    if (voucherCode) {
+        const { data: product, error: productError } = await supabase
+            .from('voucher_products')
+            .select('category')
+            .eq('id', voucherCode.product_id)
+            .single();
+
+        if (product && product.category === 'Beauty') {
+            return {
+                success: false,
+                message: 'Tento voucher je na Beauty služby. Uplatnite ho prosím priamo na recepcii.'
+            };
+        }
+    }
+
+    // 2. Proceed with RPC (it will handle invalid codes or other errors)
     const { data, error } = await supabase.rpc('redeem_voucher', {
         code_input: code
     })

@@ -9,6 +9,8 @@ export function VoucherProductManager() {
     const [isPending, setIsPending] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+    const [selectedCategory, setSelectedCategory] = useState<string>('Training');
+
     async function handleSubmit(formData: FormData) {
         setIsPending(true);
         setMessage(null);
@@ -57,11 +59,16 @@ export function VoucherProductManager() {
                             <Tag size={12} />
                             Kategória
                         </label>
-                        <input
+                        <select
                             name="category"
-                            defaultValue="Gift"
+                            defaultValue="Training"
                             className={styles.input}
-                        />
+                            style={{ height: '42px', backgroundColor: 'white' }}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                        >
+                            <option value="Training">Tréningy</option>
+                            <option value="Beauty">Beauty</option>
+                        </select>
                     </div>
 
                     {/* Price */}
@@ -80,20 +87,24 @@ export function VoucherProductManager() {
                         />
                     </div>
 
-                    {/* Credits */}
-                    <div>
-                        <label className={styles.label}>
-                            <CreditCard size={12} />
-                            Počet Vstupov
-                        </label>
-                        <input
-                            name="credits"
-                            type="number"
-                            required
-                            className={styles.input}
-                            placeholder="0"
-                        />
-                    </div>
+                    {/* Credits - Only for Training */}
+                    {selectedCategory === 'Training' ? (
+                        <div>
+                            <label className={styles.label}>
+                                <CreditCard size={12} />
+                                Počet Vstupov
+                            </label>
+                            <input
+                                name="credits"
+                                type="number"
+                                required
+                                className={styles.input}
+                                placeholder="0"
+                            />
+                        </div>
+                    ) : (
+                        <input type="hidden" name="credits" value="0" />
+                    )}
 
                     {/* Description */}
                     <div className={styles.fullWidth}>

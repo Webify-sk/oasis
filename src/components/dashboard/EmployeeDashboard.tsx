@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 // import { Modal } from '@/components/ui/Modal'; // Using inline for robustness
 import { updateAppointmentStatus, rescheduleAppointment } from '@/actions/cosmetic-actions';
 import { useRouter } from 'next/navigation';
+import { VoucherCheck } from './VoucherCheck';
 
 interface Appointment {
     id: string;
@@ -171,7 +172,7 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                         transition: 'all 0.2s', color: '#444'
                                     }}>
                                         <div style={{ background: '#f5f5f5', padding: '0.5rem', borderRadius: '6px' }}><Settings size={18} color="#5E715D" /></div>
-                                        <span style={{ fontWeight: 500 }}>Spravovať služby</span>
+                                        <span style={{ fontWeight: 500 }}>Moje služby</span>
                                     </button>
                                 </Link>
                                 <Link href="/dashboard/cosmetics/availability" style={{ textDecoration: 'none' }}>
@@ -186,6 +187,9 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                 </Link>
                             </div>
                         </div>
+
+                        {/* Voucher Check Tool */}
+                        <VoucherCheck />
 
                     </div>
                 </div>
@@ -296,8 +300,8 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
             {/* Style */}
             <style jsx>{`
                 @media (min-width: 1024px) {
-                    .lg-col-span-8 { grid-column: span 8 !important; }
-                    .lg-col-span-4 { grid-column: span 4 !important; }
+                    .lg-col-span-8 { grid-column: span 7 !important; }
+                    .lg-col-span-4 { grid-column: span 5 !important; }
                 }
             `}</style>
 

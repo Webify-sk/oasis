@@ -88,18 +88,53 @@ export async function createVoucherCheckoutSession(
     credits: number,
     recipientEmail: string,
     senderName: string,
-    message: string
+    message: string,
+    billingData?: {
+        billing_name?: string;
+        billing_street?: string;
+        billing_city?: string;
+        billing_zip?: string;
+        billing_country?: string;
+        customer_email?: string;
+        full_name?: string;
+    }
 ) {
     const supabase = await createClient()
     try {
         const { data: { user } } = await supabase.auth.getUser()
 
-        // Vouchers can be bought by anonymous users? Ideally yes, but our system requires auth for now.
-        if (!user) {
-            redirect('/login')
-        }
+        // Allow guest checkout (user can be null)
 
         const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+        // Determine customer email: Logged in user's email OR billing email provided in form (need to pass this!)
+        // Prioritize explicit customer_email from form for guests
+        const customerEmail = billingData?.customer_email || user?.email;
+
+        // Prepare Metadata
+        // We put billing info into metadata so webhook can read it
+        const metadata: any = {
+            userId: user?.id || 'guest', // Mark as guest if no user
+            userEmail: user?.email || '',
+            type: 'voucher',
+            productId: productId,
+            creditAmount: credits,
+            recipientEmail: recipientEmail,
+            senderName: senderName,
+            message: message,
+            isGuest: user ? 'false' : 'true'
+        };
+
+        // Add billing fields to metadata if present
+        if (billingData) {
+            metadata.billing_name = billingData.billing_name || billingData.full_name || '';
+            metadata.billing_street = billingData.billing_street || '';
+            metadata.billing_city = billingData.billing_city || '';
+            metadata.billing_zip = billingData.billing_zip || '';
+            metadata.billing_country = billingData.billing_country || '';
+            // We don't necessarily need customer_email in metadata if it's already on customer object, but safer to have it
+            if (billingData.customer_email) metadata.customer_email = billingData.customer_email;
+        }
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -117,19 +152,10 @@ export async function createVoucherCheckoutSession(
                 },
             ],
             mode: 'payment',
-            success_url: `${origin}/dashboard/gift-vouchers?success=true`,
+            success_url: `${origin}/dashboard/gift-vouchers?success=true`, // We might want a different success URL for guests later
             cancel_url: `${origin}/dashboard/gift-vouchers?canceled=true`,
-            customer_email: user.email,
-            metadata: {
-                userId: user.id,
-                userEmail: user.email || '',
-                type: 'voucher',
-                productId: productId,
-                creditAmount: credits,
-                recipientEmail: recipientEmail,
-                senderName: senderName,
-                message: message
-            }
+            customer_email: customerEmail, // If null, Stripe asks for it
+            metadata: metadata
         })
 
         if (session.url) {

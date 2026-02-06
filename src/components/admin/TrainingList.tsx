@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit2, Trash2, Calendar } from 'lucide-react';
+import { Edit2, Trash2, Calendar, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { deleteTrainingType } from '@/app/admin/trainings/actions';
@@ -86,41 +86,47 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => toggleExpand(training.id)}
+                                style={{ height: '32px' }}
                             >
                                 {expandedId === training.id ? 'Skryť termíny' : 'Zobraziť termíny'}
                             </Button>
 
-                            <Link href={`/admin/trainings/${training.id}`} style={{
-                                padding: '0.5rem 1rem',
-                                border: '1px solid #E5E0DD',
-                                borderRadius: '4px',
-                                color: '#4A403A',
-                                display: 'flex',
-                                alignItems: 'center',
-                                textDecoration: 'none',
-                                fontSize: '0.85rem'
-                            }}>
-                                <Edit2 size={16} style={{ marginRight: '0.5rem' }} />
-                                Upraviť
+                            <Link href={`/admin/trainings/${training.id}`} style={{ textDecoration: 'none' }}>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        height: '32px',
+                                        borderColor: '#E5E0DD',
+                                        color: '#4A403A'
+                                    }}
+                                >
+                                    <Eye size={16} />
+                                    Detail
+                                </Button>
                             </Link>
 
-                            <button
+                            <Button
                                 onClick={() => setDeletingId(training.id)}
+                                variant="secondary"
+                                size="sm"
                                 style={{
-                                    padding: '0.5rem',
-                                    border: '1px solid #fee2e2',
+                                    height: '32px',
+                                    width: '32px',
+                                    padding: 0,
+                                    borderColor: '#fee2e2',
                                     backgroundColor: '#fef2f2',
-                                    borderRadius: '4px',
                                     color: '#991b1b',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    justifyContent: 'center'
                                 }}
                             >
                                 <Trash2 size={16} />
-                            </button>
+                            </Button>
                         </div>
                     </div>
 

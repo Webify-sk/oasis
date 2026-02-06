@@ -4,15 +4,27 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { createUser } from '../actions';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
 export default function NewUserPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
 
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
     const handleSubmit = async (formData: FormData) => {
         setIsLoading(true);
         setMessage(null);
+
+        const password = formData.get('password') as string;
+        const confirmPassword = formData.get('confirmPassword') as string;
+
+        if (password !== confirmPassword) {
+            setMessage('Heslá sa nezhodujú.');
+            setIsLoading(false);
+            return;
+        }
 
         const res = await createUser(null, formData);
 
@@ -62,16 +74,45 @@ export default function NewUserPage() {
                                     style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px' }}
                                 />
                             </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#666' }}>Heslo *</label>
-                                <input
-                                    name="password"
-                                    type="password"
-                                    required
-                                    placeholder="Min. 6 znakov"
-                                    minLength={6}
-                                    style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px' }}
-                                />
+
+                            {/* Password Fields Wrapper */}
+                            <div style={{ display: 'grid', gridColumn: 'span 2', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#666' }}>Heslo *</label>
+                                    <input
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        required
+                                        placeholder="Min. 6 znakov"
+                                        minLength={6}
+                                        style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{ position: 'absolute', right: '10px', top: '35px', background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+
+                                <div style={{ position: 'relative' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#666' }}>Potvrdenie hesla *</label>
+                                    <input
+                                        name="confirmPassword"
+                                        type={showConfirm ? "text" : "password"}
+                                        required
+                                        placeholder="Zopakujte heslo"
+                                        style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirm(!showConfirm)}
+                                        style={{ position: 'absolute', right: '10px', top: '35px', background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}
+                                    >
+                                        {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ paddingBottom: '2rem', borderBottom: '1px solid #eee', gridColumn: 'span 2', marginTop: '1rem' }}>

@@ -81,7 +81,7 @@ export async function POST(req: Request) {
                 .insert({
                     code: code,
                     product_id: productId,
-                    purchaser_id: userId,
+                    purchaser_id: userId === 'guest' ? null : userId, // Handle guest
                     recipient_email: recipientEmail,
                     sender_name: senderName,
                     message: message,
@@ -89,7 +89,6 @@ export async function POST(req: Request) {
                     status: 'active'
                 });
 
-            // ... (inside voucher block)
             if (insertError) {
                 console.error('Error inserting voucher:', insertError);
                 return new NextResponse('Database Error', { status: 500 });
@@ -97,14 +96,38 @@ export async function POST(req: Request) {
 
             // CREATE INVOICE FOR VOUCHER
             const invNum = generateInvoiceNumber();
+
+            // Extract billing details from metadata (passed in Guest Form) or session customer_details
+            // We need to ensure these are passed in metadata or we fallback to something?
+            // In GuestVoucherForm we didn't pass exact billing columns to metadata yet!
+            // WAIT. createVoucherCheckoutSession needs to put them in metadata!
+            // I need to update createVoucherCheckoutSession first/as well to pass these billing fields into metadata.
+            // But let's assume they are in metadata for now and I will update stripe.ts next.
+
+            const billingData = {
+                billing_name: session.metadata?.billing_name || session.customer_details?.name,
+                billing_address: session.metadata?.billing_street || session.customer_details?.address?.line1,
+                billing_city: session.metadata?.billing_city || session.customer_details?.address?.city,
+                billing_zip: session.metadata?.billing_zip || session.customer_details?.address?.postal_code,
+                billing_country: session.metadata?.billing_country || session.customer_details?.address?.country || 'Slovensko',
+                customer_email: session.customer_details?.email // Important for guest
+            };
+
             const { error: invoiceError } = await supabase.from('invoices').insert({
-                user_id: userId,
+                user_id: userId === 'guest' ? null : userId,
                 invoice_number: invNum,
                 description: `Nákup: Darčekový poukaz (${creditAmount} vstupov)`,
                 amount: (session.amount_total || 0) / 100,
                 currency: session.currency || 'eur',
                 stripe_payment_id: session.payment_intent as string,
-                status: 'paid'
+                status: 'paid',
+                // New Billing Columns
+                billing_name: billingData.billing_name,
+                billing_address: billingData.billing_address,
+                billing_city: billingData.billing_city,
+                billing_zip: billingData.billing_zip,
+                billing_country: billingData.billing_country,
+                customer_email: billingData.customer_email
             });
             if (invoiceError) console.error('Error creating invoice for voucher:', invoiceError);
 

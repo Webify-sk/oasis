@@ -24,7 +24,12 @@ export default async function AdminUsersPage() {
                 marginBottom: '2rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Užívatelia</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    Užívatelia
+                    <span style={{ fontSize: '1.2rem', backgroundColor: '#f3f4f6', padding: '0.2rem 0.8rem', borderRadius: '999px', color: '#6b7280', fontFamily: 'var(--font-geist-sans)' }}>
+                        {users?.length || 0}
+                    </span>
+                </h1>
 
                 <Link
                     href="/admin/users/new"
