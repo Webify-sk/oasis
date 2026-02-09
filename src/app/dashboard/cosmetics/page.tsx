@@ -133,17 +133,7 @@ export default async function CosmeticsPage() {
                         </div>
                     )}
 
-                    <div style={{ marginTop: '4rem', textAlign: 'center' }}>
-                        <Link href="/dashboard/cosmetics/book">
-                            <Button variant="outline" style={{ padding: '1rem 2rem', fontSize: '1rem', borderRadius: '50px', borderColor: '#ccc', color: '#666' }}>
-                                <Zap size={18} style={{ marginRight: '0.5rem' }} />
-                                Vlastná rezervácia (Custom)
-                            </Button>
-                        </Link>
-                        <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
-                            Neviete si vybrať? Skúste konfigurátor.
-                        </p>
-                    </div>
+
                 </div>
             )}
         </div>

@@ -112,13 +112,13 @@ export function WeeklyScheduler({ initialAppointments, employees }: WeeklySchedu
                 </div>
 
                 {/* Days Columns */}
-                <div style={{ flex: 1, display: 'flex', minWidth: '800px' }}>
+                <div style={{ flex: 1, display: 'flex', minWidth: '100%' }}>
                     {weekDays.map(day => {
                         const isToday = isSameDay(day, new Date());
                         const dayEvents = appointments.filter(app => isSameDay(new Date(app.start_time), day) && app.status !== 'cancelled');
 
                         return (
-                            <div key={day.toISOString()} style={{ flex: 1, borderRight: '1px solid #eee', minWidth: '120px' }}>
+                            <div key={day.toISOString()} style={{ flex: 1, borderRight: '1px solid #eee', minWidth: '100px' }}>
                                 {/* Day Header */}
                                 <div style={{
                                     height: '50px',

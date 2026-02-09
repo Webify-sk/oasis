@@ -153,6 +153,32 @@ export function AvailabilityManager({
 
     const handleAddException = async () => {
         if (!newExceptionDate) return;
+
+        // Conflict Check (Only if setting unavailable)
+        if (!isExceptionAvailable) {
+            const { checkConflictingAppointments } = await import('@/actions/cosmetic-actions');
+            const conflicts = await checkConflictingAppointments(
+                employeeId,
+                newExceptionDate,
+                undefined, // Assuming full day off for now in UI flow simplicity or user needs to specify?
+                // The UI has start/end inputs but they are hidden if !isExceptionAvailable (== 'unavailable').
+                // Wait, if isExceptionAvailable is false (Vacation), startTime/endTime are undefined in current logic?
+                // Looking at JSX:
+                // <option value="unavailable">🏖️ Voľno / Dovolenka</option>
+                // <option value="available">✅ Dostupný (Iný čas)</option>
+                // Input fields: {isExceptionAvailable && ( ...inputs... )}
+                // So if unavailable/vacation, it's a FULL DAY off (or at least valid availability is removed).
+                // My checkConflictingAppointments logic handles undefined start/end as full day check.
+                // So this logic holds.
+                undefined
+            );
+
+            if (conflicts && conflicts.count > 0) {
+                const confirmed = window.confirm(`Pozor! Na tento deň máte naplánované ${conflicts.count} rezervácie. Naozaj chcete nastaviť voľno? (Rezervácie nebudú zrušené automaticky)`);
+                if (!confirmed) return;
+            }
+        }
+
         setIsAddingException(true);
 
         const res = await addAvailabilityException(
@@ -168,6 +194,8 @@ export function AvailabilityManager({
             setNewExceptionDate('');
             // Reset to defaults
             setIsExceptionAvailable(false);
+            setMessage('Výnimka pridaná ✅');
+            setTimeout(() => setMessage(''), 3000);
         } else {
             alert('Chyba pri pridávaní výnimky');
         }

@@ -32,9 +32,9 @@
 }
 
 .card {
-    background-color: #4A403A;
-    /* Deep premium brown */
-    color: #fff;
+    background-color: #ffffff;
+    /* Light theme by default */
+    color: #4A403A;
     padding: 3rem 2.5rem;
     border-radius: 12px;
     display: flex;
@@ -42,10 +42,12 @@
     justify-content: space-between;
     min-height: 480px;
     /* Taller card */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    /* Softer shadow */
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
+    border: 1px solid #f0f0f0;
 }
 
 .card:hover {
@@ -75,10 +77,11 @@
     font-size: 1.5rem;
     /* Smaller than before to fit long names */
     margin-bottom: 0.5rem;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.01em;
-    color: #ffffff !important;
+    color: inherit;
+    /* Inherit form card color */
 }
 
 .creditsCount {
@@ -88,27 +91,29 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #C4A484;
-    /* Gold/Bronze accent */
+    /* Keep gold accent */
+    margin-top: 5px;
 }
 
 .cardDesc {
     font-size: 0.95rem;
     line-height: 1.7;
-    opacity: 0.9;
+    opacity: 0.8;
     margin-bottom: 2.5rem;
-    font-weight: 300;
-    color: #f3f4f6 !important;
-    /* Force light grey */
+    font-weight: 400;
+    color: inherit;
+    /* Inherit from card */
 }
 
 .cardValidity {
     font-weight: 500;
     margin-bottom: auto;
-    font-size: 1rem;
+    font-size: 0.9rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    opacity: 0.9;
+    opacity: 0.7;
+    color: inherit;
 }
 
 .cardValidity::before {
@@ -145,8 +150,9 @@
 }
 
 .buyButton {
-    background-color: #F9FAFB !important;
-    color: #4A403A !important;
+    background-color: #4A403A !important;
+    /* Dark button on light card */
+    color: #fff !important;
     font-size: 0.8rem !important;
     padding: 0.75rem 1.5rem !important;
     font-weight: 700 !important;
@@ -158,18 +164,39 @@
 
 .buyButton:hover {
     background-color: #fff !important;
+    color: #4A403A !important;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #4A403A !important;
+    /* Add border to maintain visibility/structure */
 }
 
 .highlightCard {
-    background-color: #38302C;
-    /* Slightly darker/richer for contrast or keep same? */
+    background-color: #4A403A;
+    /* Dark premium background */
+    color: #fff;
     border: 1px solid #C4A484;
     /* Gold/Bronze border */
     transform: translateY(-8px);
     /* Default lifted */
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+.highlightCard .cardTitle {
+    color: #fff;
+}
+
+.highlightCard .cardDesc {
+    color: #f3f4f6;
+    font-weight: 300;
+}
+
+.highlightCard .cardValidity {
+    opacity: 0.9;
+}
+
+.highlightCard .cardFooter {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .badge {
@@ -189,10 +216,12 @@
 
 .highlightButton {
     background-color: #C4A484 !important;
-    /* Goldish button */
+    /* Goldish button on dark card */
     color: #fff !important;
 }
 
 .highlightButton:hover {
     background-color: #B08D69 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(196, 164, 132, 0.4);
 }

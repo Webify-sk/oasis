@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 
 function generateVoucherCode(length: number = 8): string {
@@ -103,6 +104,8 @@ export async function createVoucherProduct(formData: FormData) {
         return { success: false, message: `Chyba DB: ${error.message} (${error.code})` };
     }
 
+    revalidatePath('/admin/vouchers');
+    revalidatePath('/shop/voucher');
     return { success: true, message: 'Produkt vytvorený.' };
 }
 

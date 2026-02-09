@@ -41,13 +41,15 @@ export async function getManagedServices() {
     let query = supabase.from('cosmetic_services').select('*').order('created_at', { ascending: false });
 
     if (profile?.role === 'employee') {
-        // Find employee record
         const { data: emp } = await supabase.from('employees').select('id').eq('profile_id', user.id).single();
         if (emp) {
-            query = query.eq('owner_id', emp.id);
+            // Select services where id is in the list of services assigned to this employee
+            query = supabase.from('cosmetic_services')
+                .select('*, employee_services!inner(employee_id)')
+                .eq('employee_services.employee_id', emp.id)
+                .order('created_at', { ascending: false });
         } else {
-            // Employee profile but no employee record? Should not happen if promoted correctly.
-            // Return empty or maybe just return nothing.
+            // Employee profile but no employee record?
             return [];
         }
     }
@@ -62,7 +64,7 @@ export async function getManagedServices() {
     return data
 }
 
-export async function createCosmeticService(formData: FormData) {
+export async function createCosmeticService(prevState: any, formData: FormData) {
     await requireAdmin();
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -99,10 +101,10 @@ export async function createCosmeticService(formData: FormData) {
     revalidatePath('/admin/cosmetics/services');
     revalidatePath('/dashboard/cosmetics/services');
     revalidatePath('/dashboard/cosmetics'); // In case stats depend on it
-    return { success: true };
+    redirect('/admin/cosmetics/services');
 }
 
-export async function updateCosmeticService(id: string, formData: FormData) {
+export async function updateCosmeticService(id: string, prevState: any, formData: FormData) {
     await requireAdmin();
     const supabase = await createClient()
 
@@ -131,7 +133,7 @@ export async function updateCosmeticService(id: string, formData: FormData) {
     revalidatePath('/admin/cosmetics/services');
     revalidatePath('/dashboard/cosmetics/services');
     revalidatePath('/dashboard/cosmetics');
-    return { success: true };
+    redirect('/admin/cosmetics/services');
 }
 
 export async function deleteCosmeticService(id: string) {
@@ -160,46 +162,171 @@ export async function getEmployees() {
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('employees')
-        .select('*')
+        .select(`
+            *,
+            profiles(full_name)
+        `)
         .order('name', { ascending: true })
 
     if (error) {
         console.error('Error fetching employees:', error)
         return []
     }
-    return data
+
+    // Map to flatten the structure and prioritize profile name
+    return data.map(emp => ({
+        ...emp,
+        name: emp.profiles?.full_name || emp.name
+    }));
 }
+
+export async function getEmployeesForService(serviceId: string) {
+    const supabase = await createClient()
+
+    // Query employees who have an entry in employee_services for this serviceId
+    const { data, error } = await supabase
+        .from('employees')
+        .select(`
+            id, name, color, bio,
+            employee_services!inner(service_id),
+            profiles(full_name)
+        `)
+        .eq('employee_services.service_id', serviceId)
+        .eq('is_active', true) // Only active employees
+        .order('name')
+
+    if (error) {
+        console.error('Error fetching employees for service:', error)
+        return []
+    }
+
+    // Map to simple employee object (remove the join structure)
+    return data.map(emp => ({
+        id: emp.id,
+        name: emp.profiles?.full_name || emp.name,
+        color: emp.color,
+        bio: emp.bio
+    }))
+}
+
+// Add at top imports if not present, but for replace_file_content we focus on the function block.
+// We need to import createAdminClient. I'll add the import via a separate edit or assume it needs to be added.
+// Wait, replace_file_content replaces a block. I can't easily add import at top if I target the function.
+// I'll update the function to dynamic import or assume I need to do a multi-edit.
+// Let's do dynamic import inside function or use a separate tool call to add import at top.
+// Actually, `createAdminClient` is used in `users/actions.ts`.
+// I will rewrite `createEmployee` completely.
 
 export async function createEmployee(formData: FormData) {
     await requireAdmin();
-    const supabase = await createClient()
+    // Dynamic import to avoid messing with top-level imports if possible, or just add it.
+    // Ideally adding top level is better. But I'll use dynamic for safety in this tool call.
+    const { createAdminClient } = await import('@/utils/supabase/admin');
 
-    const name = formData.get('name') as string
-    const bio = formData.get('bio') as string
-    const color = formData.get('color') as string || '#5E715D'
-    const email = formData.get('email') as string // Optional: to link with profile later
+    const supabaseAdmin = createAdminClient();
+    const supabase = await createClient(); // For other checks if needed
 
-    // 1. Create Employee Record
+    const name = formData.get('name') as string;
+    const bio = formData.get('bio') as string;
+    const color = formData.get('color') as string || '#5E715D';
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    if (!email || !password) {
+        // Fallback for legacy calls or missing data? 
+        // But UI now requires it.
+        // If missing, maybe just create unlinked employee? No, user explicitly asked for login.
+        return { error: 'Email and Password are required.' };
+    }
+
+    // 1. Create Auth User
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: name }
+    });
+
+    if (authError) {
+        console.error('Auth create error:', authError);
+        return { error: 'Failed to create user: ' + authError.message };
+    }
+
+    if (!user) return { error: 'User creation failed unexpected' };
+
+    // 2. Update Profile & Set Role
+    // Profile should exist after trigger, we update it.
+    const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+            full_name: name,
+            role: 'employee',
+            email_verified: true, // We auto-verify since admin created it
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+    if (profileError) {
+        console.error('Profile update error:', profileError);
+        // Continue anyway, try to create employee record
+    }
+
+    // 3. Create Employee Record linked to Profile
     const { data: employee, error } = await supabase
         .from('employees')
         .insert({
             name,
             bio,
             color,
-            is_active: true
+            is_active: true,
+            email: email,
+            profile_id: user.id // Link to Auth User
         })
         .select()
-        .single()
+        .single();
 
     if (error) {
-        console.error('Error creating employee:', error)
-        return { error: 'Failed to create employee' }
+        console.error('Error creating employee record:', error);
+        return { error: 'Failed to create employee record' };
     }
 
-    // 2. Link with Profile (if email provided and user exists) - Advanced, skipping for now to keep simple
+    // 4. Send Welcome Email
+    try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
 
-    revalidatePath('/dashboard/cosmetics/staff')
-    return { success: true }
+        const html = getEmailTemplate(
+            'Vitajte v tíme Oasis Lounge',
+            `
+            <p>Dobrý deň ${name},</p>
+            <p>bol vám vytvorený zamestnanecký účet v <strong>Oasis Lounge</strong>.</p>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0; font-weight: bold;">Prihlasovacie údaje:</p>
+                <p style="margin: 5px 0 0 0;">Email: ${email}</p>
+                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">(Heslo vám bolo nastavené administrátorom)</p>
+            </div>
+
+            <p>Do svojho profilu sa môžete prihlásiť na tejto adrese:</p>
+            <p style="text-align: center; margin: 20px 0;">
+                <a href="${baseUrl}" style="background-color: #5E715D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Prejsť na prihlásenie</a>
+            </p>
+            `
+        );
+
+        await sendEmail({
+            to: email,
+            subject: 'Vitajte v tíme Oasis Lounge - Vytvorenie účtu',
+            html: html
+        });
+        console.log('Welcome email sent to:', email);
+    } catch (mailError) {
+        console.error('Failed to send welcome email:', mailError);
+        // Ensure we still return success even if email fails, but log it.
+        // Or maybe return a warning? For now just log.
+    }
+
+    revalidatePath('/dashboard/cosmetics/staff');
+    return { success: true, id: employee.id };
 }
 
 export async function updateEmployee(id: string, formData: FormData) {
@@ -278,6 +405,45 @@ export async function updateEmployeeServices(employeeId: string, serviceIds: str
 
     revalidatePath('/dashboard/cosmetics/staff')
     return { success: true }
+}
+
+// Check for conflicting appointments
+export async function checkConflictingAppointments(employeeId: string, date: string, startTime?: string, endTime?: string) {
+    const supabase = await createClient();
+
+    let query = supabase
+        .from('cosmetic_appointments')
+        .select('id, start_time, end_time, status, cosmetic_services(title)', { count: 'exact' })
+        .eq('employee_id', employeeId)
+        .in('status', ['pending', 'confirmed']); // Only active appointments
+
+    if (startTime && endTime) {
+        // Check overlap for partial day
+        // Appointment Start < Exception End AND Appointment End > Exception Start
+        const exceptionStart = `${date}T${startTime}`;
+        const exceptionEnd = `${date}T${endTime}`;
+
+        query = query
+            .lt('start_time', exceptionEnd)
+            .gt('end_time', exceptionStart);
+    } else {
+        // Full day exception - check any appointment on that day
+        const dayStart = `${date}T00:00:00`;
+        const dayEnd = `${date}T23:59:59`;
+
+        query = query
+            .gte('start_time', dayStart)
+            .lte('start_time', dayEnd);
+    }
+
+    const { data, count, error } = await query;
+
+    if (error) {
+        console.error('Error checking conflicts:', error);
+        return { error: 'Failed to check conflicts', count: 0 };
+    }
+
+    return { count: count || 0, appointments: data };
 }
 
 export async function addAvailabilityException(employeeId: string, date: string, isAvailable: boolean, startTime?: string, endTime?: string, reason?: string) {
@@ -837,6 +1003,7 @@ export async function getUserAppointments() {
             employees(name, color)
         `)
         .eq('user_id', user.id)
+        .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })
 
     if (error) {

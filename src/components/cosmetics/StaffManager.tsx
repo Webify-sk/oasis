@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { Plus, Edit2, Trash2, User, Calendar, Eye } from 'lucide-react';
 import { deleteEmployee } from '@/actions/cosmetic-actions';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import Link from 'next/link';
+import buttonStyles from '@/components/ui/Button.module.css';
+import clsx from 'clsx';
 
 interface Employee {
     id: string;
@@ -16,11 +19,23 @@ interface Employee {
 
 export function StaffManager({ initialEmployees }: { initialEmployees: Employee[] }) {
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = async (id: string) => {
-        if (confirm('Naozaj chcete vymazať tohto zamestnanca?')) {
-            await deleteEmployee(id);
+    const handleDeleteClick = (id: string) => {
+        setDeleteId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+        try {
+            await deleteEmployee(deleteId);
             window.location.reload();
+        } catch (e) {
+            console.error(e);
+            alert('Chyba pri mazaní.');
+            setIsDeleting(false);
         }
     };
 
@@ -28,24 +43,24 @@ export function StaffManager({ initialEmployees }: { initialEmployees: Employee[
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: '500' }}>Zoznam zamestnancov</h2>
-                <Link href="/admin/cosmetics/staff/new" style={{ textDecoration: 'none' }}>
-                    <button
-                        className="button"
-                        style={{
-                            backgroundColor: '#5E715D',
-                            color: 'white',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                        }}
-                    >
-                        <Plus size={18} />
-                        Pridať zamestnanca
-                    </button>
+                <Link
+                    href="/admin/cosmetics/staff/new"
+                    className="button"
+                    style={{
+                        textDecoration: 'none',
+                        backgroundColor: '#5E715D',
+                        color: 'white',
+                        padding: '0.6rem 1.2rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}
+                >
+                    <Plus size={18} />
+                    Pridať zamestnanca
                 </Link>
             </div>
 
@@ -119,30 +134,29 @@ export function StaffManager({ initialEmployees }: { initialEmployees: Employee[
                             >
                                 <Calendar size={16} /> Dostupnosť
                             </a>
-                            <Link href={`/admin/cosmetics/staff/${employee.id}`} style={{ textDecoration: 'none' }}>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    style={{
-                                        flex: 'none',
-                                        padding: '0.6rem 0.8rem',
-                                        height: 'auto',
-                                        backgroundColor: 'white',
-                                        border: '1px solid #ddd',
-                                        color: '#555',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        boxShadow: 'none'
-                                    }}
-                                    title="Zobraziť detail"
-                                >
-                                    <Eye size={16} />
-                                    Detail
-                                </Button>
+                            <Link
+                                href={`/admin/cosmetics/staff/${employee.id}`}
+                                className={clsx(buttonStyles.button, buttonStyles.secondary, buttonStyles.sm)}
+                                style={{
+                                    textDecoration: 'none',
+                                    flex: 'none',
+                                    padding: '0.6rem 0.8rem',
+                                    height: 'auto',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #ddd',
+                                    color: '#555',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    boxShadow: 'none'
+                                }}
+                                title="Zobraziť detail"
+                            >
+                                <Eye size={16} />
+                                Detail
                             </Link>
                             <button
-                                onClick={() => handleDelete(employee.id)}
+                                onClick={() => handleDeleteClick(employee.id)}
                                 style={{
                                     padding: '0.6rem',
                                     background: '#fff5f5',
@@ -159,6 +173,29 @@ export function StaffManager({ initialEmployees }: { initialEmployees: Employee[
                     </div>
                 ))}
             </div>
+
+            <Modal
+                isOpen={!!deleteId}
+                onClose={() => setDeleteId(null)}
+                title="Zmazať zamestnanca"
+                actions={
+                    <>
+                        <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={isDeleting}>
+                            Zrušiť
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={confirmDelete}
+                            disabled={isDeleting}
+                            style={{ backgroundColor: '#dc2626', color: 'white' }}
+                        >
+                            {isDeleting ? 'Mažem...' : 'Zmazať'}
+                        </Button>
+                    </>
+                }
+            >
+                <p>Naozaj chcete vymazať tohto zamestnanca? Táto akcia je nevratná.</p>
+            </Modal>
         </div>
     );
 }

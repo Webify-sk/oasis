@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createVoucherProduct } from '@/actions/voucher-actions';
 import { Loader2, Plus, Tag, Euro, CreditCard, FileText, Gift } from 'lucide-react';
 import styles from './VoucherAdmin.module.css';
 
 export function VoucherProductManager() {
+    const router = useRouter();
     const [isPending, setIsPending] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -20,6 +22,7 @@ export function VoucherProductManager() {
             if (result.success) {
                 setMessage({ type: 'success', text: result.message || 'Produkt úspešne vytvorený' });
                 (document.getElementById('createParamsForm') as HTMLFormElement).reset();
+                router.refresh();
             } else {
                 setMessage({ type: 'error', text: result.message || 'Chyba pri vytváraní' });
             }

@@ -118,7 +118,9 @@ export function ProfileForm({ user }: ProfileFormProps) {
                                 type="date"
                                 defaultValue={user.date_of_birth || ''}
                                 className={styles.input}
-                                required
+                                readOnly
+                                title="Pre zmenu dátumu narodenia kontaktujte správcu."
+                                style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed', color: '#888' }}
                             />
                         </div>
                     </div>

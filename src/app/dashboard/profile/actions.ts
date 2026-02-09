@@ -22,7 +22,7 @@ export async function updateProfile(formData: FormData) {
         id: user.id,
         full_name,
         phone,
-        date_of_birth,
+        // date_of_birth is set during registration and should not be editable by user
         updated_at: new Date().toISOString(),
     }
 

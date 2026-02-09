@@ -3,6 +3,8 @@
 import { Button } from '@/components/ui/Button';
 import { Trash2, Eye } from 'lucide-react';
 import Link from 'next/link';
+import styles from '@/components/ui/Button.module.css';
+import clsx from 'clsx';
 
 interface Trainer {
     id: string;
@@ -32,25 +34,24 @@ export function TrainerList({ trainers }: { trainers: Trainer[] }) {
                             <td style={{ padding: '1rem 1.5rem', color: '#333' }}>{trainer.full_name}</td>
                             <td style={{ padding: '1rem 1.5rem', width: '200px' }}>
                                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                    <Link href={`/admin/trainers/${trainer.id}`} style={{ textDecoration: 'none' }}>
-                                        <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            style={{
-                                                fontSize: '0.75rem',
-                                                height: '32px',
-                                                backgroundColor: 'transparent',
-                                                border: '1px solid #E5E7EB',
-                                                color: '#4B5563',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                boxShadow: 'none'
-                                            }}
-                                        >
-                                            <Eye size={14} />
-                                            Detail
-                                        </Button>
+                                    <Link
+                                        href={`/admin/trainers/${trainer.id}`}
+                                        className={clsx(styles.button, styles.secondary, styles.sm)}
+                                        style={{
+                                            textDecoration: 'none',
+                                            height: '32px',
+                                            backgroundColor: 'transparent',
+                                            border: '1px solid #E5E7EB',
+                                            color: '#4B5563',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            boxShadow: 'none',
+                                            padding: '0 0.75rem'
+                                        }}
+                                    >
+                                        <Eye size={14} />
+                                        Detail
                                     </Link>
                                     <Button variant="primary" size="sm" style={{ backgroundColor: '#8C4848', height: '32px', padding: '0 0.5rem' }}>
                                         <Trash2 size={16} />

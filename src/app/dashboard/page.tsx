@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     }
 
     // Parallel data fetching for performance
-    const [profileRes, bookingsRes, appointmentsRes] = await Promise.all([
+    const [profileRes, bookingsRes, appointmentsRes, pastTrainingsRes, pastAppointmentsRes] = await Promise.all([
         supabase
             .from('profiles')
             .select('full_name, credits, role, email_verified')
@@ -49,12 +49,28 @@ export default async function DashboardPage() {
             .gte('start_time', new Date().toISOString())
             .order('start_time', { ascending: true })
             .limit(1)
-            .single()
+            .single(),
+        // Stats: Past Trainings
+        supabase
+            .from('bookings')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .lt('start_time', new Date().toISOString()),
+        // Stats: Past Procedures
+        supabase
+            .from('cosmetic_appointments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .neq('status', 'cancelled')
+            .lt('start_time', new Date().toISOString())
     ]);
 
     const profile = profileRes.data;
     const nextBooking = bookingsRes.data;
     const nextAppointment = appointmentsRes.data;
+    const totalTrainings = pastTrainingsRes.count || 0;
+    const totalProcedures = pastAppointmentsRes.count || 0;
+
     const isVerified = profile?.email_verified === true;
 
     // Check if Employee or Admin
@@ -145,7 +161,7 @@ export default async function DashboardPage() {
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', opacity: isVerified ? 1 : 0.5, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                                    style={{ backgroundColor: '#fff', color: '#8C7568', border: 'none', opacity: isVerified ? 1 : 0.7, cursor: isVerified ? 'pointer' : 'not-allowed' }}
                                     disabled={!isVerified}
                                 >
                                     Zobraziť detaily <ArrowRight size={16} style={{ marginLeft: '8px' }} />
@@ -197,7 +213,7 @@ export default async function DashboardPage() {
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', opacity: isVerified ? 1 : 0.5, cursor: isVerified ? 'pointer' : 'not-allowed' }}
+                                    style={{ backgroundColor: '#fff', color: '#5E715D', border: 'none', opacity: isVerified ? 1 : 0.7, cursor: isVerified ? 'pointer' : 'not-allowed' }}
                                     disabled={!isVerified}
                                 >
                                     Spravovať <ArrowRight size={16} style={{ marginLeft: '8px' }} />
@@ -226,7 +242,57 @@ export default async function DashboardPage() {
                         </>
                     )}
                 </div>
+
             </div>
-        </div>
+
+
+            {/* Quick Stats Card - Full Width */}
+            <div className={styles.card} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '2rem' }}>
+                <div className={styles.featureTitle} style={{ color: '#8C7568', opacity: 1, marginBottom: 0 }}>
+                    <History size={14} style={{ display: 'inline', marginRight: '8px' }} />
+                    Rýchle štatistiky
+                </div>
+
+                <div style={{ display: 'flex', gap: '3rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            background: '#F5F5F4', color: '#8C7568',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <User size={20} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-heading)', color: '#4A403A', lineHeight: 1 }}>
+                                {totalTrainings}
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>Tréningy</div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            background: '#F0FDF4', color: '#5E715D',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <Calendar size={20} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-heading)', color: '#4A403A', lineHeight: 1 }}>
+                                {totalProcedures}
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>Procedúry</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ borderLeft: '1px solid #eee', paddingLeft: '2rem' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#888', fontStyle: 'italic' }}>
+                        "Zdravie je bohatstvo."
+                    </div>
+                </div>
+            </div>
+        </div >
     );
 }

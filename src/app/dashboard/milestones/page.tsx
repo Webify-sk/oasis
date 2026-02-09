@@ -27,27 +27,35 @@ export default async function MilestonesPage() {
     const milestones = (milestonesData && milestonesData.length > 0) ? milestonesData : [
         {
             id: 1,
-            title: 'Začiatočník',
-            subtitle: 'Prvý krok k cieľu',
-            description: 'Vaša cesta sa práve začína. Prvý tréning je za vami!',
-            training_count_required: 1,
-            reward: 'Odznak začiatku'
+            title: 'Core Commitment',
+            subtitle: '2 vstupy grátis',
+            description: '',
+            training_count_required: 50,
+            reward: '2 vstupy grátis'
         },
         {
             id: 2,
-            title: 'Pravidelný Návštevník',
-            subtitle: 'Udržiavate tempo',
-            description: '10 tréningov! Vaša vytrvalosť prináša ovocie.',
-            training_count_required: 10,
-            reward: '1 kredit zdarma'
+            title: 'Inner Glow Achiever',
+            subtitle: 'Telové alebo pleťové ošetrenie grátis',
+            description: '',
+            training_count_required: 100,
+            reward: 'Telové alebo pleťové ošetrenie'
         },
         {
             id: 3,
-            title: 'Oasis Master',
-            subtitle: 'Ikona klubu',
-            description: '50 tréningov. Ste inšpiráciou pre ostatných.',
-            training_count_required: 50,
-            reward: 'Master masáž'
+            title: 'Elite Flow',
+            subtitle: '5 vstupov grátis + telové alebo pleťové ošetrenie grátis',
+            description: '',
+            training_count_required: 150,
+            reward: '5 vstupov + ošetrenie'
+        },
+        {
+            id: 4,
+            title: 'Oasis Icon',
+            subtitle: '10% zľava + 10 vstupov + ošetrenie',
+            description: '10% zľava na všetky procedúry doživotne, 10 vstupová permanentka grátis + telové a pleťové ošetrenie grátis',
+            training_count_required: 200,
+            reward: '10% zľava + 10 vstupov + ošetrenie'
         }
     ];
 

@@ -89,6 +89,27 @@ export function AuthForm() {
                     return;
                 }
 
+                // Age Validation
+                const dob = submitData.get('date_of_birth') as string;
+                if (dob) {
+                    const birthDate = new Date(dob);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const m = today.getMonth() - birthDate.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                    }
+                    if (age < 18) {
+                        setError('Registrácia je povolená len osobám starším ako 18 rokov.');
+                        setIsLoading(false);
+                        return;
+                    }
+                } else {
+                    setError('Dátum narodenia je povinný.');
+                    setIsLoading(false);
+                    return;
+                }
+
                 const result = await signup(submitData);
                 if (result?.error) {
                     setError(result.error);

@@ -36,23 +36,21 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
     }
     const safeAnchorDate = isNaN(anchorDate.getTime()) ? new Date() : anchorDate;
 
-    const currentDay = safeAnchorDate.getDay();
-    const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
+    // Start from anchorDate (safeAnchorDate)
+    const startDate = new Date(safeAnchorDate);
+    startDate.setHours(0, 0, 0, 0);
 
-    // Get start and end of week for query range
-    const mondayDate = new Date(safeAnchorDate);
-    mondayDate.setDate(safeAnchorDate.getDate() + diffToMon);
-    mondayDate.setHours(0, 0, 0, 0);
+    const daysToShow = typeof params?.days === 'string' ? parseInt(params.days, 10) : 7;
 
-    const sundayDate = new Date(mondayDate);
-    sundayDate.setDate(mondayDate.getDate() + 6);
-    sundayDate.setHours(23, 59, 59, 999);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + daysToShow - 1);
+    endDate.setHours(23, 59, 59, 999);
 
     const { data: bookings } = await supabase
         .from('bookings')
         .select('*')
-        .gte('start_time', mondayDate.toISOString())
-        .lte('start_time', sundayDate.toISOString());
+        .gte('start_time', startDate.toISOString())
+        .lte('start_time', endDate.toISOString());
 
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -79,13 +77,18 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
     const weekDates = [];
     const dayNames = ['Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota', 'Nedeľa'];
 
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(mondayDate);
-        d.setDate(mondayDate.getDate() + i);
+    for (let i = 0; i < daysToShow; i++) {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
+
+        // Calculate 0-6 index for dayNames (Mon=0...Sun=6) based on getDay() (Sun=0...Sat=6)
+        const dayOfWeek = d.getDay();
+        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
         weekDates.push({
             dateObj: d,
-            dayName: dayNames[i],
-            formattedDate: `${dayNames[i]}, ${d.getDate()}. ${d.toLocaleString('sk-SK', { month: 'long' })}`
+            dayName: dayNames[dayIndex],
+            formattedDate: `${dayNames[dayIndex]}, ${d.getDate()}. ${d.toLocaleString('sk-SK', { month: 'long' })}`
         });
     }
 
@@ -158,14 +161,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
         };
     });
 
-    // Filter out past days (keep today and future)
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
 
-    const filteredScheduleData = scheduleData.filter(day => {
-        const dayDate = new Date(day.originalDate);
-        return dayDate >= todayStart;
-    });
 
     // 4. Fetch User Credits (for instant client-side validation)
     let userCredits = 0;
@@ -195,7 +191,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
 
             <MyBookings bookings={myUpcomingBookings} />
 
-            <TrainingCalendar schedule={filteredScheduleData} userCredits={userCredits} />
+            <TrainingCalendar schedule={scheduleData} userCredits={userCredits} currentDays={daysToShow} />
         </div>
     );
 }

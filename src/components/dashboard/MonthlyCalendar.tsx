@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './Calendar.module.css';
 
@@ -38,8 +39,17 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
     const prevMonthDate = new Date(year, month - 1, 1);
     const nextMonthDate = new Date(year, month + 1, 1);
 
-    const prevLink = `?date=${prevMonthDate.toISOString().split('T')[0]}`;
-    const nextLink = `?date=${nextMonthDate.toISOString().split('T')[0]}`;
+    // Helper for local date string YYYY-MM-DD
+    const formatDate = (date: Date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    const pathname = usePathname();
+    const prevLink = `${pathname}?date=${formatDate(prevMonthDate)}`;
+    const nextLink = `${pathname}?date=${formatDate(nextMonthDate)}`;
 
     const monthName = currentDate.toLocaleString('sk-SK', { month: 'long', year: 'numeric' });
 
@@ -81,19 +91,52 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
             today.getFullYear() === year;
     };
 
+    const isEventPast = (evt: TrainingSession) => {
+        let timeStr = evt.time;
+        if (timeStr.includes('-')) {
+            timeStr = timeStr.split('-')[0].trim();
+        }
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const eventDate = new Date(evt.date);
+        eventDate.setHours(hours, minutes, 0, 0);
+        return eventDate < new Date();
+    };
+
     const [selectedEvent, setSelectedEvent] = useState<TrainingSession | null>(null);
+    const router = useRouter();
+
+    const handlePrev = () => {
+        router.push(prevLink);
+        router.refresh();
+    };
+
+    const handleNext = () => {
+        router.push(nextLink);
+        router.refresh();
+    };
+
+    const isCurrentMonth = () => {
+        const today = new Date();
+        return currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+    };
 
     return (
         <div className={styles.container}>
             <div className={styles.header}>
                 <h2 className={styles.monthTitle}>{monthName}</h2>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Link href={prevLink} className={styles.navButton}>
+                    <button
+                        onClick={handlePrev}
+                        className={styles.navButton}
+                        disabled={isCurrentMonth()}
+                        style={isCurrentMonth() ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                        title={isCurrentMonth() ? "Nemôžete ísť do minulosti" : "Predchádzajúci mesiac"}
+                    >
                         <ChevronLeft size={16} /> Predchádzajúci
-                    </Link>
-                    <Link href={nextLink} className={styles.navButton}>
+                    </button>
+                    <button onClick={handleNext} className={styles.navButton}>
                         Nasledujúci <ChevronRight size={16} />
-                    </Link>
+                    </button>
                 </div>
             </div>
 
@@ -107,17 +150,23 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                     return (
                         <div key={idx} className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''}`}>
                             <span className={styles.dayNumber}>{cell.day}</span>
-                            {cellEvents.map((evt, i) => (
-                                <div
-                                    key={i}
-                                    className={`${styles.event} ${evt.isRegistered ? styles.registered : ''}`}
-                                    title={`${evt.time} - ${evt.title} (${evt.trainer})${evt.isRegistered ? ' - ZAREGISTROVANÉ' : ''}`}
-                                    onClick={() => setSelectedEvent(evt)}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <strong>{evt.time}</strong> {evt.title}
-                                </div>
-                            ))}
+                            {cellEvents.map((evt, i) => {
+                                const isPast = isEventPast(evt);
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`${styles.event} ${evt.isRegistered ? styles.registered : ''}`}
+                                        title={`${evt.time} - ${evt.title} (${evt.trainer})${evt.isRegistered ? ' - ZAREGISTROVANÉ' : ''}`}
+                                        onClick={!isPast ? () => setSelectedEvent(evt) : undefined}
+                                        style={{
+                                            cursor: isPast ? 'default' : 'pointer',
+                                            opacity: isPast ? 0.5 : 1
+                                        }}
+                                    >
+                                        <strong>{evt.time}</strong> {evt.title}
+                                    </div>
+                                );
+                            })}
                         </div>
                     );
                 })}
@@ -182,7 +231,7 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                             >
                                 Zavrieť
                             </button>
-                            <Link href={`/dashboard/trainings?date=${selectedEvent.date.toISOString().split('T')[0]}&highlightId=${selectedEvent.id}`}>
+                            <Link href={`/dashboard/trainings?date=${formatDate(selectedEvent.date)}&highlightId=${selectedEvent.id}`}>
                                 <button style={{
                                     padding: '0.75rem 1.5rem',
                                     borderRadius: '8px',

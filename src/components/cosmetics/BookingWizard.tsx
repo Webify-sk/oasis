@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCosmeticServices, getEmployees, getAvailableSlots, createAppointment } from '@/actions/cosmetic-actions';
+import { getCosmeticServices, getEmployees, getEmployeesForService, getAvailableSlots, createAppointment } from '@/actions/cosmetic-actions';
 import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, User, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useVerification } from '@/components/auth/VerificationContext';
@@ -46,8 +46,18 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                 }
             }
         });
-        getEmployees().then(data => setAllEmployees(data as Employee[]));
     }, [initialServiceId]);
+
+    // When Step 2 becomes active (or service selected), fetch relevant employees
+    useEffect(() => {
+        if (selectedService && step === 2) {
+            setLoading(true);
+            getEmployeesForService(selectedService.id).then(data => {
+                setAllEmployees(data as Employee[]); // Reusing state name but now it's filtered
+                setLoading(false);
+            });
+        }
+    }, [selectedService, step]);
 
     const handleServiceSelect = (service: Service) => {
         if (!isVerified) return;

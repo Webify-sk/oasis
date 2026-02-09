@@ -5,8 +5,9 @@ import { Plus, Edit2, Trash2, Clock, CheckCircle, AlertCircle, Eye } from 'lucid
 import { deleteCosmeticService } from '@/actions/cosmetic-actions';
 import styles from '@/app/dashboard/cosmetics/cosmetics.module.css';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button'; // Assuming we want standard buttons here too
+import { Button } from '@/components/ui/Button';
 import { useUserRole } from '@/hooks/useUserRole';
+import { Modal } from '@/components/ui/Modal';
 
 interface Service {
     id: string;
@@ -20,11 +21,23 @@ interface Service {
 export function ServiceManager({ initialServices }: { initialServices: Service[] }) {
     const { role } = useUserRole();
     const [services, setServices] = useState<Service[]>(initialServices);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = async (id: string) => {
-        if (confirm('Naozaj chcete vymazať túto službu?')) {
-            await deleteCosmeticService(id);
+    const handleDeleteClick = (id: string) => {
+        setDeleteId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+        try {
+            await deleteCosmeticService(deleteId);
             window.location.reload();
+        } catch (e) {
+            console.error(e);
+            alert('Chyba pri mazaní.');
+            setIsDeleting(false);
         }
     };
 
@@ -103,7 +116,7 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
                                             </Button>
                                         </Link>
                                         <Button
-                                            onClick={() => handleDelete(service.id)}
+                                            onClick={() => handleDeleteClick(service.id)}
                                             variant="primary"
                                             size="sm"
                                             style={{
@@ -126,6 +139,29 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
                     </div>
                 ))}
             </div>
+
+            <Modal
+                isOpen={!!deleteId}
+                onClose={() => setDeleteId(null)}
+                title="Zmazať službu"
+                actions={
+                    <>
+                        <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={isDeleting}>
+                            Zrušiť
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={confirmDelete}
+                            disabled={isDeleting}
+                            style={{ backgroundColor: '#dc2626', color: 'white' }}
+                        >
+                            {isDeleting ? 'Mažem...' : 'Zmazať'}
+                        </Button>
+                    </>
+                }
+            >
+                <p>Naozaj chcete vymazať túto službu? Táto akcia je nevratná.</p>
+            </Modal>
         </div>
     );
 }

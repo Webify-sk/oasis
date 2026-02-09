@@ -51,6 +51,23 @@ export async function signup(formData: FormData) {
         }
     }
 
+    // 0. Age Validation (Server-side)
+    const dob = formData.get('date_of_birth') as string;
+    if (dob) {
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        if (age < 18) {
+            return { error: 'Registrácia je povolená len osobám starším ako 18 rokov.' };
+        }
+    } else {
+        return { error: 'Dátum narodenia je povinný.' };
+    }
+
     // 1. Sign Up
     const { data: authData, error } = await supabase.auth.signUp(data)
 

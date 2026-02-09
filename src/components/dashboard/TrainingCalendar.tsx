@@ -33,12 +33,13 @@ interface DaySchedule {
 interface TrainingCalendarProps {
     schedule: DaySchedule[];
     userCredits: number;
+    currentDays: number;
 }
-
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
+import Link from 'next/link';
 
-export function TrainingCalendar({ schedule, userCredits }: TrainingCalendarProps) {
+export function TrainingCalendar({ schedule, userCredits, currentDays }: TrainingCalendarProps) {
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlightId');
 
@@ -106,7 +107,9 @@ export function TrainingCalendar({ schedule, userCredits }: TrainingCalendarProp
             ))}
 
             <div className={styles.footerActions}>
-                <Button variant="primary">ZOBRAZIŤ VŠETKY TRÉNINGY</Button>
+                <Link href={`/dashboard/trainings?days=${currentDays + 7}`} scroll={false}>
+                    <Button variant="primary">Zobraziť viac tréningov</Button>
+                </Link>
             </div>
         </div>
     );

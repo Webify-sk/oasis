@@ -118,10 +118,32 @@ export function MyBookings({ bookings }: MyBookingsProps) {
                 title="Zrušiť rezerváciu?"
             >
                 <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                    <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
-                        Naozaj chcete zrušiť túto rezerváciu?<br />
-                        Vstup Vám bude automaticky vrátený na účet.
-                    </p>
+                    {(() => {
+                        const booking = bookings.find(b => b.id === bookingToCancel);
+                        if (!booking) return null;
+
+                        const startTime = new Date(booking.start_time);
+                        const now = new Date();
+                        const diffMs = startTime.getTime() - now.getTime();
+                        const hours = diffMs / (1000 * 60 * 60);
+                        const isLessThant24h = hours < 24;
+
+                        return (
+                            <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
+                                Naozaj chcete zrušiť túto rezerváciu?<br />
+                                {isLessThant24h ? (
+                                    <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                                        Keďže je to menej ako 24h pred tréningom, vstup Vám NEBUDE vrátený.
+                                    </span>
+                                ) : (
+                                    <span>
+                                        Vstup Vám bude automaticky vrátený na účet.
+                                    </span>
+                                )}
+                            </p>
+                        );
+                    })()}
+
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
                         <Button
                             variant="outline"
