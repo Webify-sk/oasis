@@ -203,7 +203,7 @@ export async function getEmployeesForService(serviceId: string) {
     // Map to simple employee object (remove the join structure)
     return data.map(emp => ({
         id: emp.id,
-        name: emp.profiles?.full_name || emp.name,
+        name: (Array.isArray(emp.profiles) ? emp.profiles[0]?.full_name : (emp.profiles as any)?.full_name) || emp.name,
         color: emp.color,
         bio: emp.bio
     }))
