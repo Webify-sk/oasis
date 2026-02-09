@@ -4,6 +4,7 @@ import styles from './layout.module.css';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { VerificationProvider } from '@/components/auth/VerificationContext';
+import { VerificationBanner } from '@/components/auth/VerificationBanner';
 
 export default async function DashboardLayout({
     children,
@@ -31,19 +32,7 @@ export default async function DashboardLayout({
         <VerificationProvider isVerified={isVerified}>
             <div className={styles.container}>
                 <Header />
-                {!isVerified && (
-                    <div style={{
-                        backgroundColor: '#FEFCE8',
-                        borderBottom: '1px solid #FEF08A',
-                        padding: '0.75rem 1rem',
-                        color: '#854D0E',
-                        fontSize: '0.9rem',
-                        textAlign: 'center',
-                        fontWeight: 500
-                    }}>
-                        ⚠️ Váš email nie je overený. Pre plný prístup (rezervácie) prosím potvrďte svoj email cez odkaz, ktorý sme Vám poslali.
-                    </div>
-                )}
+                <VerificationBanner isVerified={isVerified} />
                 <div className={styles.pageWrapper}>
                     <div className={styles.dashboardGrid}>
                         <aside className={styles.sidebarWrapper}>

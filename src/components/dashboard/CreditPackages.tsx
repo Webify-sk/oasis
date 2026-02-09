@@ -7,81 +7,31 @@ import styles from './CreditPackages.module.css';
 import { createCheckoutSession } from '@/app/actions/stripe';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { PackageId } from '@/lib/constants/creditPackages';
 import { updateProfile } from '@/app/dashboard/profile/actions';
 
-const packages = [
-    {
-        id: 'intro',
-        name: 'Oasis Intro Pass',
-        credits: '1 vstup',
-        description: 'Vyskúšajte atmosféru Oasis Lounge. Ideálne pre prvú návštevu.',
-        validity: 'Platnosť 1 mesiac',
-        price: '27 €',
-        priceDetail: 'Jednorazový vstup',
-        highlight: false,
-    },
-    {
-        id: 'flow',
-        name: 'Oasis Flow Pass',
-        credits: '5 vstupov',
-        description: 'Pre tých, ktorí chcú zaradiť pohyb do svojho života.',
-        validity: 'Platnosť 2 mesiace',
-        price: '125 €',
-        priceDetail: '25 € / vstup',
-        highlight: false,
-    },
-    {
-        id: 'core',
-        name: 'Oasis Core Pass',
-        credits: '10 vstupov',
-        description: 'Náš najobľúbenejší balíček pre pravidelný tréning.',
-        validity: 'Platnosť 4 mesiace',
-        price: '230 €',
-        priceDetail: '23 € / vstup',
-        highlight: true,
-    },
-    {
-        id: 'balance',
-        name: 'Oasis Balance Builder',
-        credits: '25 vstupov',
-        description: 'Maximálna flexibilita a najlepšia cena za vstup pre odhodlaných. Platnosť 9 mesiacov.',
-        validity: 'Platnosť 9 mesiacov',
-        price: '500 €',
-        priceDetail: '20 € / vstup',
-        highlight: false,
-    },
-    {
-        id: 'unlimited',
-        name: 'Oasis Unlimited',
-        credits: 'Neobmedzený',
-        description: 'Jeden rok neobmedzeného pohybu a relaxu. Movement Pass.',
-        validity: 'Platnosť 1 rok',
-        price: '2500 €',
-        priceDetail: 'Movement Pass',
-        highlight: false,
-    },
-    {
-        id: 'private',
-        name: 'Private Experience',
-        credits: 'Individuálny',
-        description: 'Osobný prístup s trénerom pre maximálne výsledky.',
-        validity: 'Na dohodu',
-        price: 'od 60 €',
-        priceDetail: '1 os. 60€ / 2 os. 100€',
-        highlight: false,
-    }
-];
+// Define the type matching DB structure
+export interface CreditPackage {
+    id: string;
+    title: string;
+    price: number; // in Euros
+    credits: number;
+    bonus_credits: number;
+    description: string | null;
+    validity_months: number | null;
+    is_active: boolean;
+    is_popular: boolean;
+}
 
 interface CreditPackagesProps {
     userProfile?: any;
+    packages?: CreditPackage[]; // Make optional to prevent breakage if not passed immediately
 }
 
-export function CreditPackages({ userProfile }: CreditPackagesProps) {
+export function CreditPackages({ userProfile, packages = [] }: CreditPackagesProps) {
     const { isVerified } = useVerification();
     const [loadingId, setLoadingId] = useState<string | null>(null);
     // State for the compliance modal
-    const [selectedPackage, setSelectedPackage] = useState<typeof packages[0] | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [privacyAccepted, setPrivacyAccepted] = useState(false);
     const [showErrors, setShowErrors] = useState(false);
@@ -98,12 +48,7 @@ export function CreditPackages({ userProfile }: CreditPackagesProps) {
     });
 
     // Initial click handler - opens modal
-    const handleInitialClick = (pkg: typeof packages[0]) => {
-        if (pkg.id === 'private') {
-            alert('Pre individuálny tréning nás prosím kontaktujte.');
-            return;
-        }
-
+    const handleInitialClick = (pkg: CreditPackage) => {
         // Pre-fill form
         setFormData({
             full_name: userProfile?.full_name || '',
@@ -155,9 +100,7 @@ export function CreditPackages({ userProfile }: CreditPackagesProps) {
 
             // 2. Create Checkout Session
             const result = await createCheckoutSession(
-                selectedPackage.id as PackageId,
-                selectedPackage.price,
-                selectedPackage.name
+                selectedPackage.id
             ) as any;
 
             if (result && result.error) {
@@ -188,26 +131,33 @@ export function CreditPackages({ userProfile }: CreditPackagesProps) {
 
             <div className={styles.grid}>
                 {packages.map((pkg) => (
-                    <div key={pkg.id} className={clsx(styles.card, { [styles.highlightCard]: pkg.highlight })}>
-                        {pkg.highlight && <div className={styles.badge}>Doporučujeme</div>}
+                    <div key={pkg.id} className={clsx(styles.card, { [styles.highlightCard]: pkg.is_popular })}>
+                        {pkg.is_popular && <div className={styles.badge}>Doporučujeme</div>}
 
                         <div>
                             <div className={styles.cardHeader}>
-                                <h4 className={styles.cardTitle}>{pkg.name}</h4>
-                                <span className={styles.creditsCount}>{pkg.credits}</span>
+                                <h4 className={styles.cardTitle}>{pkg.title}</h4>
+                                <span className={styles.creditsCount}>
+                                    {pkg.credits} vstupov
+                                    {pkg.bonus_credits > 0 && <span style={{ fontSize: '0.6em', display: 'block', color: '#059669' }}>+{pkg.bonus_credits} bonus</span>}
+                                </span>
                             </div>
                             <p className={styles.cardDesc}>{pkg.description}</p>
-                            <div className={styles.cardValidity}>{pkg.validity}</div>
+                            <div className={styles.cardValidity}>
+                                {pkg.validity_months ? `Platnosť ${pkg.validity_months} mesiacov` : 'Neobmedzená platnosť'}
+                            </div>
                         </div>
 
                         <div className={styles.cardFooter}>
                             <div className={styles.priceContainer}>
-                                <span className={styles.priceDetail}>{pkg.priceDetail}</span>
-                                <span className={styles.price}>{pkg.price}</span>
+                                <span className={styles.priceDetail}>
+                                    {(pkg.price / pkg.credits).toFixed(2)} € / vstup
+                                </span>
+                                <span className={styles.price}>{pkg.price} €</span>
                             </div>
                             <Button
                                 className={clsx(styles.buyButton, {
-                                    [styles.highlightButton]: pkg.highlight,
+                                    [styles.highlightButton]: pkg.is_popular,
                                     'opacity-50 cursor-not-allowed': !isVerified
                                 })}
                                 onClick={() => handleInitialClick(pkg)}
@@ -240,8 +190,8 @@ export function CreditPackages({ userProfile }: CreditPackagesProps) {
                         </h3>
 
                         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#F9FAFB', borderRadius: '8px' }}>
-                            <p style={{ fontWeight: '600', marginBottom: '0.2rem' }}>{selectedPackage.name}</p>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{selectedPackage.price}</span></p>
+                            <p style={{ fontWeight: '600', marginBottom: '0.2rem' }}>{selectedPackage.title}</p>
+                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{selectedPackage.price} €</span></p>
                         </div>
 
                         {/* Invoice Data Form */}

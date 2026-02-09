@@ -246,3 +246,65 @@ export async function sendPasswordChangedNotification(email: string) {
         return { success: false, error: 'Failed to send email' };
     }
 }
+
+export async function resendVerification() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user || !user.email) {
+        return { error: 'Neprihlásený používateľ.' };
+    }
+
+    try {
+        // Generate new token
+        const token = crypto.randomUUID();
+
+        // Update profile
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+                verification_token: token,
+                // email_verified: false // Should already be false if they see the button
+            })
+            .eq('id', user.id);
+
+        if (updateError) {
+            console.error('Failed to update token:', updateError);
+            return { error: 'Nepodarilo sa aktualizovať token.' };
+        }
+
+        // Send Email
+        const { sendEmail } = await import('@/utils/email');
+        const { getEmailTemplate } = await import('@/utils/email-template');
+
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
+        const verifyLink = `${baseUrl}/auth/verify-email?token=${token}`;
+
+        const html = getEmailTemplate(
+            'Overenie emailu - Oasis Lounge',
+            `
+            <p>Dobrý deň,</p>
+            <p>na Vašu žiadosť posielame nový odkaz na overenie emailu.</p>
+            <p>Pre plný prístup k rezerváciám a službám prosím potvrďte svoj email kliknutím na tlačidlo nižšie.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${verifyLink}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Overiť email</a>
+            </div>
+
+            <p>Tím Oasis Lounge</p>
+            `
+        );
+
+        await sendEmail({
+            to: user.email,
+            subject: 'Overenie emailu - Oasis Lounge',
+            html: html
+        });
+
+        return { success: true, message: 'Email bol úspešne odoslaný.' };
+
+    } catch (e) {
+        console.error('Error resending verification:', e);
+        return { error: 'Chyba pri odosielaní emailu.' };
+    }
+}

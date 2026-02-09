@@ -12,8 +12,9 @@ interface Trainer {
     full_name: string;
 }
 
-const initialState: { message: string | null } = {
+const initialState: { message: string | null, inputs: any } = {
     message: null,
+    inputs: null,
 };
 
 export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], initialData?: any }) {
@@ -88,16 +89,16 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
                     {/* Left Column */}
                     <div>
                         <label className={styles.label}>Názov</label>
-                        <input name="title" required defaultValue={initialData?.title} className={styles.input} placeholder="napr. Pilates Flow" />
+                        <input name="title" required defaultValue={state?.inputs?.title ?? initialData?.title} className={styles.input} placeholder="napr. Pilates Flow" />
 
                         <label className={styles.label}>Max. počet účastníkov</label>
-                        <input name="capacity" type="number" defaultValue={initialData?.capacity || 8} className={styles.input} />
+                        <input name="capacity" type="number" defaultValue={(state?.inputs?.capacity ?? initialData?.capacity) || 8} className={styles.input} />
 
                         <label className={styles.label}>Dĺžka tréningu</label>
-                        <input name="duration_minutes" defaultValue={initialData?.duration_minutes} className={styles.input} placeholder="50-80 minut" />
+                        <input name="duration_minutes" defaultValue={state?.inputs?.duration_minutes ?? initialData?.duration_minutes} className={styles.input} placeholder="50-80 minut" />
 
                         <label className={styles.label}>Opis tréningu</label>
-                        <textarea name="description" rows={6} defaultValue={initialData?.description} className={`${styles.input} ${styles.textarea}`} />
+                        <textarea name="description" rows={6} defaultValue={state?.inputs?.description ?? initialData?.description} className={`${styles.input} ${styles.textarea}`} />
                         <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>87/200</div>
                     </div>
 
@@ -105,7 +106,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
                     <div>
                         <label className={styles.label}>Úroveň</label>
                         <div className={styles.selectWrapper}>
-                            <select name="level" defaultValue={initialData?.level || 'Všetky úrovne'} className={`${styles.input} ${styles.select}`}>
+                            <select name="level" defaultValue={(state?.inputs?.level ?? initialData?.level) || 'Všetky úrovne'} className={`${styles.input} ${styles.select}`}>
                                 <option value="Začiatočník">Začiatočník</option>
                                 <option value="Pokročilý">Pokročilý</option>
                                 <option value="Všetky úrovne">Všetky úrovne</option>
@@ -114,10 +115,10 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
                         </div>
 
                         <label className={styles.label}>Svalová partia</label>
-                        <input name="muscle_group" defaultValue={initialData?.muscle_group} className={styles.input} />
+                        <input name="muscle_group" defaultValue={state?.inputs?.muscle_group ?? initialData?.muscle_group} className={styles.input} />
 
                         <label className={styles.label} style={{ marginTop: '7.8rem' }}>Perex</label>
-                        <textarea name="perex" rows={6} defaultValue={initialData?.perex} className={`${styles.input} ${styles.textarea}`} />
+                        <textarea name="perex" rows={6} defaultValue={state?.inputs?.perex ?? initialData?.perex} className={`${styles.input} ${styles.textarea}`} />
                         <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>87/100</div>
                     </div>
                 </div>

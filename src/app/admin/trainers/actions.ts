@@ -75,12 +75,30 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
 
         if (error) {
             console.error('DB Error:', error);
-            return { message: 'Error saving trainer: ' + error.message };
+            return {
+                message: 'Error saving trainer: ' + error.message,
+                inputs: {
+                    full_name,
+                    specialties: specialtiesString,
+                    bio,
+                    email,
+                    phone
+                }
+            };
         }
 
     } catch (e) {
         console.error('Unexpected Error:', e);
-        return { message: 'Nastala neočakávaná chyba: ' + (e as Error).message };
+        return {
+            message: 'Nastala neočakávaná chyba: ' + (e as Error).message,
+            inputs: {
+                full_name: formData.get('full_name'),
+                specialties: formData.get('specialties'),
+                bio: formData.get('bio'),
+                email: formData.get('email'),
+                phone: formData.get('phone')
+            }
+        };
     }
 
     revalidatePath('/admin/trainers');

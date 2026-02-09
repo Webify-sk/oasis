@@ -3,6 +3,7 @@ import { CreditPackages } from '@/components/dashboard/CreditPackages';
 import { CreditCounter } from '@/components/dashboard/CreditCounter';
 import { VoucherRedemption } from '@/components/dashboard/VoucherRedemption';
 import styles from '../trainings/page.module.css';
+import { getActiveCreditPackages } from '@/app/admin/credits/actions';
 
 interface CreditPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -11,6 +12,8 @@ interface CreditPageProps {
 export default async function CreditPage({ searchParams }: CreditPageProps) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    const packages = await getActiveCreditPackages();
 
     // Fetch profile for billing details
     let userProfile = null;
@@ -68,7 +71,7 @@ export default async function CreditPage({ searchParams }: CreditPageProps) {
             )}
 
             <div style={{ padding: '0 2rem 4rem 2rem' }}>
-                <CreditPackages userProfile={userProfile} />
+                <CreditPackages userProfile={userProfile} packages={packages} />
                 <div style={{ marginTop: '3rem', maxWidth: '600px' }}>
                     <VoucherRedemption />
                 </div>

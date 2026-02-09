@@ -43,77 +43,74 @@ export function UserList({ users }: { users: Profile[] }) {
                 </div>
             </div>
 
-            <table className={styles.table}>
-                <thead className={styles.thead}>
-                    <tr>
-                        <th className={styles.th}>Meno a priezvisko</th>
-                        <th className={styles.th}>Email</th>
-                        <th className={styles.th}>Telefón</th>
-                        <th className={styles.th}>Rola</th>
-                        <th className={styles.th}>Vstupy</th>
-                        <th className={styles.th} style={{ width: '120px', textAlign: 'center' }}>Akcie</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredUsers.map((user) => (
-                        <tr key={user.id} className={styles.tr}>
-                            <td className={styles.td}>{user.full_name || 'Nezadané'}</td>
-                            <td className={styles.tdSecondary}>{user.email}</td>
-                            <td className={styles.tdSecondary}>{user.phone || '-'}</td>
-                            <td className={styles.tdSecondary}>
-                                <span style={{
-                                    textTransform: 'capitalize',
-                                    padding: '2px 8px',
-                                    borderRadius: '99px',
-                                    backgroundColor: user.role === 'admin' ? '#eef2ff' : user.role === 'employee' ? '#f0fdf4' : 'transparent',
-                                    color: user.role === 'admin' ? '#4338ca' : user.role === 'employee' ? '#166534' : 'inherit',
-                                    fontSize: '0.85rem'
-                                }}>
-                                    {user.role === 'user' ? 'Klient' : (user.role || '-')}
-                                </span>
-                            </td>
-                            <td className={styles.tdSecondary}>{user.credits}</td>
-                            <td className={styles.td} style={{ textAlign: 'center' }}>
-                                <div className={styles.actions} style={{ justifyContent: 'center' }}>
-                                    <Link href={`/admin/users/${user.id}`} style={{ textDecoration: 'none' }} title="Zobraziť detail">
-                                        <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            style={{
-                                                fontSize: '0.75rem',
-                                                height: '32px',
-                                                backgroundColor: 'transparent',
-                                                border: '1px solid #E5E7EB',
-                                                color: '#4B5563',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                boxShadow: 'none',
-                                                padding: '0 0.75rem'
-                                            }}
-                                        >
-                                            <Eye size={14} />
-                                            Detail
-                                        </Button>
-                                    </Link>
-                                    {/* 
-                                    <Button variant="primary" size="sm" style={{ backgroundColor: '#8C4848', height: '32px', padding: '0 0.5rem' }}>
-                                        <Trash2 size={16} />
-                                    </Button>
-                                    */}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                    {filteredUsers.length === 0 && (
+            <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                    <thead className={styles.thead}>
                         <tr>
-                            <td colSpan={6} className={styles.emptyState}>
-                                {searchTerm ? 'Nenašli sa žiadne výsledky.' : 'Žiadni užívatelia.'}
-                            </td>
+                            <th className={styles.th}>Meno a priezvisko</th>
+                            <th className={styles.th}>Email</th>
+                            <th className={styles.th}>Telefón</th>
+                            <th className={styles.th}>Rola</th>
+                            <th className={styles.th}>Vstupy</th>
+                            <th className={styles.th} style={{ width: '120px', textAlign: 'center' }}>Akcie</th>
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {filteredUsers.map((user) => (
+                            <tr key={user.id} className={styles.tr}>
+                                <td className={styles.td}>{user.full_name || 'Nezadané'}</td>
+                                <td className={styles.tdSecondary}>{user.email}</td>
+                                <td className={styles.tdSecondary}>{user.phone || '-'}</td>
+                                <td className={styles.tdSecondary}>
+                                    <span style={{
+                                        textTransform: 'capitalize',
+                                        padding: '2px 8px',
+                                        borderRadius: '99px',
+                                        backgroundColor: user.role === 'admin' ? '#eef2ff' : user.role === 'employee' ? '#f0fdf4' : 'transparent',
+                                        color: user.role === 'admin' ? '#4338ca' : user.role === 'employee' ? '#166534' : 'inherit',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        {user.role === 'user' ? 'Klient' : (user.role || '-')}
+                                    </span>
+                                </td>
+                                <td className={styles.tdSecondary}>{user.credits}</td>
+                                <td className={styles.td} style={{ textAlign: 'center' }}>
+                                    <div className={styles.actions} style={{ justifyContent: 'center' }}>
+                                        <Link href={`/admin/users/${user.id}`} style={{ textDecoration: 'none' }} title="Zobraziť detail">
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                style={{
+                                                    fontSize: '0.75rem',
+                                                    height: '32px',
+                                                    backgroundColor: 'transparent',
+                                                    border: '1px solid #E5E7EB',
+                                                    color: '#4B5563',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    boxShadow: 'none',
+                                                    padding: '0 0.75rem'
+                                                }}
+                                            >
+                                                <Eye size={14} />
+                                                Detail
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        {filteredUsers.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className={styles.emptyState}>
+                                    {searchTerm ? 'Nenašli sa žiadne výsledky.' : 'Žiadni užívatelia.'}
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 
 const initialState = {
     message: null as string | null,
+    inputs: null as any,
 };
 
 interface UserFormProps {
@@ -68,7 +69,7 @@ export function UserForm({ initialData }: UserFormProps) {
                 <Input
                     label="Meno a Priezvisko"
                     name="full_name"
-                    defaultValue={initialData?.full_name || ''}
+                    defaultValue={state?.inputs?.full_name ?? initialData?.full_name ?? ''}
                     icon={User}
                     required
                 />
@@ -77,7 +78,7 @@ export function UserForm({ initialData }: UserFormProps) {
                     label="Email"
                     name="email"
                     type="email"
-                    defaultValue={initialData?.email || ''}
+                    defaultValue={state?.inputs?.email ?? initialData?.email ?? ''}
                     icon={Mail}
                     required
                     // Use readOnly so it is submitted in formData, allowing backend to access email for promotion logic
@@ -88,7 +89,7 @@ export function UserForm({ initialData }: UserFormProps) {
                     label="Telefónne číslo"
                     name="phone"
                     type="tel"
-                    defaultValue={initialData?.phone || ''}
+                    defaultValue={state?.inputs?.phone ?? initialData?.phone ?? ''}
                     icon={Phone}
                 />
 
@@ -97,7 +98,7 @@ export function UserForm({ initialData }: UserFormProps) {
                         label="Kredity"
                         name="credits"
                         type="number"
-                        defaultValue={initialData?.credits?.toString() || '0'}
+                        defaultValue={state?.inputs?.credits?.toString() ?? initialData?.credits?.toString() ?? '0'}
                         icon={CreditCard}
                     />
 
@@ -109,7 +110,7 @@ export function UserForm({ initialData }: UserFormProps) {
                             <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#8D8D8D' }} />
                             <select
                                 name="role"
-                                defaultValue={initialData?.role || 'user'}
+                                defaultValue={state?.inputs?.role ?? initialData?.role ?? 'user'}
                                 style={{
                                     width: '100%',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Clock, User, XCircle, AlertCircle, Edit3, Save } from 'lucide-react';
 import { cancelAppointment, rescheduleAppointment } from '@/actions/cosmetic-actions';
 import { format } from 'date-fns';
@@ -27,12 +27,24 @@ interface Appointment {
         phone: string | null;
         email: string | null;
     };
+    client_name?: string | null;
 }
 
 export function ClientAppointmentsList({ initialAppointments, isEmployeeView = false }: { initialAppointments: Appointment[], isEmployeeView?: boolean }) {
     const [appointments, setAppointments] = useState(initialAppointments);
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [cancelModalId, setCancelModalId] = useState<string | null>(null);
+
+    useEffect(() => {
+        setAppointments(initialAppointments);
+    }, [initialAppointments]);
+
+    // Update state when props change (e.g. after router.refresh())
+    // use useEffect to sync initialAppointments with appointments state
+    // import useEffect if not already imported (it is line 3)
+    // Actually, useEffect is imported on line 3.
+    // Wait, I need to check if useEffect is imported. Yes it is 'import { useState, useEffect } from "react";' is not there?
+    // Line 3 is 'import { useState } from 'react';'. I need to add useEffect.
 
     // Reschedule State
     const [rescheduleData, setRescheduleData] = useState<{ id: string, date: string, start: string, duration: number } | null>(null);
@@ -278,7 +290,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <User size={16} />
                         {isEmployeeView
-                            ? (appointment.profiles?.full_name || 'Neznámy klient')
+                            ? (appointment.profiles?.full_name || appointment.client_name || 'Neznámy klient')
                             : (appointment.employees?.name || 'Neznámy')
                         }
                     </div>

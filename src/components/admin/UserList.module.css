@@ -126,3 +126,10 @@
         border-color: #D1D5DB !important;
         color: #111827 !important;
     }
+}
+
+.tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}

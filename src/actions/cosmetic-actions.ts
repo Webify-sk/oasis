@@ -1019,23 +1019,40 @@ export async function cancelAppointment(id: string) {
 
     if (!user) return { error: 'Unauthorized' }
 
-    // 1. Fetch details for email BEFORE cancelling (to get service name etc)
-    const { data: appointment } = await supabase
+    // 1. Check Permissions
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const isStaff = profile?.role === 'employee' || profile?.role === 'admin';
+
+    // 2. Fetch details for email BEFORE cancelling (to get service name etc)
+    let query = supabase
         .from('cosmetic_appointments')
         .select(`
             *,
             cosmetic_services(title)
         `)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', id);
 
-    // 2. Cancellation
-    const { error } = await supabase
+    if (!isStaff) {
+        query = query.eq('user_id', user.id);
+    }
+
+    const { data: appointment } = await query.single();
+
+    if (!appointment) {
+        return { error: 'Rezervácia sa nenašla alebo nemáte oprávnenie.' };
+    }
+
+    // 3. Cancellation
+    let updateQuery = supabase
         .from('cosmetic_appointments')
         .update({ status: 'cancelled' })
-        .eq('id', id)
-        .eq('user_id', user.id)
+        .eq('id', id);
+
+    if (!isStaff) {
+        updateQuery = updateQuery.eq('user_id', user.id);
+    }
+
+    const { error } = await updateQuery;
 
     if (error) {
         console.error('Error cancelling appointment:', error)
@@ -1073,6 +1090,126 @@ export async function cancelAppointment(id: string) {
 
     revalidatePath('/dashboard/cosmetics/appointments')
     return { success: true }
+}
+
+
+
+// --- Manual Reservations (Employee/Admin) ---
+
+export async function createManualReservation(prevState: any, formData: FormData) {
+    await requireEmployeeOrAdmin();
+    const supabase = await createClient();
+
+    const serviceId = formData.get('serviceId') as string;
+    const employeeId = formData.get('employeeId') as string;
+    const date = formData.get('date') as string;
+    const time = formData.get('time') as string; // HH:mm
+    const notes = formData.get('notes') as string;
+
+    // Guest info
+    const clientName = formData.get('clientName') as string;
+    const clientEmail = formData.get('clientEmail') as string;
+    const clientPhone = formData.get('clientPhone') as string;
+
+    if (!serviceId || !employeeId || !date || !time) {
+        return { error: 'Chýbajú povinné údaje (služba, zamestnanec, dátum, čas).' };
+    }
+
+    // Construct timestamps
+    const startDateTime = new Date(`${date}T${time}:00`); // Local time? Needs careful handling of timezones if server is UTC.
+    // Assuming input is local and we store UTC.
+    // Better: use date-fns-tz or similar if complex. key is to ensure consistent ISO string.
+
+    // Get duration to calculate end time
+    const { data: service } = await supabase.from('cosmetic_services').select('duration_minutes').eq('id', serviceId).single();
+    if (!service) return { error: 'Služba sa nenašla.' };
+
+    const endDateTime = new Date(startDateTime.getTime() + service.duration_minutes * 60000);
+    const endTime = endDateTime.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
+
+    // --- Availability Check ---
+
+    // 1. Check Exceptions (Vacation/Specific availability)
+    const { data: exceptions } = await supabase
+        .from('employee_availability_exceptions')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('exception_date', date);
+
+    if (exceptions && exceptions.length > 0) {
+        // Assume daily exception mostly. If multiple, it's complex, but usually one per day.
+        const exception = exceptions[0];
+        if (!exception.is_available) {
+            return { error: 'Zamestnanec má v tento deň voľno (výnimka).' };
+        }
+        // If available override, we check time boundaries if set
+        if (exception.start_time && exception.end_time) {
+            if (time < exception.start_time || endTime > exception.end_time) {
+                return { error: `Zamestnanec je dostupný len od ${exception.start_time} do ${exception.end_time}.` };
+            }
+        }
+    } else {
+        // 2. Check Regular Weekly Schedule
+        const dayOfWeek = new Date(date).getDay(); // 0 = Sunday
+        const { data: schedule } = await supabase
+            .from('employee_availability')
+            .select('*')
+            .eq('employee_id', employeeId)
+            .eq('is_recurring', true)
+            .eq('day_of_week', dayOfWeek)
+            .eq('is_available', true)
+            .maybeSingle();
+
+        if (!schedule) {
+            return { error: 'Zamestnanec v tento deň (podľa rozvrhu) nepracuje.' };
+        }
+
+        if (schedule.start_time && schedule.end_time) {
+            if (time < schedule.start_time || endTime > schedule.end_time) {
+                return { error: `Mimo pracovných hodín (${schedule.start_time} - ${schedule.end_time}).` };
+            }
+        }
+    }
+
+    // 3. Check Conflicts with existing appointments
+    const { count: conflictCount } = await checkConflictingAppointments(employeeId, date, time, endTime);
+    if (conflictCount > 0) {
+        return { error: 'V tomto čase už existuje iná rezervácia.' };
+    }
+
+    // Check if user exists with this email to link them?
+    // Optional feature: strict linking or loose linking.
+    let userId = null;
+    if (clientEmail) {
+        const { data: existingUser } = await supabase.from('profiles').select('id').eq('email', clientEmail).single();
+        if (existingUser) {
+            userId = existingUser.id;
+        }
+    }
+
+    const { error } = await supabase
+        .from('cosmetic_appointments')
+        .insert({
+            service_id: serviceId,
+            employee_id: employeeId,
+            start_time: startDateTime.toISOString(),
+            end_time: endDateTime.toISOString(),
+            user_id: userId, // Link if found, else NULL
+            client_name: clientName,
+            client_email: clientEmail,
+            client_phone: clientPhone,
+            notes: notes,
+            status: 'confirmed', // Manual reservations are usually confirmed immediately
+            created_at: new Date().toISOString()
+        });
+
+    if (error) {
+        console.error('Error creating manual reservation:', error);
+        return { error: 'Chyba pri vytváraní rezervácie: ' + error.message };
+    }
+
+    revalidatePath('/dashboard/cosmetics/appointments');
+    return { success: true, message: 'Rezervácia bola úspešne vytvorená.' };
 }
 
 

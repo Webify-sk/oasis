@@ -3,23 +3,14 @@
 import { useState, useActionState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { upsertTrainer } from '@/app/admin/trainers/actions';
-import { Image as ImageIcon, Upload, X } from 'lucide-react';
 
 const initialState = {
     message: '',
+    inputs: null as any,
 };
 
 export function TrainerForm({ initialData }: { initialData?: any }) {
-    const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.avatar_url || null);
     const [state, formAction] = useActionState(upsertTrainer, initialState);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const url = URL.createObjectURL(file);
-            setPreviewUrl(url);
-        }
-    };
 
     // Styling constants (reused)
     const inputStyle = {
@@ -59,89 +50,30 @@ export function TrainerForm({ initialData }: { initialData?: any }) {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                {/* Left Column - Form */}
+            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
                 <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '8px', border: '1px solid #E5E0DD' }}>
                     <label style={{ ...labelStyle, marginTop: 0 }}>Meno</label>
-                    <input name="full_name" required defaultValue={initialData?.full_name} style={inputStyle} placeholder="Peter" />
-
-                    <label style={labelStyle}>Priezvisko</label>
-                    <input name="last_name_placeholder" style={inputStyle} placeholder="Novák" />
-                    {/* Note: Database has single full_name, usually handled by joining or split.
-                        I'll just map full_name input to the table column for now to be safe,
-                        or I can combine them in the action if I want two inputs.
-                        Let's stick to one "Meno a Priezvisko" logic or keep simple ID match.
-                        Actually, looking at the screenshot "Meno Priezvisko" is usually one header.
-                        I will simplify to a single "Meno a priezvisko" input effectively.
-                    */}
-
-                    <label style={labelStyle}>Špecializácie (oddelené čiarkou)</label>
-                    <input name="specialties" defaultValue={initialData?.specialties?.join(', ')} style={inputStyle} placeholder="Pilates, Joga" />
-
-                    <label style={labelStyle}>Bio</label>
-                    <textarea name="bio" rows={4} defaultValue={initialData?.bio} style={{ ...inputStyle, resize: 'vertical' }} />
+                    <input name="full_name" required defaultValue={state?.inputs?.full_name ?? initialData?.full_name} style={inputStyle} placeholder="Peter" />
 
                     <label style={labelStyle}>E-mail</label>
-                    <input name="email" type="email" style={inputStyle} placeholder="email@priklad.com" />
+                    <input name="email" type="email" defaultValue={state?.inputs?.email ?? initialData?.email} style={inputStyle} placeholder="email@priklad.com" />
 
                     <label style={labelStyle}>Telefón</label>
-                    <input name="phone" style={inputStyle} placeholder="0912 345 678" />
+                    <input name="phone" defaultValue={state?.inputs?.phone ?? initialData?.phone} style={inputStyle} placeholder="0912 345 678" />
+
+                    <label style={labelStyle}>Špecializácie (oddelené čiarkou)</label>
+                    <input name="specialties" defaultValue={state?.inputs?.specialties ?? initialData?.specialties?.join(', ')} style={inputStyle} placeholder="Pilates, Joga" />
+
+                    <label style={labelStyle}>Bio</label>
+                    <textarea name="bio" rows={4} defaultValue={state?.inputs?.bio ?? initialData?.bio} style={{ ...inputStyle, resize: 'vertical' }} />
+
+                    {/* Photo upload removed as per request to fix crash */}
+                    {/* <input type="hidden" name="photo" value="" /> */}
 
                     <div style={{ marginTop: '2rem' }}>
                         <Button type="submit" style={{ backgroundColor: '#7D6A62' }}>
                             ZMENIŤ ÚDAJE
                         </Button>
-                    </div>
-                </div>
-
-                {/* Right Column - Photo Mockup */}
-                <div>
-                    <label style={labelStyle}>Profilová fotografia</label>
-                    <div style={{
-                        width: '100%',
-                        aspectRatio: '1/1',
-                        backgroundColor: '#fcfbf9',
-                        border: '1px dashed #ccc',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#8C7568',
-                        marginTop: '0.5rem',
-                        overflow: 'hidden',
-                        position: 'relative'
-                    }}>
-                        {previewUrl ? (
-                            <img
-                                src={previewUrl}
-                                alt="Preview"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                        ) : (
-                            <>
-                                <ImageIcon size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                <span style={{ fontWeight: 600 }}>Nahrajte profilovú fotografiu</span>
-                                <span style={{ fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>Fotografia musí byť menšia ako 20MB</span>
-                            </>
-                        )}
-
-                        {/* Hidden File Input */}
-                        <input
-                            type="file"
-                            name="photo"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                opacity: 0,
-                                cursor: 'pointer'
-                            }}
-                        />
                     </div>
                 </div>
             </div>

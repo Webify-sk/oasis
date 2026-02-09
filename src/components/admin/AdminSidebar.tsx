@@ -3,16 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { Users, Dumbbell, UserCheck, LogOut, Gift, Calendar, List } from 'lucide-react';
+import { Users, Dumbbell, UserCheck, LogOut, Gift, Calendar, List, LayoutDashboard, Settings, FileText, UserPlus, Scissors, CreditCard } from 'lucide-react';
 import { signOut } from '@/app/auth/actions';
 import styles from '@/components/dashboard/Sidebar.module.css'; // Reusing dashboard sidebar styles for consistency
 
 const navItems = [
     { name: 'Užívatelia', href: '/admin/users', icon: Users },
     { name: 'Tréningy', href: '/admin/trainings', icon: Dumbbell },
-    { name: 'Tréneri', href: '/admin/trainers', icon: UserCheck },
-    { name: 'Vouchery', href: '/admin/vouchers', icon: Gift },
-    { name: 'Kalendár', href: '/admin/calendar', icon: Calendar },
+    { name: 'Trainers', href: '/admin/trainers', icon: Users },
+    { name: 'Kreditné balíky', href: '/admin/credits', icon: CreditCard },
+    { name: 'Faktúry', href: '/admin/invoices', icon: FileText },
     { name: 'Kozmetika - Služby', href: '/admin/cosmetics/services', icon: List },
     { name: 'Kozmetika - Staff', href: '/admin/cosmetics/staff', icon: Users },
 ];

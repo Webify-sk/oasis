@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { ClientAppointmentsList } from '@/components/cosmetics/ClientAppointmentsList';
+import { ManualReservationModal } from '@/components/cosmetics/ManualReservationModal';
 
 export default async function MyAppointmentsPage() {
     const supabase = await createClient();
@@ -22,9 +23,14 @@ export default async function MyAppointmentsPage() {
         appointments = await getUserAppointments();
     }
 
+
+
     return (
         <div style={{ padding: '1rem' }}>
-            <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontFamily: 'serif', color: '#333' }}>Nadchádzajúce rezervácie</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h1 style={{ fontSize: '2rem', fontFamily: 'serif', color: '#333', margin: 0 }}>Nadchádzajúce rezervácie</h1>
+                {isEmployeeView && <ManualReservationModal />}
+            </div>
             <ClientAppointmentsList initialAppointments={appointments} isEmployeeView={isEmployeeView} />
         </div>
     );

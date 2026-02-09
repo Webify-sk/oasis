@@ -31,6 +31,8 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [formKey, setFormKey] = useState(0);
+    const [prevValues, setPrevValues] = useState<any>(null);
 
     // Determine which action to use (create or update)
     // Note: This is slightly more complex here because we need to handle services separately for update
@@ -55,6 +57,15 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
 
     const handleSubmit = async (formData: FormData) => {
         setLoading(true);
+
+        const currentValues = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            bio: formData.get('bio'),
+            color: formData.get('color'),
+            is_active: formData.get('is_active') === 'on'
+        };
+
         try {
             if (initialData?.id) {
                 // UPDATE
@@ -68,6 +79,8 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
                 if (password !== confirmPassword) {
                     alert('Heslá sa nezhodujú.');
                     setLoading(false);
+                    setPrevValues(currentValues);
+                    setFormKey(k => k + 1);
                     return;
                 }
 
@@ -75,6 +88,8 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
                 if (res.error) {
                     alert(res.error);
                     setLoading(false);
+                    setPrevValues(currentValues);
+                    setFormKey(k => k + 1);
                     return;
                 }
 
@@ -87,6 +102,8 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
         } catch (e) {
             console.error(e);
             alert('Nastala chyba.');
+            setPrevValues(currentValues);
+            setFormKey(k => k + 1);
         } finally {
             setLoading(false);
         }
@@ -112,13 +129,13 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
 
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', border: '1px solid #E5E0DD', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
 
-                <form action={handleSubmit}>
+                <form key={formKey} action={handleSubmit}>
                     <div style={{ display: 'grid', gridTemplateColumns: !initialData ? '1fr 1fr' : '1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Meno</label>
                             <input
                                 name="name"
-                                defaultValue={initialData?.name}
+                                defaultValue={prevValues?.name ?? initialData?.name}
                                 required
                                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }}
                             />
@@ -130,6 +147,7 @@ export function StaffForm({ initialData }: { initialData?: Employee }) {
                                 <input
                                     type="email"
                                     name="email"
+                                    defaultValue={prevValues?.email ?? ''}
                                     required
                                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }}
                                 />

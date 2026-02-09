@@ -30,17 +30,22 @@ export async function upsertUser(prevState: any, formData: FormData) {
 
         if (error) {
             console.error('Error updating user:', error);
-            return { message: 'Chyba pri ukladaní užívateľa: ' + error.message };
+            return {
+                message: 'Chyba pri ukladaní užívateľa: ' + error.message,
+                inputs: { full_name, phone, credits, role, email: formData.get('email') }
+            };
         }
 
 
     } catch (e) {
-        return { message: 'Nastala neočakávaná chyba.' };
+        return {
+            message: 'Nastala neočakávaná chyba.',
+            inputs: { full_name, phone, credits, role, email: formData.get('email') }
+        };
     }
 
     // Handle Employee Promotion
     if (role === 'employee') {
-        // We need email. For existing users, it was passed via readOnly input.
         const email = formData.get('email') as string;
         if (email) {
             const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
@@ -63,6 +68,7 @@ export async function createUser(fromState: any, formData: FormData) {
     const phone = formData.get('phone') as string;
     const credits = parseInt(formData.get('credits') as string) || 0;
     const role = formData.get('role') as string;
+    const inputs = { email, full_name, phone, credits, role };
 
     try {
         // 1. Create Auth User
@@ -75,30 +81,14 @@ export async function createUser(fromState: any, formData: FormData) {
 
         if (authError) {
             console.error('Auth create error:', authError);
-            return { message: 'Chyba pri vytváraní užívateľa: ' + authError.message };
+            return { message: 'Chyba pri vytváraní užívateľa: ' + authError.message, inputs };
         }
 
         if (!user) {
-            return { message: 'Nepodarilo sa vytvoriť užívateľa.' };
+            return { message: 'Nepodarilo sa vytvoriť užívateľa.', inputs };
         }
 
-        // 2. Update Profile (Profile is auto-created by trigger? Or we manually upsert?)
-        // Usually trigger handles insertion, so we update it.
-        // Let's wait a bit or try update immediately. 
-        // Best practice: just update specific fields.
-
-        const supabase = await createClient(); // Standard client for RLS checks if needed, but admin client is safer here for immediate consistency if trigger laggy?
-        // Actually, let's use admin client to update profile to be sure we bypass RLS if my admin user isn't properly set up yet for insertion? 
-        // But 'upsertUser' used standard client. 
-        // Let's use standard client, assuming RLS allows admin to update any profile.
-
-        // Wait for trigger? Or insert if not exists?
-        // Note: 'create_profile_for_new_user' trigger usually does INSERT.
-        // So we UPDATE.
-
-        // Small delay might be needed if trigger is async? Triggers in Postgres are synchronous inside transaction usually?
-        // Auth createUser is one transaction. Trigger runs after user insert. 
-        // So profile SHOULD exist.
+        const supabase = await createClient();
 
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
@@ -113,6 +103,9 @@ export async function createUser(fromState: any, formData: FormData) {
 
         if (profileError) {
             console.error('Profile update error:', profileError);
+            // Don't return here to avoid incomplete state, but logging is good.
+            // Or should we fail? If profile update fails, user exists but has wrong role/data.
+            // Proceeding might be better than failing hard?
         }
 
         // 3. Send Verification Email (Soft Verification)
@@ -167,28 +160,7 @@ export async function createUser(fromState: any, formData: FormData) {
 
     } catch (e) {
         console.error(e);
-        return { message: 'Nastala neočakávaná chyba.' };
-    }
-
-    // Handle Employee Promotion
-    if (role === 'employee') {
-        // In createUser, email is definitely in formData
-        const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
-        // We reuse the new user.id (which was fetched from auth creation) not just formData? 
-        // Wait, createUser uses `user.id` from auth response.
-        // We need to pass THAT id.
-        // But `createUser` function implementation:
-        // `step 1: const { data: { user } ... }`
-        // So we should capture `user.id` inside the try/catch or ensure it's available here.
-        // The snippet above is outside try/catch? No, previous implementation had try/catch wrapping everything.
-        // Let's look at the original file structure provided in context. 
-        // Ah, I need to be careful where I insert this.
-        // The previous `replace_file_content` was targeting `upsertUser` end block. 
-        // Now `createUser` is huge.
-        // I should target the end of `createUser` before redirect, but make sure `user` object is accessible or use `id` if available.
-        // Actually `createUser` returns early if error. 
-        // But `user` variable scope is inside `try`.
-        // I should put this logic INSIDE the `try` block after profile update.
+        return { message: 'Nastala neočakávaná chyba.', inputs };
     }
 
     revalidatePath('/admin/users');

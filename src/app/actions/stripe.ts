@@ -11,9 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export async function createCheckoutSession(
-    packageId: PackageId, // Enforce correct IDs
-    price: string, // Expecting string like "27 €" or "500 €" - need to parse
-    name: string
+    packageId: string // Ensure this matches DB ID now
 ) {
     const supabase = await createClient()
     try {
@@ -35,12 +33,28 @@ export async function createCheckoutSession(
             return { error: 'Pre nákup kreditov musíte mať overený email.' }
         }
 
-        // Parse price string to number (cents)
-        // Example: "27 €" -> 2700
-        const amount = parseInt(price.replace(/[^0-9]/g, '')) * 100
+        // FETCH PACKAGE FROM DB
+        const { data: creditPackage, error: packageError } = await supabase
+            .from('credit_packages')
+            .select('*')
+            .eq('id', packageId)
+            .single();
+
+        if (packageError || !creditPackage) {
+            console.error('Package fetch error:', packageError);
+            throw new Error('Invalid package selected or package not found.');
+        }
+
+        if (!creditPackage.is_active) {
+            throw new Error('This package is no longer available.');
+        }
+
+        // Price is stored in Euros in DB (e.g. 27.00)
+        // Stripe expects cents for 'unit_amount'
+        const amount = Math.round(creditPackage.price * 100);
 
         if (isNaN(amount) || amount <= 0) {
-            throw new Error('Invalid price')
+            throw new Error('Invalid price calculated from package.')
         }
 
         const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
@@ -52,8 +66,8 @@ export async function createCheckoutSession(
                     price_data: {
                         currency: 'eur',
                         product_data: {
-                            name: name,
-                            description: `Credit Package: ${packageId}`,
+                            name: creditPackage.title,
+                            description: creditPackage.description || `Kreditný balík: ${creditPackage.credits} kreditov`,
                         },
                         unit_amount: amount,
                     },
@@ -68,7 +82,9 @@ export async function createCheckoutSession(
                 userId: user.id,
                 userEmail: user.email || '',
                 packageId: packageId,
-                packageName: name
+                packageName: creditPackage.title,
+                credits: creditPackage.credits, // Add this for webhook convenience
+                bonus: creditPackage.bonus_credits || 0
             }
         })
 

@@ -1,15 +1,30 @@
 import { createClient } from '@/utils/supabase/server';
 import { TrainerForm } from '@/components/admin/TrainerForm';
 
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
+
 export default async function NewTrainerPage() {
     return (
-        <div style={{ padding: '0rem' }}>
-            <div style={{
-                marginBottom: '2rem',
-                padding: '2rem 2rem 0 2rem'
-            }}>
-                <TrainerForm />
-            </div>
+        <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
+            <Link
+                href="/admin/trainers"
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: '#666',
+                    marginBottom: '2rem',
+                    textDecoration: 'none',
+                    fontSize: '0.9rem',
+                    fontWeight: 500
+                }}
+            >
+                <ChevronLeft size={20} />
+                Späť na zoznam
+            </Link>
+
+            <TrainerForm />
         </div>
     );
 }
