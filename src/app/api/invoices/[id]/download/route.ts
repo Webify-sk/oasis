@@ -10,31 +10,47 @@ export async function GET(
     const invoiceId = params.id;
     const supabase = await createClient();
 
-    // 1. Auth Check & Fetch Invoice
+    // 1. Auth Check
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { data: invoice, error } = await supabase
+    // 2. Check Permissions (Fetch requester profile)
+    const { data: requesterProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    const isAdmin = requesterProfile?.role === 'admin';
+
+    // 3. Fetch Invoice
+    let query = supabase
         .from('invoices')
         .select('*')
-        .eq('id', invoiceId)
-        .eq('user_id', user.id) // Ensure user owns invoice
-        .single();
+        .eq('id', invoiceId);
+
+    // If not admin, restrict to own invoices
+    if (!isAdmin) {
+        query = query.eq('user_id', user.id);
+    }
+
+    const { data: invoice, error } = await query.single();
 
     if (error || !invoice) {
         return new NextResponse('Invoice not found', { status: 404 });
     }
 
-    // 2. Fetch User Profile for Address details
+    // 4. Fetch Invoice Owner Profile (for PDF Address details)
+    // We need the profile of the person who OWNS the invoice
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', invoice.user_id)
         .single();
 
-    // 3. Prepare Data
+    // 5. Prepare Data
     const formattedDate = new Date(invoice.created_at).toLocaleDateString('sk-SK');
 
     // Construct Buyer Address
@@ -44,7 +60,7 @@ export async function GET(
         profile?.billing_country || 'Slovensko'
     ].filter(Boolean).join('\n') || 'Adresa nezadaná';
 
-    const buyerName = profile?.billing_name || profile?.full_name || user.email || 'Zakaznik';
+    const buyerName = profile?.billing_name || profile?.full_name || 'Zakaznik';
 
     // 4. Generate PDF
     try {
