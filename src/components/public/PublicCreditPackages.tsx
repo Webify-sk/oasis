@@ -69,7 +69,8 @@ export function PublicCreditPackages({ packages }: PublicCreditPackagesProps) {
                             fontFamily: 'serif',
                             fontWeight: 'normal',
                             marginBottom: '0.5rem',
-                            lineHeight: 1.2
+                            lineHeight: 1.2,
+                            color: 'white'
                         }}>
                             {pkg.title}
                         </h3>
