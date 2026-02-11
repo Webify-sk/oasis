@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { VoucherListActions } from '@/components/admin/VoucherListActions';
 import { VoucherProductManager } from '@/components/admin/VoucherProductManager';
 import { Package, Calendar, MoreHorizontal } from 'lucide-react';
 import styles from '@/components/admin/VoucherAdmin.module.css';
@@ -42,6 +43,7 @@ export default async function AdminVouchersPage() {
                                 <th className={styles.th} style={{ textAlign: 'right' }}>Vstupy</th>
                                 <th className={styles.th} style={{ textAlign: 'center' }}>Status</th>
                                 <th className={styles.th} style={{ textAlign: 'right' }}>Dátum</th>
+                                <th className={styles.th}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -55,6 +57,7 @@ export default async function AdminVouchersPage() {
                                             </div>
                                         )}
                                     </td>
+                                    {/* ... existing cells ... */}
                                     <td className={styles.td}>
                                         <span className={styles.categoryBadge}>
                                             {product.category}
@@ -74,18 +77,12 @@ export default async function AdminVouchersPage() {
                                     <td className={styles.td} style={{ textAlign: 'right', fontSize: '0.8rem', color: '#9ca3af' }}>
                                         {new Date(product.created_at).toLocaleDateString()}
                                     </td>
-                                </tr>
-                            ))}
-                            {(!products || products.length === 0) && (
-                                <tr>
-                                    <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Package size={32} color="#e5e7eb" />
-                                            <p>Zatiaľ žiadne produkty.</p>
-                                        </div>
+                                    <td className={styles.td}>
+                                        <VoucherListActions product={product} />
                                     </td>
                                 </tr>
-                            )}
+                            ))}
+                            {/* ... empty state ... */}
                         </tbody>
                     </table>
                 </div>

@@ -196,3 +196,59 @@ export async function redeemBeautyVoucher(code: string) {
 
     return { success: true, message: 'Voucher bol úspešne uplatnený.' };
 }
+
+export async function deleteVoucherProduct(id: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') return { success: false, message: 'Unauthorized' };
+
+    const { error } = await supabase.from('voucher_products').delete().eq('id', id);
+
+    if (error) {
+        return { success: false, message: `Chyba pri mazaní: ${error.message}` };
+    }
+
+    revalidatePath('/admin/vouchers');
+    revalidatePath('/shop/voucher');
+    return { success: true, message: 'Produkt zmazaný.' };
+}
+
+export async function updateVoucherProduct(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') return { success: false, message: 'Unauthorized' };
+
+    const id = formData.get('id') as string;
+    const title = formData.get('title') as string;
+    const price = parseFloat(formData.get('price') as string);
+    const credits = parseInt(formData.get('credits') as string);
+    const category = formData.get('category') as string || 'Gift';
+    const description = formData.get('description') as string;
+    const isActive = formData.get('is_active') === 'on';
+
+    const { error } = await supabase.from('voucher_products').update({
+        title,
+        price,
+        credit_amount: parseInt(credits.toString()),
+        category,
+        description,
+        is_active: isActive
+    }).eq('id', id);
+
+    if (error) {
+        return { success: false, message: `Chyba pri aktualizácii: ${error.message}` };
+    }
+
+    revalidatePath('/admin/vouchers');
+    revalidatePath('/shop/voucher');
+    return { success: true, message: 'Produkt aktualizovaný.' };
+}
+

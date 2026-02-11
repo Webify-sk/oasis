@@ -17,6 +17,7 @@ export async function upsertTrainingType(prevState: any, formData: FormData) {
         const description = formData.get('description') as string;
         const perex = formData.get('perex') as string;
         const schedule = formData.get('schedule') as string; // JSON string
+        const price_credits = formData.get('price_credits') as string;
 
         const data = {
             title,
@@ -26,6 +27,7 @@ export async function upsertTrainingType(prevState: any, formData: FormData) {
             duration_minutes,
             description,
             perex,
+            price_credits: parseInt(price_credits),
             schedule: JSON.parse(schedule),
         };
 
@@ -70,12 +72,14 @@ export async function upsertTrainingType(prevState: any, formData: FormData) {
                 duration_minutes: formData.get('duration_minutes'),
                 description: formData.get('description'),
                 perex: formData.get('perex'),
+                price_credits: formData.get('price_credits'),
                 schedule: JSON.parse(formData.get('schedule') as string || '[]')
             }
         };
     }
 
     revalidatePath('/admin/trainings');
+    revalidatePath('/dashboard/trainings');
     redirect('/admin/trainings');
 }
 

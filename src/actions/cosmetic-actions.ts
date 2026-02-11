@@ -140,6 +140,29 @@ export async function deleteCosmeticService(id: string) {
     await requireAdmin();
     const supabase = await createClient()
 
+    // 1. Delete associated appointments
+    const { error: appointmentError } = await supabase
+        .from('cosmetic_appointments')
+        .delete()
+        .eq('service_id', id);
+
+    if (appointmentError) {
+        console.error('Error deleting service appointments:', appointmentError);
+        return { error: 'Failed to delete associated appointments' };
+    }
+
+    // 2. Delete associated employee services (links)
+    const { error: linkError } = await supabase
+        .from('employee_services')
+        .delete()
+        .eq('service_id', id);
+
+    if (linkError) {
+        console.error('Error deleting employee service links:', linkError);
+        return { error: 'Failed to delete employee service links' };
+    }
+
+    // 3. Delete the service
     const { error } = await supabase
         .from('cosmetic_services')
         .delete()

@@ -6,6 +6,10 @@ import Link from 'next/link';
 import styles from '@/components/ui/Button.module.css';
 import clsx from 'clsx';
 
+import { useState } from 'react';
+import { deleteTrainer } from '@/app/admin/trainers/actions';
+import { Modal } from '@/components/ui/Modal';
+
 interface Trainer {
     id: string;
     full_name: string;
@@ -15,6 +19,14 @@ interface Trainer {
 }
 
 export function TrainerList({ trainers }: { trainers: Trainer[] }) {
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const handleDelete = async () => {
+        if (!deletingId) return;
+        await deleteTrainer(deletingId);
+        setDeletingId(null);
+    };
+
     return (
         <div style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #E5E0DD', overflow: 'hidden' }}>
             <div style={{ padding: '1.5rem', borderBottom: '1px solid #E5E0DD' }}>
@@ -53,7 +65,12 @@ export function TrainerList({ trainers }: { trainers: Trainer[] }) {
                                         <Eye size={14} />
                                         Detail
                                     </Link>
-                                    <Button variant="primary" size="sm" style={{ backgroundColor: '#8C4848', height: '32px', padding: '0 0.5rem' }}>
+                                    <Button
+                                        variant="primary"
+                                        size="sm"
+                                        style={{ backgroundColor: '#8C4848', height: '32px', padding: '0 0.5rem' }}
+                                        onClick={() => setDeletingId(trainer.id)}
+                                    >
                                         <Trash2 size={16} />
                                     </Button>
                                 </div>
@@ -62,6 +79,24 @@ export function TrainerList({ trainers }: { trainers: Trainer[] }) {
                     ))}
                 </tbody>
             </table>
+
+            <Modal
+                isOpen={!!deletingId}
+                onClose={() => setDeletingId(null)}
+                title="Vymazať trénera"
+                actions={
+                    <>
+                        <Button variant="ghost" onClick={() => setDeletingId(null)}>
+                            Zrušiť
+                        </Button>
+                        <Button variant="primary" style={{ backgroundColor: '#991b1b', borderColor: '#991b1b' }} onClick={handleDelete}>
+                            Vymazať
+                        </Button>
+                    </>
+                }
+            >
+                <p>Naozaj chcete vymazať tohto trénera? Táto akcia je nevratná.</p>
+            </Modal>
         </div>
     );
 }

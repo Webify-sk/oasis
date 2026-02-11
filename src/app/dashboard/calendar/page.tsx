@@ -63,7 +63,23 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         trainingTypes?.forEach(tt => {
             if (Array.isArray(tt.schedule)) {
                 // Find matching day terms
-                const terms = tt.schedule.filter((term: any) => term.day === dayName && term.active !== false);
+                const terms = tt.schedule.filter((term: any) => {
+                    if (term.active === false) return false;
+
+                    // Recurring Logic
+                    if (term.isRecurring !== false) {
+                        return term.day === dayName;
+                    }
+
+                    // One-time Date Logic
+                    if (term.date) {
+                        const termDate = new Date(term.date);
+                        // Compare YYYY-MM-DD
+                        return termDate.toDateString() === dateObj.toDateString();
+                    }
+
+                    return false;
+                });
 
                 terms.forEach((term: any) => {
                     // Calculate exact start time for matching

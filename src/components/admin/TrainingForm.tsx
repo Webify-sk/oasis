@@ -24,7 +24,9 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
         day: 'Pondelok',
         time: '18:00',
         trainer_id: trainers[0]?.id || '',
-        active: true
+        active: true,
+        isRecurring: true,
+        date: ''
     };
 
     const [terms, setTerms] = useState<any[]>(
@@ -42,7 +44,9 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
             day: 'Pondelok',
             time: '18:00',
             trainer_id: trainers[0]?.id || '',
-            active: true
+            active: true,
+            isRecurring: true,
+            date: ''
         }]);
     };
 
@@ -52,6 +56,12 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
 
     const updateTerm = (id: number, field: string, value: any) => {
         setTerms(terms.map(t => t.id === id ? { ...t, [field]: value } : t));
+    };
+
+    // Helper to format date for input (YYYY-MM-DD)
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '';
+        return dateString.split('T')[0];
     };
 
     return (
@@ -82,7 +92,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
             <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '8px', border: '1px solid #E5E0DD' }}>
                 <h3 style={{ fontSize: '1.1rem', fontFamily: 'serif', color: '#4A403A', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {/* Icon */}
-                    Pilates Flow
+                    Základné informácie
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
@@ -100,6 +110,9 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
                         <label className={styles.label}>Opis tréningu</label>
                         <textarea name="description" rows={6} defaultValue={state?.inputs?.description ?? initialData?.description} className={`${styles.input} ${styles.textarea}`} />
                         <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>87/200</div>
+
+                        <label className={styles.label} style={{ marginTop: '1rem' }}>Cena (kredity)</label>
+                        <input name="price_credits" type="number" min="0" defaultValue={(state?.inputs?.price_credits ?? initialData?.price_credits) ?? 1} className={styles.input} />
                     </div>
 
                     {/* Right Column */}
@@ -159,23 +172,60 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                                 <div>
-                                    <label className={styles.label}>Deň</label>
-                                    <div className={styles.selectWrapper}>
-                                        <select
-                                            value={term.day}
-                                            onChange={(e) => updateTerm(term.id, 'day', e.target.value)}
-                                            className={`${styles.input} ${styles.select}`}
-                                        >
-                                            <option value="Pondelok">Pondelok</option>
-                                            <option value="Utorok">Utorok</option>
-                                            <option value="Streda">Streda</option>
-                                            <option value="Štvrtok">Štvrtok</option>
-                                            <option value="Piatok">Piatok</option>
-                                            <option value="Sobota">Sobota</option>
-                                            <option value="Nedeľa">Nedeľa</option>
-                                        </select>
-                                        <ChevronDown size={16} className={styles.selectIcon} />
+                                    <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#666', fontWeight: 600 }}>Typ:</label>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="radio"
+                                                    checked={term.isRecurring !== false} // Default to true if undefined
+                                                    onChange={() => updateTerm(term.id, 'isRecurring', true)}
+                                                />
+                                                Opakovaný (Každý týždeň)
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="radio"
+                                                    checked={term.isRecurring === false}
+                                                    onChange={() => updateTerm(term.id, 'isRecurring', false)}
+                                                />
+                                                Jednorazový (Dátum)
+                                            </label>
+                                        </div>
                                     </div>
+
+                                    {term.isRecurring !== false ? (
+                                        <>
+                                            <label className={styles.label}>Deň</label>
+                                            <div className={styles.selectWrapper}>
+                                                <select
+                                                    value={term.day}
+                                                    onChange={(e) => updateTerm(term.id, 'day', e.target.value)}
+                                                    className={`${styles.input} ${styles.select}`}
+                                                >
+                                                    <option value="Pondelok">Pondelok</option>
+                                                    <option value="Utorok">Utorok</option>
+                                                    <option value="Streda">Streda</option>
+                                                    <option value="Štvrtok">Štvrtok</option>
+                                                    <option value="Piatok">Piatok</option>
+                                                    <option value="Sobota">Sobota</option>
+                                                    <option value="Nedeľa">Nedeľa</option>
+                                                </select>
+                                                <ChevronDown size={16} className={styles.selectIcon} />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <label className={styles.label}>Dátum</label>
+                                            <input
+                                                type="date"
+                                                value={formatDate(term.date)}
+                                                onChange={(e) => updateTerm(term.id, 'date', e.target.value)}
+                                                className={styles.input}
+                                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                            />
+                                        </>
+                                    )}
 
                                     <label className={styles.label}>Čas začiatku</label>
                                     <div className={styles.selectWrapper}>

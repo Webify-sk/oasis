@@ -104,3 +104,19 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
     revalidatePath('/admin/trainers');
     redirect('/admin/trainers');
 }
+
+export async function deleteTrainer(id: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('trainers')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        return { message: 'Chyba pri mazaní trénera: ' + error.message };
+    }
+
+    revalidatePath('/admin/trainers');
+    return { message: 'Tréner bol úspešne vymazaný.' };
+}

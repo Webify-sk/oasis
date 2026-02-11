@@ -17,6 +17,7 @@ interface Session {
     name: string;
     trainer: string;
     level: string;
+    priceCredits: number;
     occupancy: {
         current: number;
         max: number;
@@ -85,7 +86,14 @@ export function TrainingCalendar({ schedule, userCredits, currentDays }: Trainin
                                 className={styles.sessionRow}
                             >
                                 <div className={styles.colTime}>{session.time}</div>
-                                <div className={styles.colName}>{session.name}</div>
+                                <div className={styles.colName}>
+                                    {session.name}
+                                    {session.priceCredits !== 1 && (
+                                        <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '0.5rem', fontWeight: 'normal' }}>
+                                            ({session.priceCredits} kr.)
+                                        </span>
+                                    )}
+                                </div>
                                 <div className={styles.colTrainer}>{session.trainer}</div>
                                 <div className={styles.colLevel}>{session.level}</div>
 
@@ -150,11 +158,12 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
 
     const executeBooking = async () => {
         // Client-side credit check
-        if (!session.isUserRegistered && userCredits < 1) {
+        // Only check if price is > 0
+        if (!session.isUserRegistered && session.priceCredits > 0 && userCredits < session.priceCredits) {
             setModal({
                 isOpen: true,
                 title: 'Chyba',
-                message: 'Nemáte dostatok vstupov. Prosím, zakúpte si vstupy.',
+                message: `Nemáte dostatok vstupov. Cena tréningu je ${session.priceCredits} kreditov.`,
                 isError: true
             });
             return;
@@ -320,13 +329,13 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
                             </p>
                             <p style={{ color: '#7F1D1D', fontSize: '0.95rem', lineHeight: '1.5' }}>
                                 Odhlasujete sa menej ako 24 hodín pred začiatkom tréningu.<br />
-                                <strong>Váš vstup NEBUDE vrátený.</strong>
+                                <strong>{session.priceCredits > 0 ? 'Váš vstup NEBUDE vrátený.' : 'Tréning je zadarmo, žiadny vstup sa nevracia.'}</strong>
                             </p>
                         </div>
                     ) : (
                         <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
                             Naozaj chcete zrušiť túto rezerváciu?<br />
-                            Vstup Vám bude automaticky vrátený na účet.
+                            {session.priceCredits > 0 ? 'Vstup Vám bude automaticky vrátený na účet.' : 'Tento tréning je zadarmo.'}
                         </p>
                     )}
 

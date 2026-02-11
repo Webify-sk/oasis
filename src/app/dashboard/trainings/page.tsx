@@ -97,8 +97,27 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
 
         trainingTypes?.forEach(tt => {
             if (Array.isArray(tt.schedule)) {
-                // Find terms for this day. Relax active check: show if active is true OR undefined (legacy), unless explicitly false.
-                const terms = tt.schedule.filter((term: any) => term.day === wd.dayName && term.active !== false);
+                // Filter terms for this day
+                const terms = tt.schedule.filter((term: any) => {
+                    if (term.active === false) return false;
+
+                    // DEBUG LOGGING
+                    // console.log(`Term ${term.id}: isRecurring=${term.isRecurring}, Date=${term.date}, Day=${term.day}, ComparingWith=${wd.dayName}/${wd.formattedDate}`);
+
+                    // Recurring Logic
+                    if (term.isRecurring !== false) {
+                        return term.day === wd.dayName;
+                    }
+
+                    // One-time Date Logic
+                    if (term.date) {
+                        const termDate = new Date(term.date);
+                        // Compare YYYY-MM-DD
+                        return termDate.toDateString() === wd.dateObj.toDateString();
+                    }
+
+                    return false;
+                });
 
                 terms.forEach((term: any) => {
                     // Construct EXACT start time ISO string for this session
@@ -140,6 +159,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                         name: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || 'Neznámy tréner',
                         level: tt.level || 'Všetky úrovne',
+                        priceCredits: tt.price_credits ?? 1,
                         occupancy: {
                             current: slotBookings.length,
                             max: tt.capacity || 10

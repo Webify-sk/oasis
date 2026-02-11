@@ -40,7 +40,7 @@ export function TrainerForm({ initialData }: { initialData?: any }) {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontFamily: 'serif', color: '#4A403A', margin: 0 }}>
-                    {initialData ? 'Upraviť trénera' : 'Meno Priezvisko'}
+                    {initialData ? 'Upraviť trénera' : 'Nový tréner'}
                 </h2>
             </div>
 
@@ -72,7 +72,7 @@ export function TrainerForm({ initialData }: { initialData?: any }) {
 
                     <div style={{ marginTop: '2rem' }}>
                         <Button type="submit" style={{ backgroundColor: '#7D6A62' }}>
-                            ZMENIŤ ÚDAJE
+                            {initialData ? 'ULOŽIŤ ZMENY' : 'VYTVORIŤ TRÉNERA'}
                         </Button>
                     </div>
                 </div>

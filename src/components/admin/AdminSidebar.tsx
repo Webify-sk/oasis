@@ -12,6 +12,7 @@ const navItems = [
     { name: 'Tréningy', href: '/admin/trainings', icon: Dumbbell },
     { name: 'Trainers', href: '/admin/trainers', icon: Users },
     { name: 'Kreditné balíky', href: '/admin/credits', icon: CreditCard },
+    { name: 'Vouchery', href: '/admin/vouchers', icon: Gift },
     { name: 'Faktúry', href: '/admin/invoices', icon: FileText },
     { name: 'Kozmetika - Služby', href: '/admin/cosmetics/services', icon: List },
     { name: 'Kozmetika - Staff', href: '/admin/cosmetics/staff', icon: Users },

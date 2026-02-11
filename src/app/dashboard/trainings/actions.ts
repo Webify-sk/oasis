@@ -33,13 +33,15 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
     // Check if training type exists and get capacity
     const { data: trainingType, error: typeError } = await supabase
         .from('training_types')
-        .select('capacity, title')
+        .select('capacity, title, price_credits')
         .eq('id', trainingTypeId)
         .single();
 
     if (typeError || !trainingType) {
         return { success: false, message: 'Tréning sa nenašiel.' };
     }
+
+    const priceCredits = trainingType.price_credits ?? 1;
 
     // Check existing occupancy for this specific time slot
     const { count: currentOccupancy, error: countError } = await supabase
@@ -80,8 +82,9 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         return { success: false, message: 'Chyba pri načítaní profilu.' };
     }
 
-    if ((profile.credits || 0) < 1) {
-        return { success: false, message: 'Nemáte dostatok vstupov. Prosím, zakúpte si vstupy.' };
+    // Only check credits if price > 0
+    if (priceCredits > 0 && (profile.credits || 0) < priceCredits) {
+        return { success: false, message: `Nemáte dostatok vstupov. Cena tréningu je ${priceCredits} kreditov.` };
     }
 
     // Insert booking
@@ -97,16 +100,18 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         return { success: false, message: 'Chyba pri vytváraní rezervácie: ' + bookingError.message };
     }
 
-    // Deduct credit
-    const { error: creditError } = await supabase
-        .from('profiles')
-        .update({ credits: (profile.credits || 0) - 1 })
-        .eq('id', user.id);
+    // Deduct credit only if price > 0
+    if (priceCredits > 0) {
+        const { error: creditError } = await supabase
+            .from('profiles')
+            .update({ credits: (profile.credits || 0) - priceCredits })
+            .eq('id', user.id);
 
-    if (creditError) {
-        // Fallback: If credit update fails, ideally we should rollback booking.
-        // For now logging error. A transaction via RPC would be safer.
-        console.error('Failed to deduct credit', creditError);
+        if (creditError) {
+            // Fallback: If credit update fails, ideally we should rollback booking.
+            // For now logging error. A transaction via RPC would be safer.
+            console.error('Failed to deduct credit', creditError);
+        }
     }
 
     revalidatePath('/dashboard/trainings');
@@ -158,7 +163,7 @@ export async function cancelBooking(bookingId: string) {
     // 1. Fetch booking details *before* deletion to get start_time
     const { data: booking, error: fetchError } = await supabase
         .from('bookings')
-        .select('start_time, training_type:training_type_id(title)')
+        .select('start_time, training_type:training_type_id(title, price_credits)')
         .eq('id', bookingId)
         .eq('user_id', user.id)
         .single();
@@ -166,6 +171,9 @@ export async function cancelBooking(bookingId: string) {
     if (fetchError || !booking) {
         return { success: false, message: 'Rezervácia sa nenašla.' };
     }
+
+    const trainingTypeData = booking.training_type as any;
+    const priceCredits = (Array.isArray(trainingTypeData) ? trainingTypeData[0]?.price_credits : trainingTypeData?.price_credits) ?? 1;
 
     // 2. Check 24h rule
     const startTime = new Date(booking.start_time);
@@ -185,13 +193,13 @@ export async function cancelBooking(bookingId: string) {
         return { success: false, message: 'Chyba pri rušení rezervácie: ' + deleteError.message };
     }
 
-    // 4. Refund credit if eligible
-    if (shouldRefund) {
+    // 4. Refund credit if eligible and price > 0
+    if (shouldRefund && priceCredits > 0) {
         const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
         if (profile) {
             await supabase
                 .from('profiles')
-                .update({ credits: (profile.credits || 0) + 1 })
+                .update({ credits: (profile.credits || 0) + priceCredits })
                 .eq('id', user.id);
         }
     }
@@ -205,7 +213,7 @@ export async function cancelBooking(bookingId: string) {
         const { getEmailTemplate } = await import('@/utils/email-template');
 
         const refundMessage = shouldRefund
-            ? 'a 1 vstup ti bol vrátený na účet.'
+            ? (priceCredits > 0 ? `a ${priceCredits} kr. ti bolo vrátené na účet.` : 'tento tréning bol zadarmo.')
             : 'ale keďže je to menej ako 24h pred tréningom, <strong>vstup nebol vrátený</strong>.';
 
         const html = getEmailTemplate(
