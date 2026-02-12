@@ -15,7 +15,7 @@ export function Header() {
                 <div className={styles.logo}>
                     <Link href="/dashboard" className={styles.logoLink}>
                         <Image
-                            src="/logo-new.png"
+                            src="/Logo_Brown.png"
                             alt="Oasis Lounge"
                             width={180}
                             height={50}

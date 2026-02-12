@@ -39,8 +39,6 @@ export function MilestoneList({ milestones, currentProgress }: MilestoneListProp
 
                             <div className={styles.content}>
                                 <h4 className={styles.title}>{milestone.title}</h4>
-                                <p className={styles.subtitle}>{milestone.subtitle}</p>
-                                {milestone.description && <p className={styles.desc}>{milestone.description}</p>}
                             </div>
                         </div>
                     );

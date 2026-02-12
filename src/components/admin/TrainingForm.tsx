@@ -228,21 +228,13 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
                                     )}
 
                                     <label className={styles.label}>Čas začiatku</label>
-                                    <div className={styles.selectWrapper}>
-                                        <select
-                                            value={term.time.replace(/ - .*/, '')}
-                                            onChange={(e) => updateTerm(term.id, 'time', e.target.value)}
-                                            className={`${styles.input} ${styles.select}`}
-                                        >
-                                            {Array.from({ length: 33 }, (_, i) => {
-                                                const hour = Math.floor(i / 2) + 6; // Start at 06:00
-                                                const min = (i % 2) * 30;
-                                                const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-                                                return <option key={time} value={time}>{time}</option>;
-                                            })}
-                                        </select>
-                                        <ChevronDown size={16} className={styles.selectIcon} />
-                                    </div>
+                                    <input
+                                        type="time"
+                                        value={term.time.replace(/ - .*/, '')}
+                                        onChange={(e) => updateTerm(term.id, 'time', e.target.value)}
+                                        className={styles.input}
+                                        style={{ width: '100%', boxSizing: 'border-box' }}
+                                    />
                                 </div>
                                 <div>
                                     <label className={styles.label}>Tréner</label>

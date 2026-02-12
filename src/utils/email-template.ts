@@ -1,6 +1,6 @@
 export function getEmailTemplate(title: string, bodyContent: string, previewText: string = '') {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
-    const logoUrl = `${baseUrl}/logo-new.png`;
+    const logoUrl = `${baseUrl}/Logo_Brown.png`;
 
     return `
 <!DOCTYPE html>

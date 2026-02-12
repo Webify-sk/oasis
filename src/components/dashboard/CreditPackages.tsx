@@ -27,6 +27,12 @@ interface CreditPackagesProps {
     packages?: CreditPackage[]; // Make optional to prevent breakage if not passed immediately
 }
 
+const formatMonths = (count: number) => {
+    if (count === 1) return '1 mesiac';
+    if (count >= 2 && count <= 4) return `${count} mesiace`;
+    return `${count} mesiacov`;
+};
+
 export function CreditPackages({ userProfile, packages = [] }: CreditPackagesProps) {
     const { isVerified } = useVerification();
     const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -144,15 +150,17 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
                             </div>
                             <p className={styles.cardDesc}>{pkg.description}</p>
                             <div className={styles.cardValidity}>
-                                {pkg.validity_months ? `Platnosť ${pkg.validity_months} mesiacov` : 'Neobmedzená platnosť'}
+                                {pkg.validity_months ? `Platnosť ${formatMonths(pkg.validity_months)}` : 'Neobmedzená platnosť'}
                             </div>
                         </div>
 
                         <div className={styles.cardFooter}>
                             <div className={styles.priceContainer}>
-                                <span className={styles.priceDetail}>
-                                    {(pkg.price / pkg.credits).toFixed(2)} € / vstup
-                                </span>
+                                {pkg.title !== 'Oasis Unlimited Movement Pass' && (
+                                    <span className={styles.priceDetail}>
+                                        {(pkg.price / pkg.credits).toFixed(2)} € / vstup
+                                    </span>
+                                )}
                                 <span className={styles.price}>{pkg.price} €</span>
                             </div>
                             <Button

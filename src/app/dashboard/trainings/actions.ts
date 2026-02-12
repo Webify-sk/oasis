@@ -126,7 +126,6 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         const html = getEmailTemplate(
             'Potvrdenie rezervácie',
             `
-            <h1 style="color: #5E715D; text-align: center;">Rezervácia potvrdená</h1>
             <p>Ahoj,</p>
             <p>úspešne sme rezervovali tvoje miesto na tréningu:</p>
             
@@ -219,7 +218,6 @@ export async function cancelBooking(bookingId: string) {
         const html = getEmailTemplate(
             'Zrušenie rezervácie',
             `
-            <h1 style="color: #d9534f; text-align: center;">Rezervácia zrušená</h1>
             <p>Ahoj,</p>
             <p>tvoja rezervácia na tréning <strong>${// @ts-ignore
             booking.training_type?.title || 'Tréning'}</strong> bola zrušená ${refundMessage}</p>

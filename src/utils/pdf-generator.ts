@@ -30,7 +30,7 @@ export async function generateVoucherPDF(data: {
     try {
         const fs = await import('fs');
         const path = await import('path');
-        const logoPath = path.join(process.cwd(), 'public', 'logo-new.png');
+        const logoPath = path.join(process.cwd(), 'public', 'Logo_Brown.png');
         if (fs.existsSync(logoPath)) {
             const logoBytes = fs.readFileSync(logoPath);
             logoImage = await pdfDoc.embedPng(logoBytes);
@@ -251,7 +251,7 @@ export async function generateInvoicePDF(data: {
     try {
         const fs = await import('fs');
         const path = await import('path');
-        const logoPath = path.join(process.cwd(), 'public', 'logo-new.png');
+        const logoPath = path.join(process.cwd(), 'public', 'Logo_Brown.png');
         if (fs.existsSync(logoPath)) {
             const logoBytes = fs.readFileSync(logoPath);
             logoImage = await pdfDoc.embedPng(logoBytes);
