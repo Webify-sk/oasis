@@ -147,7 +147,7 @@ export function UserForm({ initialData }: UserFormProps) {
                         <Button type="button" variant="ghost" onClick={() => window.history.back()}>
                             Zrušiť
                         </Button>
-                        <Button type="submit" variant="primary" style={{ backgroundColor: '#79665A', color: 'white' }}>
+                        <Button type="submit" variant="primary" style={{ backgroundColor: '#93745F', color: 'white' }}>
                             ULOŽIŤ ZMENY
                         </Button>
                     </div>

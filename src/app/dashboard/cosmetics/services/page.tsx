@@ -10,7 +10,7 @@ export default async function ServicesDashboardPage() {
         <div>
 
 
-            <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontFamily: 'serif', color: '#333' }}>Správa Procedúr</h1>
+            <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontFamily: "var(--font-heading)", color: '#333' }}>Správa Procedúr</h1>
 
             <ServiceManager initialServices={services} />
         </div>

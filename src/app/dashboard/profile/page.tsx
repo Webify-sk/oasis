@@ -42,7 +42,7 @@ export default async function ProfilePage() {
                 marginBottom: '2rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Môj profil</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Môj profil</h1>
 
                 {profile?.role !== 'employee' && <CreditCounter />}
             </div>

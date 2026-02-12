@@ -21,7 +21,7 @@ function ErrorContent() {
             padding: '2rem',
             textAlign: 'center'
         }}>
-            <h1 style={{ fontFamily: 'serif', color: '#8C7568' }}>Nastala chyba</h1>
+            <h1 style={{ fontFamily: "var(--font-heading)", color: '#93745F' }}>Nastala chyba</h1>
             <p style={{ color: '#666' }}>
                 {message ? message : 'Pri prihlasovaní alebo registrácii sa vyskytla chyba.'}
             </p>

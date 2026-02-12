@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { TrainingList } from '@/components/admin/TrainingList';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import styles from '@/components/ui/Button.module.css';
 
 export default async function AdminTrainingsPage() {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Fetch all training types
     const { data: trainingsData, error } = await supabase
@@ -86,7 +86,7 @@ export default async function AdminTrainingsPage() {
                 marginBottom: '2rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Tréningy</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Tréningy</h1>
 
                 <Link
                     href="/admin/trainings/new"

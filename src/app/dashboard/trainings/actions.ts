@@ -126,15 +126,15 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         const html = getEmailTemplate(
             'Potvrdenie rezervácie',
             `
-            <p>Ahoj,</p>
-            <p>úspešne sme rezervovali tvoje miesto na tréningu:</p>
+            <p>Dobrý deň,</p>
+            <p>úspešne sme rezervovali Vaše miesto na tréningu:</p>
             
             <div class="highlight-box">
                 <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingType.title}</p>
                 <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDate}</p>
             </div>
             
-            <p>Tešíme sa na teba!</p>
+            <p>Tešíme sa na Vás!</p>
             <div style="text-align: center; margin-top: 20px;">
                 <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
             </div>
@@ -218,10 +218,10 @@ export async function cancelBooking(bookingId: string) {
         const html = getEmailTemplate(
             'Zrušenie rezervácie',
             `
-            <p>Ahoj,</p>
-            <p>tvoja rezervácia na tréning <strong>${// @ts-ignore
+            <p>Dobrý deň,</p>
+            <p>Vaša rezervácia na tréning <strong>${// @ts-ignore
             booking.training_type?.title || 'Tréning'}</strong> bola zrušená ${refundMessage}</p>
-            <p>Dúfame, že si čoskoro nájdeš iný termín.</p>
+            <p>Dúfame, že si čoskoro nájdete iný termín.</p>
             
             <div style="text-align: center; margin-top: 20px;">
                 <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Rezervovať nový termín</a>

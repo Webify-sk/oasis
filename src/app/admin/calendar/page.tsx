@@ -72,7 +72,7 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
                 marginBottom: '1rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Kalendár tréningov</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Kalendár tréningov</h1>
             </div>
 
             <MonthlyCalendar currentDate={currentDate} events={events} />

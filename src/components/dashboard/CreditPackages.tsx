@@ -33,6 +33,11 @@ const formatMonths = (count: number) => {
     return `${count} mesiacov`;
 };
 
+const formatPriceDetail = (price: number, credits: number) => {
+    if (credits === 1) return `1 hodina - ${price.toFixed(2)} €`;
+    return `${(price / credits).toFixed(2)} € / vstup`;
+};
+
 export function CreditPackages({ userProfile, packages = [] }: CreditPackagesProps) {
     const { isVerified } = useVerification();
     const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -128,7 +133,6 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h3>Vyberte si z dostupných možností</h3>
                 <p>
                     Zvoľte si balíček, ktorý najviac vyhovuje vašim potrebám.
                     Po zakúpení sa vstupy automaticky pripočítajú na váš účet a môžete ich ihneď využiť na rezerváciu termínov.
@@ -143,36 +147,39 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
                         <div>
                             <div className={styles.cardHeader}>
                                 <h4 className={styles.cardTitle}>{pkg.title}</h4>
+                            </div>
+
+                            <div className={styles.metaRow}>
                                 <span className={styles.creditsCount}>
-                                    {pkg.credits} vstupov
-                                    {pkg.bonus_credits > 0 && <span style={{ fontSize: '0.6em', display: 'block', color: '#059669' }}>+{pkg.bonus_credits} bonus</span>}
+                                    Počet vstupov: <strong>{pkg.credits}</strong>
+                                    {pkg.bonus_credits > 0 && <span style={{ fontSize: '0.8em', marginLeft: '5px', color: '#a7f3d0' }}>+{pkg.bonus_credits}</span>}
+                                </span>
+                                <span className={styles.validity}>
+                                    Platnosť: <strong>{pkg.validity_months ? formatMonths(pkg.validity_months) : 'Neobmedzená'}</strong>
                                 </span>
                             </div>
+
                             <p className={styles.cardDesc}>{pkg.description}</p>
-                            <div className={styles.cardValidity}>
-                                {pkg.validity_months ? `Platnosť ${formatMonths(pkg.validity_months)}` : 'Neobmedzená platnosť'}
-                            </div>
                         </div>
 
                         <div className={styles.cardFooter}>
                             <div className={styles.priceContainer}>
                                 {pkg.title !== 'Oasis Unlimited Movement Pass' && (
                                     <span className={styles.priceDetail}>
-                                        {(pkg.price / pkg.credits).toFixed(2)} € / vstup
+                                        {formatPriceDetail(pkg.price, pkg.credits)}
                                     </span>
                                 )}
                                 <span className={styles.price}>{pkg.price} €</span>
                             </div>
                             <Button
                                 className={clsx(styles.buyButton, {
-                                    [styles.highlightButton]: pkg.is_popular,
                                     'opacity-50 cursor-not-allowed': !isVerified
                                 })}
                                 onClick={() => handleInitialClick(pkg)}
                                 disabled={loadingId !== null || !isVerified}
                                 title={!isVerified ? "Pre nákup musíte mať overený email" : ""}
                             >
-                                {loadingId === pkg.id ? 'SPRACOVÁVA SA...' : (!isVerified ? 'Overte Email' : 'ZAKÚPIŤ')}
+                                {loadingId === pkg.id ? 'SPRACOVÁVA SA...' : (!isVerified ? 'Overte Email' : 'Zakúpiť')}
                             </Button>
                         </div>
                     </div>

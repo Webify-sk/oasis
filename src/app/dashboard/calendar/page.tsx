@@ -123,7 +123,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                 marginBottom: '1rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Kalendár</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Kalendár</h1>
             </div>
 
             <MonthlyCalendar currentDate={currentDate} events={events} />

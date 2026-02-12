@@ -7,7 +7,7 @@ export default async function CalendarPage() {
 
     return (
         <div style={{ padding: '0' }}>
-            <h1 style={{ marginBottom: '1.5rem', fontSize: '2rem', fontFamily: 'serif', color: '#333' }}>Kalendár služieb</h1>
+            <h1 style={{ marginBottom: '1.5rem', fontSize: '2rem', fontFamily: "var(--font-heading)", color: '#93745F' }}>Kalendár služieb</h1>
             <WeeklyScheduler
                 initialAppointments={appointments as any}
                 employees={employees as any}

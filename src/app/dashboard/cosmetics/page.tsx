@@ -35,7 +35,7 @@ export default async function CosmeticsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
                 <div>
                     <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Beauty & Body</p>
-                    <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-heading, serif)', color: '#2c3e50', margin: 0 }}>
+                    <h1 style={{ fontSize: '2.5rem', fontFamily: "var(--font-heading)", color: '#93745F', margin: 0 }}>
                         {isEmployeeOrAdmin ? 'Správa Kozmetiky' : 'Naša Ponuka'}
                     </h1>
                 </div>
@@ -77,7 +77,7 @@ export default async function CosmeticsPage() {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                        <h2 style={{ fontSize: '1.8rem', fontFamily: 'serif', color: '#333', marginBottom: '1.5rem' }}>Moje služby</h2>
+                        <h2 style={{ fontSize: '1.8rem', fontFamily: "var(--font-heading)", color: '#93745F', marginBottom: '1.5rem' }}>Moje služby</h2>
                         <ServiceManager initialServices={services} />
                     </div>
                 </>

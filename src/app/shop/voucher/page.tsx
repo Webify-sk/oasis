@@ -30,9 +30,9 @@ export default async function PublicVoucherPage({
                 marginTop: '1rem'
             }}>
                 <h1 style={{
-                    fontFamily: 'serif',
+                    fontFamily: "var(--font-heading)",
                     fontSize: '2.5rem',
-                    color: '#4A403A',
+                    color: '#93745F',
                     marginBottom: '0.5rem'
                 }}>Darujte Radosť</h1>
                 <p style={{

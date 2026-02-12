@@ -63,7 +63,7 @@ export default function NewUserPage() {
                 <Link href="/admin/users" style={{ color: '#4A403A', display: 'flex', alignItems: 'center' }}>
                     <ChevronLeft size={24} />
                 </Link>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Pridať užívateľa</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Pridať užívateľa</h1>
             </div>
 
             <div style={{

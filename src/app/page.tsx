@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { AuthForm } from '@/components/auth/AuthForm';
 
 export default function Home() {
@@ -17,22 +18,19 @@ export default function Home() {
         maxWidth: '500px',
         width: '100%'
       }}>
-        <h1 style={{
-          fontSize: '3.5rem',
-          fontFamily: 'serif',
-          color: '#8C7568',
-          marginBottom: '0.5rem',
-          fontWeight: 'normal'
-        }}>Oasis Lounge</h1>
-
-        <h2 style={{
-          fontSize: '0.9rem',
-          textTransform: 'uppercase',
-          letterSpacing: '0.2em',
-          color: '#8D8D8D',
-          marginBottom: '4rem',
-          fontWeight: 400
-        }}>Pilates, Body & Beauty</h2>
+        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+          <Image
+            src="/Logo_Brown.png"
+            alt="Oasis Lounge"
+            width={400}
+            height={150}
+            style={{
+              maxWidth: '100%',
+              height: 'auto'
+            }}
+            priority
+          />
+        </div>
 
         <AuthForm />
       </div>

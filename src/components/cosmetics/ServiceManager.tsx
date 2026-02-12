@@ -43,17 +43,7 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '500', color: '#333' }}>Zoznam služieb ({services.length})</h2>
-                {role === 'admin' && (
-                    <Link href="/admin/cosmetics/services/new">
-                        <button className={styles.primaryButton}>
-                            <Plus size={18} />
-                            Pridať službu
-                        </button>
-                    </Link>
-                )}
-            </div>
+
 
             <div className={styles.grid}>
                 {services.map((service) => (

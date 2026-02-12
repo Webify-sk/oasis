@@ -28,7 +28,7 @@ export default async function GiftVouchersPage({
 
     return (
         <div className={styles.container}>
-            <h1 className={styles.pageTitle}>Darčekové Poukazy</h1>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F', marginBottom: '1rem' }}>Darčekové Poukazy</h1>
             <p className={styles.description}>
                 Podarujte svojim blízkym zdravie a relax. Vyberte si z našej ponuky darčekových poukazov,
                 ktoré im zašleme priamo na email s vaším venovaním.

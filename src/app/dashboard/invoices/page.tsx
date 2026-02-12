@@ -14,7 +14,7 @@ export default async function InvoicesPage() {
                 marginBottom: '2rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: 'serif' }}>Faktúry</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Faktúry</h1>
 
                 <CreditCounter />
             </div>

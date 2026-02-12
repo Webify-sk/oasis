@@ -28,7 +28,7 @@ export default async function MyAppointmentsPage() {
     return (
         <div style={{ padding: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2rem', fontFamily: 'serif', color: '#333', margin: 0 }}>Nadchádzajúce rezervácie</h1>
+                <h1 style={{ fontSize: '2rem', fontFamily: "var(--font-heading)", color: '#93745F', margin: 0 }}>Nadchádzajúce rezervácie</h1>
                 {isEmployeeView && <ManualReservationModal />}
             </div>
             <ClientAppointmentsList initialAppointments={appointments} isEmployeeView={isEmployeeView} />

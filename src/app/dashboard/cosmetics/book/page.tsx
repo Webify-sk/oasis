@@ -12,7 +12,7 @@ export default async function BookingPage({
 
     return (
         <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '2rem', fontFamily: 'serif', fontSize: '2.5rem', color: '#333' }}>
+            <h1 style={{ textAlign: 'center', marginBottom: '2rem', fontFamily: "var(--font-heading)", fontSize: '2.5rem', color: '#93745F' }}>
                 Rezervácia termínu
             </h1>
             <BookingWizard initialServiceId={serviceId} />

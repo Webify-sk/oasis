@@ -10,9 +10,8 @@
 }
 
 .header h3 {
-    font-family: var(--font-heading, "Playfair Display", serif);
+    font-family: var(--font-heading);
     color: #4A403A;
-    /* Use dark brown for light mode page background */
     font-size: 1.5rem;
     margin-bottom: 1.5rem;
     font-weight: 500;
@@ -27,45 +26,29 @@
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: 2rem;
 }
 
 .card {
-    background-color: #ffffff;
-    /* Light theme by default */
-    color: #4A403A;
-    padding: 3rem 2.5rem;
+    background-color: #93745F;
+    color: #FFFFFF;
+    padding: 2.5rem;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     min-height: 480px;
-    /* Taller card */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    /* Softer shadow */
+    box-shadow: 0 10px 30px rgba(147, 116, 95, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
-    border: 1px solid #f0f0f0;
+    border: none;
 }
 
 .card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-/* Subtle pattern overlay or gradient could go here */
-.card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
-    border-radius: 50%;
-    transform: translate(30%, -30%);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(147, 116, 95, 0.3);
 }
 
 .cardHeader {
@@ -73,52 +56,38 @@
 }
 
 .cardTitle {
-    font-family: var(--font-heading, "Playfair Display", serif);
-    font-size: 1.5rem;
-    /* Smaller than before to fit long names */
-    margin-bottom: 0.5rem;
-    font-weight: 600;
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    margin-bottom: 1.5rem;
+    font-weight: normal;
     line-height: 1.2;
-    letter-spacing: -0.01em;
-    color: inherit;
-    /* Inherit form card color */
+    color: #FFFFFF;
+}
+
+.metaRow {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: var(--font-heading);
 }
 
 .creditsCount {
-    display: inline-block;
-    font-size: 0.9rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #C4A484;
-    /* Keep gold accent */
-    margin-top: 5px;
+    font-weight: normal;
+}
+
+.validity {
+    font-weight: normal;
 }
 
 .cardDesc {
-    font-size: 0.95rem;
-    line-height: 1.7;
-    opacity: 0.8;
-    margin-bottom: 2.5rem;
-    font-weight: 400;
-    color: inherit;
-    /* Inherit from card */
-}
-
-.cardValidity {
-    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
     margin-bottom: auto;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    opacity: 0.7;
-    color: inherit;
-}
-
-.cardValidity::before {
-    content: '•';
-    color: #D1D5DB;
+    font-weight: 300;
+    font-family: var(--font-heading);
 }
 
 .cardFooter {
@@ -126,8 +95,6 @@
     justify-content: space-between;
     align-items: flex-end;
     margin-top: 3rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 1.5rem;
 }
 
 .priceContainer {
@@ -136,92 +103,52 @@
 }
 
 .priceDetail {
-    font-size: 0.75rem;
-    opacity: 0.7;
+    font-size: 0.9rem;
+    opacity: 0.8;
     margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-weight: 300;
+    font-family: var(--font-heading);
 }
 
 .price {
-    font-family: var(--font-heading, "Playfair Display", serif);
-    font-size: 2.25rem;
-    font-weight: 500;
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    font-weight: normal;
+    line-height: 1;
 }
 
 .buyButton {
-    background-color: #4A403A !important;
-    /* Dark button on light card */
-    color: #fff !important;
-    font-size: 0.8rem !important;
-    padding: 0.75rem 1.5rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.1em;
-    border-radius: 6px !important;
+    background-color: #FFFFFF !important;
+    color: #342F2F !important;
+    font-size: 0.9rem !important;
+    padding: 0.8rem 2rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
     border: none !important;
     transition: all 0.2s ease;
+    text-transform: none !important;
+    letter-spacing: normal;
 }
 
 .buyButton:hover {
-    background-color: #fff !important;
-    color: #4A403A !important;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid #4A403A !important;
-    /* Add border to maintain visibility/structure */
-}
-
-.highlightCard {
-    background-color: #4A403A;
-    /* Dark premium background */
-    color: #fff;
-    border: 1px solid #C4A484;
-    /* Gold/Bronze border */
-    transform: translateY(-8px);
-    /* Default lifted */
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-}
-
-.highlightCard .cardTitle {
-    color: #fff;
-}
-
-.highlightCard .cardDesc {
-    color: #f3f4f6;
-    font-weight: 300;
-}
-
-.highlightCard .cardValidity {
     opacity: 0.9;
-}
-
-.highlightCard .cardFooter {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .badge {
     position: absolute;
     top: 1.5rem;
     right: 1.5rem;
-    background-color: #fff;
-    color: #4A403A;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
     padding: 0.4rem 0.8rem;
-    border-radius: 9999px;
+    border-radius: 4px;
     letter-spacing: 0.05em;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
 }
 
-.highlightButton {
-    background-color: #C4A484 !important;
-    /* Goldish button on dark card */
-    color: #fff !important;
-}
-
-.highlightButton:hover {
-    background-color: #B08D69 !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(196, 164, 132, 0.4);
-}
+.highlightCard {}

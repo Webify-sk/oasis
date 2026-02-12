@@ -160,11 +160,11 @@ export async function POST(req: Request) {
                 `Dostal si darček od ${senderName}!`,
                 `
                 <h1 style="color: #5E715D; text-align: center;">Máš darček!</h1>
-                <p style="font-size: 16px;">Ahoj,</p>
-                <p style="font-size: 16px;"><strong>${senderName}</strong> ti posiela ${creditAmount} vstupov do Oasis Lounge.</p>
+                <p style="font-size: 16px;">Dobrý deň,</p>
+                <p style="font-size: 16px;"><strong>${senderName}</strong> Vám posiela ${creditAmount} vstupov do Oasis Lounge.</p>
                 
                 <div style="background-color: #f9f9f9; border: 2px dashed #5E715D; padding: 20px; text-align: center; margin: 30px 0;">
-                    <p style="margin: 0; font-size: 14px; color: #666;">Tvoj kód voucheru:</p>
+                    <p style="margin: 0; font-size: 14px; color: #666;">Váš kód voucheru:</p>
                     <p style="margin: 10px 0; font-size: 32px; font-weight: bold; color: #333; letter-spacing: 2px;">${code}</p>
                 </div>
 
@@ -174,7 +174,7 @@ export async function POST(req: Request) {
                     <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}" class="button">Uplatniť voucher</a>
                 </div>
                 `,
-                `Tvoj kód voucheru: ${code}`
+                `Váš kód voucheru: ${code}`
             );
 
             await sendEmail({

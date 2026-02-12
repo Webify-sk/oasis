@@ -21,7 +21,7 @@ export default async function MyAvailabilityPage() {
         <div>
 
 
-            <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontFamily: 'serif', color: '#333' }}>Moja dostupnosť</h1>
+            <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontFamily: "var(--font-heading)", color: '#93745F' }}>Moja dostupnosť</h1>
             <p style={{ color: '#666', marginBottom: '2rem' }}>Nastavte si svoje bežné pracovné hodiny.</p>
 
             <AvailabilityManager

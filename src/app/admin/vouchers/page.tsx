@@ -15,11 +15,14 @@ export default async function AdminVouchersPage() {
 
     return (
         <div className={styles.container}>
-            <div className={styles.header}>
-                <div>
-                    <h1 className={styles.title}>Správa Voucherov</h1>
-                    <p className={styles.subtitle}>Vytvárajte a spravujte darčekové poukazy pre užívateľov.</p>
-                </div>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '2rem',
+                padding: '2rem 2rem 0 2rem'
+            }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Vouchery</h1>
             </div>
 
             <VoucherProductManager />

@@ -90,17 +90,17 @@ export async function GET(req: Request) {
             const html = getEmailTemplate(
                 `Pripomienka tréningu: ${trainingTitle}`,
                 `
-                <h1 style="color: #5E715D; text-align: center;">Nezabudni na tréning!</h1>
-                <p>Ahoj ${userName},</p>
-                <p>pripomíname ti, že už zajtra máš rezervovaný tréning.</p>
+                <h1 style="color: #5E715D; text-align: center;">Nezabudnite na tréning!</h1>
+                <p>Dobrý deň ${userName},</p>
+                <p>pripomíname Vám, že už zajtra máte rezervovaný tréning.</p>
                 
                 <div class="highlight-box">
                     <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingTitle}</p>
                     <p style="margin: 5px 0;"><strong>Čas:</strong> ${formattedDate}</p>
                 </div>
                 
-                <p>Tešíme sa na teba!</p>
-                <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak sa nemôžeš zúčastniť, prosím zruš rezerváciu včas.</p>
+                <p>Tešíme sa na Vás!</p>
+                <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak sa nemôžete zúčastniť, prosím zrušte rezerváciu včas.</p>
                 <div style="text-align: center; margin-top: 15px;">
                     <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
                 </div>
