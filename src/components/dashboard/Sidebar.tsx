@@ -88,7 +88,7 @@ export function Sidebar() {
                             padding: '0.75rem 1.5rem 0.25rem',
                             fontSize: '0.75rem',
                             fontWeight: 'bold',
-                            color: '#9ca3af',
+                            color: 'rgba(255, 255, 255, 0.7)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             marginTop: '0.5rem'
