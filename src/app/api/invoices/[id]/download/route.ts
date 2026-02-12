@@ -72,9 +72,11 @@ export async function GET(
             description: invoice.description || 'Nákup služieb',
             buyerName: buyerName,
             buyerAddress: buyerAddress,
-            supplierName: 'Oasis Lounge s.r.o.', // Todo: update with real supplier info from user if available? Or verify hardcoded.
-            supplierAddress: 'Zizkova 9\n811 02 Bratislava\nSlovensko',
-            supplierIco: 'ICO: 12345678' // Placeholders - user should update. I will notify user.
+            supplierName: 'Oasis Lounge s.r.o.',
+            supplierAddress: 'Pribinova 25\n811 09 Bratislava - mestská časť Staré Mesto\nSlovensko',
+            supplierIco: 'IČO: 56418078',
+            supplierDic: 'DIČ: 2122300895',
+            supplierIcdph: 'IČ DPH: SK2122300895'
         });
 
         // 5. Return PDF

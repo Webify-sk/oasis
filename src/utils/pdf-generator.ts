@@ -300,7 +300,7 @@ export async function generateInvoicePDF(data: {
 
     // --- Supplier (Left) ---
     let y = topSectionY;
-    page.drawRectangle({ x: 50, y: y - 100, width: 240, height: 115, color: LIGHT_GRAY });
+    page.drawRectangle({ x: 50, y: y - 140, width: 240, height: 160, color: LIGHT_GRAY });
 
     y -= 20;
     drawText('DODAVATEL', 70, y, 10, true, BRAND_GREEN); y -= 20;
@@ -310,6 +310,8 @@ export async function generateInvoicePDF(data: {
     });
     y -= 5;
     if (data.supplierIco) { drawText(data.supplierIco, 70, y, 9, false, DARK_GRAY); y -= 12; }
+    if (data.supplierDic) { drawText(data.supplierDic, 70, y, 9, false, DARK_GRAY); y -= 12; }
+    if (data.supplierIcdph) { drawText(data.supplierIcdph, 70, y, 9, false, DARK_GRAY); y -= 12; }
 
     // --- Buyer (Right) ---
     y = topSectionY;
@@ -327,7 +329,7 @@ export async function generateInvoicePDF(data: {
     }
 
     // --- Details Bar ---
-    y = topSectionY - 140;
+    y = topSectionY - 180;
     page.drawRectangle({ x: 50, y: y - 20, width: width - 100, height: 35, color: BRAND_GREEN });
 
     drawText('Datum vystavenia', 70, y - 5, 10, true, rgb(1, 1, 1));

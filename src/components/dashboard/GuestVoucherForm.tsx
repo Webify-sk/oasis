@@ -435,7 +435,7 @@ export function GuestVoucherForm({ products, preselectedId }: { products: Produc
                                     style={{ marginTop: '3px' }}
                                 />
                                 <span style={{ color: billingErrors && !termsAccepted ? '#b91c1c' : 'inherit' }}>
-                                    Súhlasím so <a href="/vop" target="_blank" style={{ textDecoration: 'underline', color: billingErrors && !termsAccepted ? '#b91c1c' : '#8C7568' }}>Všeobecnými obchodnými podmienkami (VOP)</a>
+                                    Súhlasím so <a href="https://www.oasislounge.sk/vseobecne-obchodne-podmienky/" target="_blank" style={{ textDecoration: 'underline', color: billingErrors && !termsAccepted ? '#b91c1c' : '#8C7568' }}>Všeobecnými obchodnými podmienkami (VOP)</a>
                                 </span>
                             </label>
 
@@ -456,7 +456,7 @@ export function GuestVoucherForm({ products, preselectedId }: { products: Produc
                                     style={{ marginTop: '3px' }}
                                 />
                                 <span style={{ color: billingErrors && !privacyAccepted ? '#b91c1c' : 'inherit' }}>
-                                    Súhlasím so spracovaním osobných údajov <a href="/gdpr" target="_blank" style={{ textDecoration: 'underline', color: billingErrors && !privacyAccepted ? '#b91c1c' : '#8C7568' }}>(GDPR)</a>
+                                    Súhlasím so spracovaním osobných údajov <a href="https://www.oasislounge.sk/ochrana-osobnych-udajov/" target="_blank" style={{ textDecoration: 'underline', color: billingErrors && !privacyAccepted ? '#b91c1c' : '#8C7568' }}>(GDPR)</a>
                                 </span>
                             </label>
                         </div>
