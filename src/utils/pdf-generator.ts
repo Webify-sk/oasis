@@ -351,18 +351,31 @@ export async function generateInvoicePDF(data: {
     y -= 20;
     drawText(data.description, 50, y, 11);
     drawText('1 ks', 350, y, 11, false, undefined, 'right'); // Quantity placeholder
-    drawText(`${data.amount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 11, true, undefined, 'right');
+    drawText(`${data.amount.toFixed(2)} ${data.currency.toUpperCase()} s DPH`, width - 50, y, 11, true, undefined, 'right');
 
     y -= 20;
     page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
 
-    // --- Total ---
-    y -= 50;
-    const totalBoxY = y;
-    page.drawRectangle({ x: width - 250, y: totalBoxY - 15, width: 200, height: 40, color: LIGHT_GRAY });
+    // --- VAT Breakdown ---
+    y -= 30;
+    const vatRate = 0.23;
+    const baseAmount = data.amount / (1 + vatRate);
+    const vatAmount = data.amount - baseAmount;
 
-    drawText('CELKOM K UHRADE', width - 240, totalBoxY + 5, 10, true, BRAND_GREEN);
-    drawText(`${data.amount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 60, totalBoxY + 5, 14, true, undefined, 'right');
+    drawText('Základ dane:', width - 200, y, 10, false, DARK_GRAY, 'right');
+    drawText(`${baseAmount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 10, false, DARK_GRAY, 'right');
+    y -= 15;
+    drawText('DPH 23%:', width - 200, y, 10, false, DARK_GRAY, 'right');
+    drawText(`${vatAmount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 10, false, DARK_GRAY, 'right');
+
+    // --- Total ---
+    y -= 40;
+    const totalBoxY = y;
+    // Widen the total box for "s DPH" label
+    page.drawRectangle({ x: width - 300, y: totalBoxY - 15, width: 250, height: 40, color: LIGHT_GRAY });
+
+    drawText('CELKOM K UHRADE', width - 290, totalBoxY + 5, 10, true, BRAND_GREEN);
+    drawText(`${data.amount.toFixed(2)} ${data.currency.toUpperCase()} s DPH`, width - 60, totalBoxY + 5, 14, true, undefined, 'right');
 
     // --- Footer ---
     const footerY = 50;

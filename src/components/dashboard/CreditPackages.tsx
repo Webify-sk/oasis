@@ -211,7 +211,7 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
 
                         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#F9FAFB', borderRadius: '8px' }}>
                             <p style={{ fontWeight: '600', marginBottom: '0.2rem' }}>{selectedPackage.title}</p>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{selectedPackage.price} €</span></p>
+                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{selectedPackage.price} € s DPH</span></p>
                         </div>
 
                         {/* Invoice Data Form */}

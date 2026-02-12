@@ -336,7 +336,7 @@ export function GuestVoucherForm({ products, preselectedId }: { products: Produc
 
                         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#F9FAFB', borderRadius: '8px' }}>
                             <p style={{ fontWeight: '600', marginBottom: '0.2rem' }}>{currentProduct.title}</p>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{currentProduct.price} €</span></p>
+                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{currentProduct.price} € s DPH</span></p>
                         </div>
 
                         {/* Error Notification */}
