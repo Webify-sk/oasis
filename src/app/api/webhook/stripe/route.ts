@@ -20,7 +20,7 @@ import { createClient } from '@/utils/supabase/server' // Note: This uses cookie
 // ... actually I'll write the code to use `process.env.SUPABASE_SERVICE_ROLE_KEY`.
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { CREDIT_PACKAGES, PackageId } from '@/lib/constants/creditPackages'
+// import { CREDIT_PACKAGES, PackageId } from '@/lib/constants/creditPackages' // Legacy
 import { sendEmail } from '@/utils/email';
 import { generateVoucherPDF } from '@/utils/pdf-generator';
 
@@ -220,11 +220,15 @@ export async function POST(req: Request) {
 
         // EXISTING CREDIT LOGIC
         const userId = session.metadata?.userId
-        const packageId = session.metadata?.packageId as PackageId
+        // packageId is now a UUID from DB, so we don't check against CREDIT_PACKAGES constant
         const packageName = session.metadata?.packageName
 
-        if (userId && packageId && CREDIT_PACKAGES[packageId]) {
-            const creditsToAdd = CREDIT_PACKAGES[packageId].credits
+        // Parse credits directly from metadata (trusted source from our createCheckoutSession)
+        const credits = parseInt(session.metadata?.credits || '0')
+        const bonus = parseInt(session.metadata?.bonus || '0')
+        const creditsToAdd = credits + bonus
+
+        if (userId && creditsToAdd > 0) {
 
             // 1. Get current credits
             const { data: profile, error: fetchError } = await supabase
