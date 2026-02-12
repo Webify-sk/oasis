@@ -13,6 +13,10 @@ interface TrainingSession {
     trainer: string;
     date: Date;
     isRegistered?: boolean;
+    occupancy?: {
+        current: number;
+        max: number;
+    };
 }
 
 interface MonthlyCalendarProps {
@@ -155,7 +159,7 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                 return (
                                     <div
                                         key={i}
-                                        className={`${styles.event} ${evt.isRegistered ? styles.registered : ''}`}
+                                        className={`${styles.event} ${evt.isRegistered ? styles.registered : ''} ${evt.occupancy && evt.occupancy.current >= evt.occupancy.max && !evt.isRegistered ? styles.full : ''}`}
                                         title={`${evt.time} - ${evt.title} (${evt.trainer})${evt.isRegistered ? ' - ZAREGISTROVANÉ' : ''}`}
                                         onClick={!isPast ? () => setSelectedEvent(evt) : undefined}
                                         style={{
@@ -209,6 +213,12 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                             <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 👤 Tréner: <strong>{selectedEvent.trainer}</strong>
                             </p>
+                            {selectedEvent.occupancy && (
+                                <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', color: selectedEvent.occupancy.current >= selectedEvent.occupancy.max ? '#DC2626' : '#666' }}>
+                                    👥 Obsadenosť: <strong>{selectedEvent.occupancy.current}/{selectedEvent.occupancy.max}</strong>
+                                    {selectedEvent.occupancy.current >= selectedEvent.occupancy.max && ' (Obsadené)'}
+                                </p>
+                            )}
                         </div>
 
                         {selectedEvent.isRegistered && (

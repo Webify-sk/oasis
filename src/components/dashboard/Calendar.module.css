@@ -121,6 +121,16 @@
     background: #d1fae5;
 }
 
+.full {
+    background: #FEF2F2;
+    color: #991B1B;
+    border-left-color: #DC2626;
+}
+
+.full:hover {
+    background: #FEE2E2;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .container {

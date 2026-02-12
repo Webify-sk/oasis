@@ -33,23 +33,21 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         .select('id, full_name');
     const trainersMap = new Map(trainers?.map(t => [t.id, t.full_name]) || []);
 
-    // 3. Fetch User Bookings for the Month (to highlight)
+    // 3. Fetch Bookings for the Month (for occupancy & user status)
     const { data: { user } } = await supabase.auth.getUser();
-    let userBookings: any[] = [];
 
-    if (user) {
-        const startDate = new Date(year, month, 1).toISOString();
-        const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+    // Use UTC for consistent querying regardless of server timezone
+    const startDate = new Date(Date.UTC(year, month, 1)).toISOString();
+    const endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)).toISOString();
 
-        const { data: bookings } = await supabase
-            .from('bookings')
-            .select('training_type_id, start_time')
-            .eq('user_id', user.id)
-            .gte('start_time', startDate)
-            .lte('start_time', endDate);
+    const { data: monthBookings } = await supabase
+        .from('bookings')
+        .select('training_type_id, start_time, user_id')
+        .gte('start_time', startDate)
+        .lte('start_time', endDate);
 
-        userBookings = bookings || [];
-    }
+    const allBookings = monthBookings || [];
+    const userBookings = user ? allBookings.filter((b: any) => b.user_id === user.id) : [];
 
     // 4. Generate Events for the Month
     const events: any[] = [];
@@ -87,16 +85,27 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                     if (timeStr.includes('-')) timeStr = timeStr.split('-')[0].trim();
                     const [hours, minutes] = timeStr.split(':').map(Number);
 
-                    const sessionStart = new Date(dateObj);
-                    sessionStart.setHours(hours, minutes, 0, 0);
+                    // IMPORTANT: Construct Date in UTC to match DB "Face Value" storage
+                    // The DB stores "08:30" as "08:30 UTC"
+                    const sessionStartTimestamp = Date.UTC(year, month, day, hours, minutes, 0, 0);
 
                     // Check if user has a booking for this type at this time
                     // ISO string comparison might be tricky due to timezones, so we compare timestamps or close enough
                     // Ideally database stores UTC. detailed comparison:
-                    const isRegistered = userBookings.some(b => {
+                    // Calculate Occupancy
+                    // Use loose equality for time matching or specific window if needed. 
+                    // Ideally we match by training_type_id and start_time
+                    const currentOccupancy = allBookings.filter((b: any) => {
                         const bDate = new Date(b.start_time);
-                        return b.training_type_id === tt.id && bDate.getTime() === sessionStart.getTime();
+                        return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
+                    }).length;
+
+                    const isRegistered = userBookings.some((b: any) => {
+                        const bDate = new Date(b.start_time);
+                        return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
                     });
+
+                    const maxOccupancy = tt.capacity || 10;
 
                     events.push({
                         id: `${tt.id}-${term.id}-${day}`,
@@ -104,7 +113,11 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         title: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || '?',
                         date: dateObj,
-                        isRegistered // Add flag
+                        isRegistered, // Add flag
+                        occupancy: {
+                            current: currentOccupancy,
+                            max: maxOccupancy
+                        }
                     });
                 });
             }
