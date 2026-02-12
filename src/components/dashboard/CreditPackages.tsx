@@ -92,8 +92,8 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
         }
 
         // Basic validation
-        if (!formData.full_name || !formData.billing_name || !formData.billing_street || !formData.billing_city || !formData.billing_zip) {
-            alert('Prosím vyplňte všetky povinné fakturačné údaje.');
+        if (!formData.full_name || !formData.billing_street || !formData.billing_city || !formData.billing_zip || !formData.billing_country) {
+            alert('Prosím vyplňte všetky povinné fakturačné údaje (vrátane štátu).');
             return;
         }
 
@@ -103,7 +103,12 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
             // 1. Update Profile First
             const profileData = new FormData();
             Object.entries(formData).forEach(([key, value]) => {
-                profileData.append(key, value);
+                // If billing_name is empty, use full_name
+                if (key === 'billing_name' && !value) {
+                    profileData.append(key, formData.full_name);
+                } else {
+                    profileData.append(key, value);
+                }
             });
 
             // We assume user is logged in
@@ -223,11 +228,12 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
 
                                 <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '0.5rem 0' }} />
 
-                                <input
-                                    name="billing_name" placeholder="Fakturačné meno / Firma (Povinné)"
+                                {/* Billing Name hidden - using Full Name */}
+                                {/* <input
+                                    name="billing_name" placeholder="Fakturačné meno / Firma (Voliteľné)"
                                     value={formData.billing_name} onChange={handleInputChange}
                                     style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: formData.billing_name ? 'white' : '#fff5f5' }}
-                                />
+                                /> */}
                                 <input
                                     name="billing_street" placeholder="Ulica a číslo (Povinné)"
                                     value={formData.billing_street} onChange={handleInputChange}
@@ -246,9 +252,9 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
                                     />
                                 </div>
                                 <input
-                                    name="billing_country" placeholder="Štát"
+                                    name="billing_country" placeholder="Štát (Povinné)"
                                     value={formData.billing_country} onChange={handleInputChange}
-                                    style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                                    style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: formData.billing_country ? 'white' : '#fff5f5' }}
                                 />
                             </div>
                         </div>

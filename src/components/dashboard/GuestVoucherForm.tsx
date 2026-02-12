@@ -130,12 +130,13 @@ export function GuestVoucherForm({ products, preselectedId }: { products: Produc
             billingData.customer_email,
             billingData.billing_street,
             billingData.billing_city,
-            billingData.billing_zip
+            billingData.billing_zip,
+            billingData.billing_country
         ];
 
         if (required.some(field => !field || field.trim() === '')) {
             setBillingErrors(true); // Re-use this to highlight fields
-            setModalError('Všetky kontaktné a fakturačné údaje (Meno, Email, Adresa) sú povinné.');
+            setModalError('Všetky kontaktné a fakturačné údaje (Meno, Email, Adresa, Štát) sú povinné.');
             return;
         }
 
@@ -152,7 +153,11 @@ export function GuestVoucherForm({ products, preselectedId }: { products: Produc
             formData.append('message', voucherData.message);
 
             Object.entries(billingData).forEach(([key, value]) => {
-                formData.append(key, value);
+                if (key === 'billing_name' && !value) {
+                    formData.append(key, billingData.full_name);
+                } else {
+                    formData.append(key, value);
+                }
             });
             formData.append('isGuest', 'true');
 
@@ -376,11 +381,12 @@ export function GuestVoucherForm({ products, preselectedId }: { products: Produc
 
                                 <p style={{ fontSize: '0.85rem', color: '#666' }}>Údaje na faktúru:</p>
 
-                                <input
+                                {/* Billing Name hidden - using Full Name */}
+                                {/* <input
                                     name="billing_name" placeholder="Fakturačné meno / Firma (Voliteľné)"
                                     value={billingData.billing_name} onChange={handleBillingChange}
                                     style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
-                                />
+                                /> */}
 
                                 <input
                                     name="billing_street" placeholder="Ulica a číslo *"
