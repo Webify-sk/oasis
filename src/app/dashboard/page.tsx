@@ -86,8 +86,8 @@ export default async function DashboardPage() {
     const formatBookingDate = (dateStr: string) => {
         const d = new Date(dateStr);
         return {
-            time: d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
-            date: d.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long' }),
+            time: d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }),
+            date: d.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }),
             relative: getRelativeTime(d)
         };
     };
