@@ -13,10 +13,12 @@
 }
 
 .description {
-    color: #666;
-    margin-bottom: 3rem;
-    line-height: 1.6;
-    font-size: 1.1rem;
+    color: #5F5F5F;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 800px;
+    font-family: 'Times New Roman', serif;
 }
 
 /* Purchase Form */

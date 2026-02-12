@@ -137,13 +137,9 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
 
     return (
         <div className={styles.container}>
-            <div className={styles.header}>
-                <p>
-                    Zvoľte si balíček, ktorý najviac vyhovuje vašim potrebám.
-                    Po zakúpení sa vstupy automaticky pripočítajú na váš účet a môžete ich ihneď využiť na rezerváciu termínov.
-                </p>
-            </div>
-
+            <p className={styles.description}>
+                Zvoľte si balíček, ktorý najviac vyhovuje vašim potrebám. Po zakúpení sa vstupy automaticky pripočítajú na váš účet a môžete ich ihneď využiť na rezerváciu termínov.
+            </p>
             <div className={styles.grid}>
                 {packages.map((pkg) => (
                     <div key={pkg.id} className={clsx(styles.card, { [styles.highlightCard]: pkg.is_popular })}>

@@ -24,6 +24,15 @@
     max-width: 700px;
 }
 
+.description {
+    color: #5F5F5F;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 800px;
+    font-family: 'Times New Roman', serif;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -150,5 +159,3 @@
     letter-spacing: 0.05em;
     backdrop-filter: blur(4px);
 }
-
-.highlightCard {}
