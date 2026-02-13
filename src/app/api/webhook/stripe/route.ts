@@ -95,7 +95,7 @@ export async function POST(req: Request) {
             }
 
             // CREATE INVOICE FOR VOUCHER
-            const invNum = generateInvoiceNumber();
+            const invNum = await generateNextInvoiceNumber(supabase);
 
             // Extract billing details from metadata (passed in Guest Form) or session customer_details
             // We need to ensure these are passed in metadata or we fallback to something?
@@ -257,7 +257,7 @@ export async function POST(req: Request) {
             }
 
             // CREATE INVOICE FOR CREDITS
-            const invNum = generateInvoiceNumber();
+            const invNum = await generateNextInvoiceNumber(supabase);
             const { error: invoiceError } = await supabase.from('invoices').insert({
                 user_id: userId,
                 invoice_number: invNum,
@@ -306,11 +306,36 @@ export async function POST(req: Request) {
     return new NextResponse(null, { status: 200 })
 }
 
-function generateInvoiceNumber() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(1000 + Math.random() * 9000);
-    return `FA-${year}${month}${day}-${random}`;
+async function generateNextInvoiceNumber(supabase: any) {
+    const year = new Date().getFullYear();
+    const prefix = `W${year}`;
+
+    // Find the latest invoice for this year
+    const { data: latestInvoice, error } = await supabase
+        .from('invoices')
+        .select('invoice_number')
+        .like('invoice_number', `${prefix}%`)
+        .order('invoice_number', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error fetching latest invoice number:', error);
+        // Fallback to random if DB fails? Or fail? Better to fail or fallback to safe random to avoid collision.
+        // Let's fallback to random but log error
+        return `W${year}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    let nextSequence = 1;
+    if (latestInvoice && latestInvoice.invoice_number) {
+        // format W20260001
+        const lastSequenceStr = latestInvoice.invoice_number.slice(-4);
+        const lastSequence = parseInt(lastSequenceStr, 10);
+        if (!isNaN(lastSequence)) {
+            nextSequence = lastSequence + 1;
+        }
+    }
+
+    const sequenceStr = String(nextSequence).padStart(4, '0');
+    return `${prefix}${sequenceStr}`;
 }

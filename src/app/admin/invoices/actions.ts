@@ -43,3 +43,36 @@ export async function getAllInvoices() {
 
     return data as unknown as AdminInvoice[];
 }
+
+import { revalidatePath } from 'next/cache';
+
+import { createClient as createAdminClient } from '@supabase/supabase-js';
+
+export async function deleteInvoice(invoiceId: string) {
+    await requireAdmin();
+
+    // Use Service Role Key to bypass RLS
+    const supabase = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+
+    const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId);
+
+    if (error) {
+        console.error('Error deleting invoice:', error);
+        throw new Error('Nepodarilo sa vymazať faktúru.');
+    }
+
+    revalidatePath('/admin/invoices');
+    return { success: true };
+}
