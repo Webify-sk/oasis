@@ -24,6 +24,7 @@ interface Session {
     };
     isUserRegistered?: boolean;
     bookingId?: string;
+    isPast?: boolean;
 }
 
 interface DaySchedule {
@@ -134,7 +135,7 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
     const [confirmModalOpen, setConfirmModalOpen] = React.useState(false);
     const [isLateCancellation, setIsLateCancellation] = React.useState(false);
 
-    const isPast = new Date(session.startTimeISO) < new Date();
+    const isPast = session.isPast ?? (new Date(session.startTimeISO) < new Date());
 
     const handleActionClick = (e: React.MouseEvent) => {
         e.preventDefault();

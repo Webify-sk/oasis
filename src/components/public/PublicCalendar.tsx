@@ -5,13 +5,17 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import styles from '@/components/dashboard/Calendar.module.css'; // Reusing styles
 
+// ... imports
+
 interface TrainingSession {
     id: string;
     time: string;
     title: string;
     trainer: string;
     date: Date;
-    isRegistered?: boolean; // Always false or undefined for public
+    isRegistered?: boolean;
+    totalCapacity?: number;
+    bookedCount?: number;
 }
 
 interface PublicCalendarProps {
@@ -26,7 +30,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    // Calendar logic (Same as MonthlyCalendar)
+    // Calendar logic
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
 
@@ -116,6 +120,22 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
         window.open(`${baseUrl}/dashboard/trainings?date=${formatDate(evt.date)}`, '_blank');
     };
 
+    const getOccupancyColor = (booked: number, capacity: number) => {
+        if (!capacity) return '#e0f2fe'; // blue-50 (default available)
+        const ratio = booked / capacity;
+        if (ratio >= 1) return '#fee2e2'; // red-100 (full)
+        if (ratio >= 0.75) return '#ffedd5'; // orange-100 (almost full)
+        return '#e0f2fe'; // blue-50 (plenty of space)
+    };
+
+    const getOccupancyBorder = (booked: number, capacity: number) => {
+        if (!capacity) return '#0ea5e9'; // sky-500
+        const ratio = booked / capacity;
+        if (ratio >= 1) return '#ef4444'; // red-500
+        if (ratio >= 0.75) return '#f97316'; // orange-500
+        return '#0ea5e9'; // sky-500
+    };
+
     return (
         <div className={styles.container} style={{ height: 'auto', minHeight: '100%', padding: '10px' }}>
             <div className={styles.header}>
@@ -142,20 +162,32 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                             <span className={styles.dayNumber}>{cell.day}</span>
                             {cellEvents.map((evt, i) => {
                                 const isPast = isEventPast(evt);
+                                const booked = evt.bookedCount || 0;
+                                const capacity = evt.totalCapacity || 10;
+
+                                const bgColor = getOccupancyColor(booked, capacity);
+                                const borderColor = getOccupancyBorder(booked, capacity);
+
                                 return (
                                     <div
                                         key={i}
                                         className={styles.event}
-                                        title={`${evt.time} - ${evt.title}`}
+                                        title={`${evt.time} - ${evt.title} (${booked}/${capacity})`}
                                         onClick={() => setSelectedEvent(evt)}
                                         style={{
                                             cursor: 'pointer',
                                             opacity: isPast ? 0.6 : 1,
                                             fontSize: '0.7rem',
-                                            padding: '2px 4px'
+                                            padding: '2px 4px',
+                                            backgroundColor: bgColor,
+                                            borderLeft: `3px solid ${borderColor}`,
+                                            marginBottom: '2px',
+                                            color: '#333'
                                         }}
                                     >
-                                        <strong>{evt.time}</strong> {evt.title}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span><strong>{evt.time}</strong> {evt.title}</span>
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -164,7 +196,6 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                 })}
             </div>
 
-            {/* Modal */}
             {selectedEvent && (
                 <div style={{
                     position: 'fixed',
@@ -194,7 +225,22 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                         <div style={{ marginBottom: '1rem', color: '#555', fontSize: '0.9rem' }}>
                             <p style={{ marginBottom: '4px' }}>🕒 <strong>{selectedEvent.time}</strong></p>
                             <p style={{ marginBottom: '4px' }}>📅 {selectedEvent.date.toLocaleDateString('sk-SK')}</p>
-                            <p>👤 Tréner: {selectedEvent.trainer}</p>
+                            <p style={{ marginBottom: '4px' }}>👤 Tréner: {selectedEvent.trainer}</p>
+
+                            <div style={{
+                                marginTop: '1rem',
+                                padding: '0.75rem',
+                                backgroundColor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#fef2f2' : '#f0fdf4',
+                                borderRadius: '8px',
+                                border: `1px solid ${(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#fee2e2' : '#dcfce7'}`
+                            }}>
+                                <p style={{ margin: 0, fontWeight: 600, color: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#991b1b' : '#166534' }}>
+                                    {(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)
+                                        ? 'PLNE OBSADENÉ'
+                                        : `Voľné miesta: ${(selectedEvent.totalCapacity || 10) - (selectedEvent.bookedCount || 0)} z ${(selectedEvent.totalCapacity || 10)}`
+                                    }
+                                </p>
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
@@ -213,13 +259,14 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                             </button>
                             <button
                                 onClick={() => handleBookClick(selectedEvent)}
+                                disabled={(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)}
                                 style={{
                                     padding: '0.5rem 1rem',
                                     borderRadius: '6px',
                                     border: 'none',
-                                    background: '#8C7568',
+                                    background: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#ccc' : '#8C7568',
                                     color: 'white',
-                                    cursor: 'pointer',
+                                    cursor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? 'not-allowed' : 'pointer',
                                     fontSize: '0.9rem'
                                 }}
                             >

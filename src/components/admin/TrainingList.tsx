@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit2, Trash2, Calendar, Eye } from 'lucide-react';
+import { Edit2, Trash2, Calendar, Eye, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { deleteTrainingType } from '@/app/admin/trainings/actions';
@@ -32,6 +32,7 @@ interface TrainingType {
 export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [expandedSessionKeys, setExpandedSessionKeys] = useState<Set<string>>(new Set());
 
     const handleDelete = async () => {
         if (!deletingId) return;
@@ -43,18 +44,25 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
         setExpandedId(expandedId === id ? null : id);
     };
 
+    const toggleSession = (key: string) => {
+        const newSet = new Set(expandedSessionKeys);
+        if (newSet.has(key)) {
+            newSet.delete(key);
+        } else {
+            newSet.add(key);
+        }
+        setExpandedSessionKeys(newSet);
+    };
+
     if (!trainings || trainings.length === 0) {
-        return (
-            <div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>
-                Zatiaľ nie sú vytvorené žiadne tréningy.
-            </div>
-        );
+        // ... (unchanged)
     }
 
     return (
         <div style={{ display: 'grid', gap: '1rem' }}>
             {trainings.map((training) => (
                 <div key={training.id} style={{
+                    // ... (unchanged style)
                     backgroundColor: '#fff',
                     padding: '1.5rem',
                     borderRadius: '8px',
@@ -64,6 +72,7 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                     gap: '1rem'
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        {/* ... (unchanged header content) */}
                         <div>
                             <h3 style={{ margin: '0 0 0.5rem 0', fontFamily: 'serif', color: '#4A403A' }}>
                                 {training.title}
@@ -72,7 +81,7 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                                 <span>{training.level}</span>
                                 <span>{training.duration_minutes} min</span>
                                 <span style={{ color: '#4A403A', fontWeight: 500 }}>
-                                    Prihlásení: {training.bookingCount} (budúce)
+                                    Prihlásení: {training.bookingCount}
                                 </span>
                                 <span style={{ display: 'flex', alignItems: 'center' }}>
                                     <Calendar size={14} style={{ marginRight: '0.25rem' }} />
@@ -130,23 +139,65 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                         </div>
                     </div>
 
-                    {/* Sessions List - Expanded or if sessions exist? Let's use expand. */}
+                    {/* Sessions List */}
                     {expandedId === training.id && training.upcomingSessions && training.upcomingSessions.length > 0 && (
                         <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px dashed #eee' }}>
                             <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#444' }}>Obsadené termíny & Účastníci:</h4>
                             <div style={{ display: 'grid', gap: '0.5rem' }}>
-                                {training.upcomingSessions.map((session, idx) => (
-                                    <div key={idx} style={{ fontSize: '0.85rem', backgroundColor: '#fafafa', padding: '0.5rem', borderRadius: '4px' }}>
-                                        <div style={{ fontWeight: 600, marginBottom: '2px' }}>
-                                            {new Date(session.start).toLocaleString('sk-SK', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                                {training.upcomingSessions.map((session, idx) => {
+                                    const sessionKey = `${training.id}-${session.start}`;
+                                    const isExpanded = expandedSessionKeys.has(sessionKey);
+
+                                    return (
+                                        <div key={idx} style={{ fontSize: '0.85rem', backgroundColor: '#fafafa', padding: '0', borderRadius: '4px', border: '1px solid #eee', overflow: 'hidden' }}>
+                                            <div
+                                                onClick={() => toggleSession(sessionKey)}
+                                                style={{
+                                                    padding: '0.75rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    backgroundColor: isExpanded ? '#f5f5f5' : '#fafafa',
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: 600, color: '#8C7568' }}>
+                                                    {new Date(session.start).toLocaleString('sk-SK', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                                                    <span style={{ marginLeft: '8px', color: '#666', fontWeight: 400, fontSize: '0.8rem' }}>
+                                                        ({session.attendees.length} prihlásených)
+                                                    </span>
+                                                </div>
+                                                <div style={{ color: '#888' }}>
+                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                </div>
+                                            </div>
+
+                                            {isExpanded && (
+                                                <div style={{ padding: '0 0.75rem 0.75rem 0.75rem', borderTop: '1px solid #eee', marginTop: '-1px' }}>
+                                                    <div style={{ paddingTop: '0.5rem' }}>
+                                                        {session.attendees.length > 0 ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                {session.attendees.map((attendee, i) => (
+                                                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: i < session.attendees.length - 1 ? '1px solid #f0f0f0' : 'none', paddingBottom: i < session.attendees.length - 1 ? '4px' : '0' }}>
+                                                                        <span style={{ fontWeight: 500, color: '#333' }}>
+                                                                            {attendee.full_name || 'Neznámy'}
+                                                                        </span>
+                                                                        <span style={{ color: '#666', fontSize: '0.8rem' }}>
+                                                                            {attendee.email}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span style={{ fontStyle: 'italic', color: '#999' }}>Nikto nie je prihlásený</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div style={{ color: '#666' }}>
-                                            {session.attendees.length > 0
-                                                ? session.attendees.map(a => a.full_name || a.email).join(', ')
-                                                : <span style={{ fontStyle: 'italic' }}>Nikto</span>}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -157,6 +208,7 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                     )}
                 </div>
             ))}
+            {/* Modal code remains same */}
 
             <Modal
                 isOpen={!!deletingId}

@@ -14,35 +14,51 @@ export default async function AdminTrainingsPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-    // Fetch all active/future bookings with user details
+    // Fetch all active/future bookings
+    // Fetch all active/future bookings
     const now = new Date();
-    // Show sessions from today onwards (or maybe just all active ones?)
-    // Let's show from start of today to keep it relevant.
+    // Show sessions from today onwards
     now.setHours(0, 0, 0, 0);
     const fromDate = now.toISOString();
 
-    const { data: bookingsData } = await supabase
+    // 1. Fetch bookings (raw, no join)
+    const { data: bookingsDataRaw, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
             start_time,
             training_type_id,
-            profiles (
-                full_name,
-                email
-            )
+            user_id
         `)
         .gte('start_time', fromDate)
         .order('start_time', { ascending: true });
+
+    if (bookingsError) {
+        console.error('AdminTrainingsPage: Error fetching bookings:', JSON.stringify(bookingsError, null, 2));
+    }
+
+    // 2. Fetch profiles manually
+    const userIds = Array.from(new Set(bookingsDataRaw?.map((b: any) => b.user_id) || [])) as string[];
+    let profilesMap = new Map<string, any>();
+
+    if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds);
+
+        profilesData?.forEach(p => profilesMap.set(p.id, p));
+    }
 
     // Group bookings by TrainingType -> Session (StartTime)
     // Structure: Map<TrainingId, Map<StartTime, Attendee[]>>
     const trainingSessions = new Map<string, Map<string, any[]>>();
     const totalCounts = new Map<string, number>();
 
-    bookingsData?.forEach((b: any) => {
+    bookingsDataRaw?.forEach((b: any) => {
         const tid = b.training_type_id;
         const time = b.start_time;
-        const attendee = b.profiles;
+        // Manual join
+        const attendee = profilesMap.get(b.user_id);
 
         // Total Count
         totalCounts.set(tid, (totalCounts.get(tid) || 0) + 1);

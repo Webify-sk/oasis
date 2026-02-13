@@ -120,41 +120,60 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                 });
 
                 terms.forEach((term: any) => {
-                    // Construct EXACT start time ISO string for this session
-                    // term.time is "18:00". wd.dateObj has correct date.
+                    // 1. Parse time "HH:MM"
                     let timeStr = term.time;
                     if (timeStr.includes('-')) {
                         timeStr = timeStr.split('-')[0].trim();
                     }
 
                     if (!timeStr || !timeStr.includes(':')) {
-                        console.log('Skipping invalid time:', term.time);
                         return;
                     }
 
                     const [hours, minutes] = timeStr.split(':').map(Number);
                     if (isNaN(hours) || isNaN(minutes)) {
-                        console.log('Skipping NaN time:', term.time);
                         return;
                     }
 
-                    const sessionStart = new Date(wd.dateObj);
-                    sessionStart.setHours(hours, minutes, 0, 0);
-                    const sessionStartISO = sessionStart.toISOString();
+                    // 2. Construct "FACE VALUE" UTC Timestamp for the session
+                    // This matches how DB stores it ("18:00" -> "18:00 Z")
+                    const sessionStartTimestamp = Date.UTC(wd.dateObj.getFullYear(), wd.dateObj.getMonth(), wd.dateObj.getDate(), hours, minutes, 0, 0);
 
-                    // Count bookings for this specific slot
-                    const slotBookings = bookings?.filter((b: any) =>
-                        b.training_type_id === tt.id &&
-                        new Date(b.start_time).toISOString() === sessionStartISO
-                    ) || [];
+                    // 3. Construct "FACE VALUE" UTC Timestamp for NOW (in Bratislava)
+                    // We want: If it is 18:30 in Bratislava, we want a timestamp for 18:30 UTC to compare with session 18:00 UTC.
+                    const now = new Date();
+                    const bratislavaTimeStr = now.toLocaleString('en-US', { timeZone: 'Europe/Bratislava', hour12: false });
+                    const bratislavaDate = new Date(bratislavaTimeStr);
+                    // bratislavaDate is now a Date object where .getHours() / .getDate() etc returns the local Bratislava time values 
+                    // BUT .getTime() is shifted. We need to construct a UTC timestamp from its components.
+                    const nowFaceValue = Date.UTC(
+                        bratislavaDate.getFullYear(),
+                        bratislavaDate.getMonth(),
+                        bratislavaDate.getDate(),
+                        bratislavaDate.getHours(),
+                        bratislavaDate.getMinutes(),
+                        bratislavaDate.getSeconds()
+                    );
+
+                    const isPast = sessionStartTimestamp < nowFaceValue;
+
+                    // 4. Client-side ISO string (still needs to be what the calendar expects)
+                    // We can stick to the UTC string.
+                    const sessionStartISO = new Date(sessionStartTimestamp).toISOString();
+
+                    // 5. Calculate Occupancy with 60s Fuzzy Match
+                    const slotBookings = bookings?.filter((b: any) => {
+                        const bDate = new Date(b.start_time);
+                        return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
+                    }) || [];
 
                     const userBooking = user ? slotBookings.find((b: any) => b.user_id === user.id) : null;
                     const isUserRegistered = !!userBooking;
 
                     sessionsForDay.push({
-                        id: `${tt.id}-${term.id}-${wd.dateObj.getDate()}`, // Include Day of Month to match MonthlyCalendar ID
-                        trainingTypeId: tt.id, // Needed for action
-                        startTimeISO: sessionStartISO, // Needed for action
+                        id: `${tt.id}-${term.id}-${wd.dateObj.getDate()}`,
+                        trainingTypeId: tt.id,
+                        startTimeISO: sessionStartISO,
                         time: term.time,
                         name: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || 'Neznámy tréner',
@@ -165,7 +184,8 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                             max: tt.capacity || 10
                         },
                         isUserRegistered,
-                        bookingId: userBooking?.id // Pass ID for robust cancellation
+                        bookingId: userBooking?.id,
+                        isPast // Explicitly pass based on server calculation
                     });
                 });
             }
