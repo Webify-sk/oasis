@@ -1,120 +1,118 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { sendEmail } from '@/utils/email';
 
-export async function GET(req: Request) {
-    // Optional: Add secret key protection
-    const { searchParams } = new URL(req.url);
-    const key = searchParams.get('key');
-    if (process.env.CRON_SECRET && key !== process.env.CRON_SECRET) {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+    // 1. Security Check
+    const authHeader = request.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const supabase = await createClient();
 
-    // Calculate time range: Trainings starting tomorrow between now and now+1h (approx)
-    // Or just "Trainings starting tomorrow" if run once a day.
-    // Ideally run this hourly.
+    // 2. Calculate time range
+    // We want to notify for trainings starting in ~24 hours.
+    // Let's pick a window: [NOW + 23h, NOW + 25h] to catch anything in that slot.
+    // Or simpler: >= NOW + 23h AND < NOW + 25h AND reminder_sent = false
 
+    // Postgres interval syntax is robust, but let's use JS dates for query parameters to be explicit.
     const now = new Date();
-    const startRange = new Date(now.getTime() + 24 * 60 * 60 * 1000); // +24h
-    const endRange = new Date(now.getTime() + 25 * 60 * 60 * 1000); // +25h
+    const startWindow = new Date(now.getTime() + 23 * 60 * 60 * 1000).toISOString();
+    const endWindow = new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString();
 
-    // Format for DB query
-    const startStr = startRange.toISOString();
-    const endStr = endRange.toISOString();
-
-    console.log(`Checking reminders for trainings between ${startStr} and ${endStr}`);
-
-    // Fetch bookings starting in this range
+    // 3. Fetch bookings
     const { data: bookings, error } = await supabase
         .from('bookings')
         .select(`
             id,
             start_time,
-            training_type:training_types ( title ),
-            user:profiles ( email, full_name, id )
+            user_id,
+            training_type:training_types (title),
+            profile:profiles (email, full_name, id)
         `)
-        .gte('start_time', startStr)
-        .lt('start_time', endStr);
+        .gte('start_time', startWindow)
+        .lt('start_time', endWindow)
+        .eq('reminder_sent', false);
 
     if (error) {
-        return new NextResponse(`Error: ${error.message}`, { status: 500 });
+        console.error('Error fetching bookings for reminder:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (!bookings || bookings.length === 0) {
-        return new NextResponse('No trainings found in range', { status: 200 });
+        return NextResponse.json({ message: 'No bookings to remind', count: 0 });
     }
 
+    // 4. Send Emails
     let sentCount = 0;
+    let failedCount = 0;
 
     for (const booking of bookings) {
-        // @ts-ignore
-        const userEmail = booking.user?.email;
-        // @ts-ignore
-        const userName = booking.user?.full_name || 'športovec';
-        // @ts-ignore
-        const trainingTitle = booking.training_type?.title || 'Tréning';
+        // Safe casting/checking
+        const profile = booking.profile as any;
+        const trainingTitle = (booking.training_type as any)?.title || 'Tréning';
 
-        // Skip if we can't find email (shouldn't happen if properly joined, but profiles vs entries)
-        // Note: profiles table might not have email if it's not synced, usually user.email is in auth.users.
-        // If 'profiles' has email column, great. If not, we have a problem.
-        // Let's assume profiles has email based on previous context or we need to join auth users (which we can't easily).
-        // CHECK: src/app/dashboard/profile/actions.ts uses auth.getUser(). profiles table usually has extra data.
-        // If profiles doesn't have email, we can't send.
-        // Wait, stripe webhook used `session.customer_details.email` or `user.email`.
-        // Let's assume profile table has it or we can't send.
+        if (!profile?.email) {
+            console.log(`Skipping booking ${booking.id}: No email`);
+            continue;
+        }
 
-        // Actually, we can fetch email if not in profile? unique id is synced.
-        // If email is not in profiles, we are stuck for cron as we can't query auth.users easily without Service Role.
-        // BUT we have SERVICE_ROLE for other things (maybe).
-        // Let's check if 'email' is in 'profiles' table. 
-        // Based on ProfileForm.tsx: user.email is passed from auth.getUser(), not necessarily from profile.
-        // PROFILE update only updates phone, name etc.
-        // So email might NOT be in profiles.
+        const startTime = new Date(booking.start_time).toLocaleString('sk-SK', {
+            timeZone: 'Europe/Bratislava',
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
-        // FIX: We need access to auth.users using Service Role to get emails by ID.
-        // OR we just mistakenly assumed profiles has email.
-
-        if (booking.user && userEmail) {
-            const formattedDate = new Date(booking.start_time).toLocaleString('sk-SK', {
-                timeZone: 'Europe/Bratislava',
-                weekday: 'long',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            // Import template helper
-            const { getEmailTemplate } = await import('@/utils/email-template');
-
-            const html = getEmailTemplate(
-                `Pripomienka tréningu: ${trainingTitle}`,
-                `
-                <h1 style="color: #5E715D; text-align: center;">Nezabudnite na tréning!</h1>
-                <p>Dobrý deň ${userName},</p>
-                <p>pripomíname Vám, že už zajtra máte rezervovaný tréning.</p>
-                
-                <div class="highlight-box">
-                    <p style="margin: 5px 0;"><strong>Tréning:</strong> ${trainingTitle}</p>
-                    <p style="margin: 5px 0;"><strong>Čas:</strong> ${formattedDate}</p>
+        const subject = `Pripomienka: Zajtrajší tréning ${trainingTitle}`;
+        const html = `
+            <div style="font-family: sans-serif; color: #333;">
+                <h1>Dobrý deň ${profile.full_name || 'športovec'},</h1>
+                <p>Pripomíname Vám Váš zajtrajší tréning v Oasis Lounge.</p>
+                <div style="background: #fdf4ea; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p><strong>Tréning:</strong> ${trainingTitle}</p>
+                    <p><strong>Čas:</strong> ${startTime}</p>
                 </div>
-                
                 <p>Tešíme sa na Vás!</p>
-                <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak sa nemôžete zúčastniť, prosím zrušte rezerváciu včas.</p>
-                <div style="text-align: center; margin-top: 15px;">
-                    <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
+                <p style="font-size: 0.8rem; color: #666; margin-top: 30px;">
+                    Ak sa nemôžete zúčastniť, prosíme, odhláste sa včas cez náš portál, aby Vám neprepadol vstup.
+                </p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/trainings" 
+                       style="background-color: #5E715D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                       Spravovať rezervácie
+                    </a>
                 </div>
-                `
-            );
+            </div>
+        `;
 
-            await sendEmail({
-                to: userEmail,
-                subject: `Pripomienka tréningu: ${trainingTitle}`,
-                html: html
-            });
+        const { success } = await sendEmail({
+            to: profile.email,
+            subject,
+            html
+        });
+
+        if (success) {
+            // 5. Update reminder_sent flag
+            await supabase
+                .from('bookings')
+                .update({ reminder_sent: true })
+                .eq('id', booking.id);
             sentCount++;
+        } else {
+            failedCount++;
         }
     }
 
-    return new NextResponse(`Sent ${sentCount} reminders`, { status: 200 });
+    return NextResponse.json({
+        message: 'Processed reminders',
+        sent: sentCount,
+        failed: failedCount,
+        totalFound: bookings.length
+    });
 }
