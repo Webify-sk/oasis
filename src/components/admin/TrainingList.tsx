@@ -163,7 +163,7 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                                                 }}
                                             >
                                                 <div style={{ fontWeight: 600, color: '#8C7568' }}>
-                                                    {new Date(session.start).toLocaleString('sk-SK', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(session.start).toLocaleString('sk-SK', { timeZone: 'UTC', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                                                     <span style={{ marginLeft: '8px', color: '#666', fontWeight: 400, fontSize: '0.8rem' }}>
                                                         ({session.attendees.length} prihlásených)
                                                     </span>

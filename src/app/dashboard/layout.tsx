@@ -26,7 +26,9 @@ export default async function DashboardLayout({
 
     // Logic: Exempt if employee/admin OR if explicitly verified
     const isStaff = profile?.role === 'employee' || profile?.role === 'admin';
-    const isVerified = isStaff || (profile?.email_verified !== false);
+    // UPDATE: Verification requirement removed for all users (force true)
+    // const isVerified = isStaff || (profile?.email_verified !== false);
+    const isVerified = true;
 
     return (
         <VerificationProvider isVerified={isVerified}>
