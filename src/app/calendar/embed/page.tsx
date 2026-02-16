@@ -36,14 +36,11 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
     const trainersMap = new Map(trainers?.map(t => [t.id, t.full_name]) || []);
 
     // 3. Generate Events for the Month
-    const events: any[] = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const dayNames = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
-
     // 4. Fetch Bookings (UTC logic to match Dashboard)
     // Use UTC for consistent querying regardless of server timezone
     const startDate = new Date(Date.UTC(year, month, 1)).toISOString();
-    const endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)).toISOString();
+    // Extend end date by 15 days into next month to cover overlap
+    const endDate = new Date(Date.UTC(year, month + 1, 15, 23, 59, 59, 999)).toISOString();
 
     const { data: monthlyBookings } = await supabase
         .from('bookings')
@@ -69,10 +66,17 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
     const allBookings = monthlyBookings || [];
 
     // Debug logs can be removed or kept if needed, but the logic changes below
-    console.log('DEBUG: Monthly bookings count:', allBookings.length);
+    // console.log('DEBUG: Monthly bookings count:', allBookings.length);
 
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateObj = new Date(year, month, day);
+    // 4. Generate Events
+    const events: any[] = [];
+    const dayNames = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+
+    const loopStart = new Date(year, month, 1);
+    const loopEnd = new Date(year, month + 1, 15); // Go 15 days into next month
+
+    for (let d = new Date(loopStart); d <= loopEnd; d.setDate(d.getDate() + 1)) {
+        const dateObj = new Date(d);
         const dayName = dayNames[dateObj.getDay()];
 
         trainingTypes?.forEach((tt: any) => {
@@ -103,7 +107,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
 
                     // IMPORTANT: Construct Date in UTC to match DB "Face Value" storage
                     // The DB stores "08:30" as "08:30 UTC"
-                    const sessionStartTimestamp = Date.UTC(year, month, day, hours, minutes, 0, 0);
+                    const sessionStartTimestamp = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), hours, minutes, 0, 0);
 
                     // Check for VACATIONS
                     const isVacation = vacations?.some((v: any) => {
@@ -145,7 +149,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                     displayDate.setHours(hours, minutes, 0, 0);
 
                     events.push({
-                        id: `${tt.id}-${term.id}-${day}`, // Unique ID
+                        id: `${tt.id}-${term.id}-${dateObj.getDate()}-${dateObj.getMonth()}`, // Unique ID with month
                         time: term.time,
                         title: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || '?',

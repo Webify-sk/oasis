@@ -33,12 +33,13 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         .select('id, full_name');
     const trainersMap = new Map(trainers?.map(t => [t.id, t.full_name]) || []);
 
-    // 3. Fetch Bookings for the Month (for occupancy & user status)
+    // 3. Fetch Bookings for the Month (plus buffer for next month overlap)
     const { data: { user } } = await supabase.auth.getUser();
 
     // Use UTC for consistent querying regardless of server timezone
     const startDate = new Date(Date.UTC(year, month, 1)).toISOString();
-    const endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)).toISOString();
+    // Extend end date by 15 days into next month to cover overlap and 14-day limit visibility in next month cells
+    const endDate = new Date(Date.UTC(year, month + 1, 15, 23, 59, 59, 999)).toISOString();
 
     const { data: monthBookings } = await supabase
         .from('bookings')
@@ -46,7 +47,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         .gte('start_time', startDate)
         .lte('start_time', endDate);
 
-    // 3b. Fetch Exceptions for the month
+    // 3b. Fetch Exceptions
     const { data: exceptions } = await supabase
         .from('training_session_exceptions')
         .select('*')
@@ -54,7 +55,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         .gte('session_start_time', startDate)
         .lte('session_start_time', endDate);
 
-    // 3c. Fetch Vacations for the month
+    // 3c. Fetch Vacations
     const { data: vacations } = await supabase
         .from('vacations')
         .select('*')
@@ -64,13 +65,16 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     const allBookings = monthBookings || [];
     const userBookings = user ? allBookings.filter((b: any) => b.user_id === user.id) : [];
 
-    // 4. Generate Events for the Month
+    // 4. Generate Events
     const events: any[] = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const dayNames = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
 
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateObj = new Date(year, month, day);
+    const loopStart = new Date(year, month, 1);
+    const loopEnd = new Date(year, month + 1, 15); // Go 15 days into next month to ensure we cover the 14-day limit
+
+    for (let d = new Date(loopStart); d <= loopEnd; d.setDate(d.getDate() + 1)) {
+        const dateObj = new Date(d);
+        // Fixed: ensure dateObj is used for ID generation
         const dayName = dayNames[dateObj.getDay()];
 
         trainingTypes?.forEach(tt => {
@@ -101,8 +105,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                     const [hours, minutes] = timeStr.split(':').map(Number);
 
                     // IMPORTANT: Construct Date in UTC to match DB "Face Value" storage
-                    // The DB stores "08:30" as "08:30 UTC"
-                    const sessionStartTimestamp = Date.UTC(year, month, day, hours, minutes, 0, 0);
+                    // Use dateObj components (which are local year/month/day)
+                    const sessionStartTimestamp = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), hours, minutes, 0, 0);
 
                     // Check if user has a booking for this type at this time
                     // ISO string comparison might be tricky due to timezones, so we compare timestamps or close enough
@@ -122,8 +126,6 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
                     }).length;
 
-                    const currentOccupancy = isVacation ? maxOccupancy : bookedCount;
-
                     const isRegistered = userBookings.some((b: any) => {
                         const bDate = new Date(b.start_time);
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
@@ -139,10 +141,10 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                     });
                     const isIndividual = exception?.is_individual || false;
 
-
+                    const currentOccupancy = isVacation ? maxOccupancy : bookedCount;
 
                     events.push({
-                        id: `${tt.id}-${term.id}-${day}`,
+                        id: `${tt.id}-${term.id}-${dateObj.getDate()}-${dateObj.getMonth()}`,
                         time: term.time,
                         title: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || '?',

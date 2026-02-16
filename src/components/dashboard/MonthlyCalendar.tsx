@@ -151,12 +151,32 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                 ))}
 
                 {cells.map((cell, idx) => {
-                    const cellEvents = getEventsForDay(cell.day, cell.type);
+                    let cellDate = new Date(year, month, cell.day);
+                    if (cell.type === 'prev') cellDate = new Date(year, month - 1, cell.day);
+                    if (cell.type === 'next') cellDate = new Date(year, month + 1, cell.day);
+
+                    const cellEvents = events.filter(e => e.date.toDateString() === cellDate.toDateString());
+
                     return (
                         <div key={idx} className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''}`}>
                             <span className={styles.dayNumber}>{cell.day}</span>
                             {cellEvents.map((evt, i) => {
                                 const isPast = isEventPast(evt);
+                                if (isPast) return null; // Hide past events
+
+                                // Check 14-day limit
+                                const limitDate = new Date();
+                                limitDate.setDate(limitDate.getDate() + 14);
+                                limitDate.setHours(23, 59, 59, 999);
+
+                                let timeStr = evt.time;
+                                if (timeStr.includes('-')) timeStr = timeStr.split('-')[0].trim();
+                                const [hours, minutes] = timeStr.split(':').map(Number);
+                                const eventDate = new Date(evt.date);
+                                eventDate.setHours(hours, minutes, 0, 0);
+
+                                if (eventDate > limitDate) return null;
+
                                 return (
                                     <div
                                         key={i}
