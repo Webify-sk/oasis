@@ -46,6 +46,14 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         .gte('start_time', startDate)
         .lte('start_time', endDate);
 
+    // 3b. Fetch Exceptions for the month
+    const { data: exceptions } = await supabase
+        .from('training_session_exceptions')
+        .select('*')
+        .in('training_type_id', trainingTypes?.map(t => t.id) || [])
+        .gte('session_start_time', startDate)
+        .lte('session_start_time', endDate);
+
     const allBookings = monthBookings || [];
     const userBookings = user ? allBookings.filter((b: any) => b.user_id === user.id) : [];
 
@@ -105,6 +113,16 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
                     });
 
+                    // Check for exception (Individual)
+                    // Construct ISO string for comparison logic if needed, or use timestamp
+                    // Exceptions in DB are timestamptz.
+                    const exception = exceptions?.find((e: any) => {
+                        const dbTime = new Date(e.session_start_time).getTime();
+                        // 1s tolerance
+                        return e.training_type_id === tt.id && Math.abs(dbTime - sessionStartTimestamp) < 1000;
+                    });
+                    const isIndividual = exception?.is_individual || false;
+
                     const maxOccupancy = tt.capacity || 10;
 
                     events.push({
@@ -113,7 +131,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         title: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || '?',
                         date: dateObj,
-                        isRegistered, // Add flag
+                        isRegistered,
+                        isIndividual, // Add flag
                         occupancy: {
                             current: currentOccupancy,
                             max: maxOccupancy

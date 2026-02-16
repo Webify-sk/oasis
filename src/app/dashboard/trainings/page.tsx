@@ -92,6 +92,14 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
         });
     }
 
+    // 3b. Fetch Exceptions for the week
+    const { data: exceptions } = await supabase
+        .from('training_session_exceptions')
+        .select('*')
+        .in('training_type_id', trainingTypes?.map(t => t.id) || [])
+        .gte('session_start_time', startDate.toISOString())
+        .lte('session_start_time', endDate.toISOString());
+
     const scheduleData = weekDates.map(wd => {
         const sessionsForDay: any[] = [];
 
@@ -100,9 +108,6 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                 // Filter terms for this day
                 const terms = tt.schedule.filter((term: any) => {
                     if (term.active === false) return false;
-
-                    // DEBUG LOGGING
-                    // console.log(`Term ${term.id}: isRecurring=${term.isRecurring}, Date=${term.date}, Day=${term.day}, ComparingWith=${wd.dayName}/${wd.formattedDate}`);
 
                     // Recurring Logic
                     if (term.isRecurring !== false) {
@@ -161,6 +166,17 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                     // We can stick to the UTC string.
                     const sessionStartISO = new Date(sessionStartTimestamp).toISOString();
 
+                    // Check for exception
+                    const exception = exceptions?.find((e: any) => {
+                        // Robust comparison: Compare time values or substrings
+                        const dbTime = new Date(e.session_start_time).getTime();
+                        const sessionTime = new Date(sessionStartISO).getTime();
+                        // 1s tolerance for any microsecond differences
+                        return e.training_type_id === tt.id && Math.abs(dbTime - sessionTime) < 1000;
+                    });
+
+                    const isIndividual = exception?.is_individual || false;
+
                     // 5. Calculate Occupancy with 60s Fuzzy Match
                     const slotBookings = bookings?.filter((b: any) => {
                         const bDate = new Date(b.start_time);
@@ -185,7 +201,8 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                         },
                         isUserRegistered,
                         bookingId: userBooking?.id,
-                        isPast // Explicitly pass based on server calculation
+                        isPast,
+                        isIndividual // Pass the flag
                     });
                 });
             }

@@ -17,6 +17,7 @@ interface TrainingSession {
         current: number;
         max: number;
     };
+    isIndividual?: boolean;
 }
 
 interface MonthlyCalendarProps {
@@ -160,11 +161,15 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                     <div
                                         key={i}
                                         className={`${styles.event} ${evt.isRegistered ? styles.registered : ''} ${evt.occupancy && evt.occupancy.current >= evt.occupancy.max && !evt.isRegistered ? styles.full : ''}`}
-                                        title={`${evt.time} - ${evt.title} (${evt.trainer})${evt.isRegistered ? ' - ZAREGISTROVANÉ' : ''}`}
+                                        title={`${evt.time} - ${evt.title} (${evt.trainer})${evt.isRegistered ? ' - ZAREGISTROVANÉ' : ''}${evt.isIndividual ? ' - INDIVIDUÁLNE' : ''}`}
                                         onClick={!isPast ? () => setSelectedEvent(evt) : undefined}
                                         style={{
                                             cursor: isPast ? 'default' : 'pointer',
-                                            opacity: isPast ? 0.5 : 1
+                                            opacity: isPast ? 0.5 : 1,
+                                            // Red background for individual sessions
+                                            backgroundColor: evt.isIndividual && !evt.isRegistered ? '#FEF2F2' : undefined,
+                                            borderLeft: evt.isIndividual && !evt.isRegistered ? '3px solid #DC2626' : undefined,
+                                            color: evt.isIndividual && !evt.isRegistered ? '#DC2626' : undefined
                                         }}
                                     >
                                         <strong>{evt.time}</strong> {evt.title}
@@ -224,6 +229,12 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                         {selectedEvent.isRegistered && (
                             <div style={{ backgroundColor: '#ecfdf5', color: '#059669', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 ✅ Na tento tréning ste prihlásený.
+                            </div>
+                        )}
+
+                        {selectedEvent.isIndividual && !selectedEvent.isRegistered && (
+                            <div style={{ backgroundColor: '#FEF2F2', color: '#DC2626', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                🔒 Individuálny tréning - nie je možné sa prihlásiť online.
                             </div>
                         )}
 

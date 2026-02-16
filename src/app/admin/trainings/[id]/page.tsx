@@ -1,5 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { TrainingForm } from '@/components/admin/TrainingForm';
+import { SessionManager } from '@/components/admin/SessionManager';
+import { getTrainingExceptions } from '../schedule-actions';
 import { notFound } from 'next/navigation';
 
 export default async function EditTrainingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,6 +23,9 @@ export default async function EditTrainingPage({ params }: { params: Promise<{ i
         notFound();
     }
 
+    // Fetch exceptions
+    const exceptions = await getTrainingExceptions(id);
+
     // Fetch trainers for the dropdown
     const { data: trainers } = await supabase
         .from('trainers')
@@ -35,6 +40,11 @@ export default async function EditTrainingPage({ params }: { params: Promise<{ i
                 <TrainingForm
                     trainers={trainers || []}
                     initialData={training}
+                />
+
+                <SessionManager
+                    training={training}
+                    exceptions={exceptions}
                 />
             </div>
         </div>

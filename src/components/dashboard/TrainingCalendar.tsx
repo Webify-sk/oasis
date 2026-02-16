@@ -8,6 +8,9 @@ import { Modal } from '@/components/ui/Modal';
 import { bookTraining, cancelBooking } from '@/app/dashboard/trainings/actions';
 import styles from './TrainingCalendar.module.css';
 import { useVerification } from '@/components/auth/VerificationContext';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import Link from 'next/link';
 
 interface Session {
     id: string | number;
@@ -25,6 +28,7 @@ interface Session {
     isUserRegistered?: boolean;
     bookingId?: string;
     isPast?: boolean;
+    isIndividual?: boolean;
 }
 
 interface DaySchedule {
@@ -37,9 +41,6 @@ interface TrainingCalendarProps {
     userCredits: number;
     currentDays: number;
 }
-import { useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
-import Link from 'next/link';
 
 export function TrainingCalendar({ schedule, userCredits, currentDays }: TrainingCalendarProps) {
     const searchParams = useSearchParams();
@@ -228,10 +229,11 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
     const isFull = session.occupancy.current >= session.occupancy.max;
     // Don't disable button just because of credits, so they can click and see the specific error message
     // But disable for verification as requested
-    const isDisabled = isLoading || (isFull && !session.isUserRegistered) || isPast || (!isVerified && !session.isUserRegistered);
+    const isDisabled = isLoading || (isFull && !session.isUserRegistered) || isPast || (!isVerified && !session.isUserRegistered) || (session.isIndividual && !session.isUserRegistered);
 
     let buttonText = session.isUserRegistered ? 'Odhlásiť sa' : 'Prihlásiť sa';
     if (!isVerified && !session.isUserRegistered) buttonText = 'Overte email';
+    if (session.isIndividual && !session.isUserRegistered) buttonText = 'Individuálne';
     if (isLoading) buttonText = '...';
     if (isPast) buttonText = 'Ukončené';
 
@@ -243,15 +245,24 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
                 className={clsx(styles.actionButton, {
                     [styles.disabled]: isDisabled,
                     [styles.registered]: session.isUserRegistered,
-                    'opacity-50 cursor-not-allowed': !isVerified && !session.isUserRegistered
+                    'opacity-50 cursor-not-allowed': (!isVerified && !session.isUserRegistered)
                 })}
                 disabled={isDisabled}
-                title={(!isVerified && !session.isUserRegistered) ? "Pre prihlásenie musíte mať overený email" : ""}
+                title={
+                    session.isIndividual
+                        ? "Tento termín je vyhradený pre individuálny tréning"
+                        : (!isVerified && !session.isUserRegistered)
+                            ? "Pre prihlásenie musíte mať overený email"
+                            : ""
+                }
                 variant={session.isUserRegistered ? "secondary" : "primary"}
                 style={{
                     minWidth: '100px',
                     opacity: (isPast || (!isVerified && !session.isUserRegistered)) ? 0.6 : 1,
-                    cursor: (isPast || (!isVerified && !session.isUserRegistered)) ? 'not-allowed' : 'pointer'
+                    cursor: (isPast || (!isVerified && !session.isUserRegistered) || (session.isIndividual && !session.isUserRegistered)) ? 'not-allowed' : 'pointer',
+                    backgroundColor: (session.isIndividual && !session.isUserRegistered) ? '#DC2626' : undefined, // Red for individual
+                    borderColor: (session.isIndividual && !session.isUserRegistered) ? '#DC2626' : undefined,
+                    color: (session.isIndividual && !session.isUserRegistered) ? 'white' : undefined
                 }}
             >
                 {buttonText}
