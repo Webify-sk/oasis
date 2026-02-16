@@ -236,3 +236,64 @@
         padding: 1rem 1.5rem;
     }
 }
+/* Quick Stats - Base (Desktop) */
+.quickStatsCard {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2rem;
+    gap: 1rem;
+    flex-wrap: nowrap;
+}
+
+.quickStatsTitle {
+    color: #8C7568; 
+    opacity: 1; 
+    margin-bottom: 0;
+}
+
+.quickStatsContent {
+    display: flex; 
+    gap: 3rem; 
+    align-items: center;
+}
+
+.quickStatsQuote {
+    border-left: 1px solid #eee; 
+    padding-left: 2rem;
+}
+
+/* Quick Stats - Mobile Overrides */
+@media (max-width: 768px) {
+    .quickStatsCard {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+    }
+
+    .quickStatsContent {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: 100%;
+        justify-content: space-between;
+        gap: 0.25rem;
+    }
+
+    .quickStatsContent > div {
+        flex: 1;
+        justify-content: center;
+        gap: 0.5rem !important;
+    }
+
+    .quickStatsQuote {
+        border-left: none;
+        border-top: 1px solid #eee;
+        padding-left: 0;
+        padding-top: 1rem;
+        width: 100%;
+        text-align: center;
+    }
+}
+

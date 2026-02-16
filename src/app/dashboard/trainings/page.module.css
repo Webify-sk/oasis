@@ -35,17 +35,14 @@
 
     .actions {
         width: 100%;
-        flex-direction: column;
-        /* Stack Credit Counter and Button? Or keep row? */
-        /* Keeping row might still be too wide if credit counter is wide. 
-           Let's try row first but wrap if needed, or stick to column for safety.
-        */
-        flex-wrap: wrap;
+        flex-direction: row;
+        gap: 0.5rem;
     }
 
     /* Make the button full width on mobile for easier tapping */
     .dobitButton {
-        width: 100%;
+        flex: 1;
+        width: auto;
         justify-content: center;
     }
 }

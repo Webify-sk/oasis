@@ -247,13 +247,13 @@ export default async function DashboardPage() {
 
 
             {/* Quick Stats Card - Full Width */}
-            <div className={styles.card} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '2rem' }}>
-                <div className={styles.featureTitle} style={{ color: '#8C7568', opacity: 1, marginBottom: 0 }}>
+            <div className={`${styles.card} ${styles.quickStatsCard}`}>
+                <div className={`${styles.featureTitle} ${styles.quickStatsTitle}`}>
                     <History size={14} style={{ display: 'inline', marginRight: '8px' }} />
                     Rýchle štatistiky
                 </div>
 
-                <div style={{ display: 'flex', gap: '3rem', alignItems: 'center' }}>
+                <div className={styles.quickStatsContent}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div style={{
                             width: '40px', height: '40px', borderRadius: '50%',
@@ -287,7 +287,7 @@ export default async function DashboardPage() {
                     </div>
                 </div>
 
-                <div style={{ borderLeft: '1px solid #eee', paddingLeft: '2rem' }}>
+                <div className={styles.quickStatsQuote}>
                     <div style={{ fontSize: '0.9rem', color: '#888', fontStyle: 'italic' }}>
                         "Zdravie je bohatstvo."
                     </div>
