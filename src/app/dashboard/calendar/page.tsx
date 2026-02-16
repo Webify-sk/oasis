@@ -54,6 +54,13 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         .gte('session_start_time', startDate)
         .lte('session_start_time', endDate);
 
+    // 3c. Fetch Vacations for the month
+    const { data: vacations } = await supabase
+        .from('vacations')
+        .select('*')
+        .lte('start_time', endDate)
+        .gte('end_time', startDate);
+
     const allBookings = monthBookings || [];
     const userBookings = user ? allBookings.filter((b: any) => b.user_id === user.id) : [];
 
@@ -100,13 +107,22 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                     // Check if user has a booking for this type at this time
                     // ISO string comparison might be tricky due to timezones, so we compare timestamps or close enough
                     // Ideally database stores UTC. detailed comparison:
-                    // Calculate Occupancy
-                    // Use loose equality for time matching or specific window if needed. 
-                    // Ideally we match by training_type_id and start_time
-                    const currentOccupancy = allBookings.filter((b: any) => {
+                    // Check for VACATIONS
+                    const isVacation = vacations?.some((v: any) => {
+                        const vStart = new Date(v.start_time).getTime();
+                        const vEnd = new Date(v.end_time).getTime();
+                        // sessionStartTimestamp is already UTC timestamp constructed from Face Value
+                        return sessionStartTimestamp >= vStart && sessionStartTimestamp < vEnd;
+                    });
+
+                    const maxOccupancy = tt.capacity || 10;
+
+                    const bookedCount = allBookings.filter((b: any) => {
                         const bDate = new Date(b.start_time);
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
                     }).length;
+
+                    const currentOccupancy = isVacation ? maxOccupancy : bookedCount;
 
                     const isRegistered = userBookings.some((b: any) => {
                         const bDate = new Date(b.start_time);
@@ -123,7 +139,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                     });
                     const isIndividual = exception?.is_individual || false;
 
-                    const maxOccupancy = tt.capacity || 10;
+
 
                     events.push({
                         id: `${tt.id}-${term.id}-${day}`,

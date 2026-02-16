@@ -100,6 +100,14 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
         .gte('session_start_time', startDate.toISOString())
         .lte('session_start_time', endDate.toISOString());
 
+    // 3c. Fetch Vacations for the week
+    const { data: vacations } = await supabase
+        .from('vacations')
+        .select('*')
+        // Overlap logic: vacation_start <= week_end AND vacation_end >= week_start
+        .lte('start_time', endDate.toISOString())
+        .gte('end_time', startDate.toISOString());
+
     const scheduleData = weekDates.map(wd => {
         const sessionsForDay: any[] = [];
 
@@ -177,6 +185,21 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
 
                     const isIndividual = exception?.is_individual || false;
 
+                    // Check for VACATIONS
+                    // We need to fetch vacations first (will add fetch above loop)
+                    const isVacation = vacations?.some((v: any) => {
+                        const vStart = new Date(v.start_time).getTime();
+                        const vEnd = new Date(v.end_time).getTime();
+                        const sessionTime = new Date(sessionStartISO).getTime();
+
+                        // Debug overlaps
+                        // if (sessionTime >= vStart && sessionTime < vEnd) {
+                        //    console.log(`[Vacation Match] Session: ${sessionStartISO} (${sessionTime}) matches Vacation: ${v.start_time} - ${v.end_time}`);
+                        // }
+
+                        return sessionTime >= vStart && sessionTime < vEnd;
+                    });
+
                     // 5. Calculate Occupancy with 60s Fuzzy Match
                     const slotBookings = bookings?.filter((b: any) => {
                         const bDate = new Date(b.start_time);
@@ -196,7 +219,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                         level: tt.level || 'Všetky úrovne',
                         priceCredits: tt.price_credits ?? 1,
                         occupancy: {
-                            current: slotBookings.length,
+                            current: isVacation ? (tt.capacity || 10) : slotBookings.length, // If vacation, show as FULL
                             max: tt.capacity || 10
                         },
                         isUserRegistered,

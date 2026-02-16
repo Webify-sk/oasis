@@ -234,6 +234,9 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
     let buttonText = session.isUserRegistered ? 'Odhlásiť sa' : 'Prihlásiť sa';
     if (!isVerified && !session.isUserRegistered) buttonText = 'Overte email';
     if (session.isIndividual && !session.isUserRegistered) buttonText = 'Individuálne';
+    // Vacation overrides everything else visually if not registered
+    if (session.isVacation && !session.isUserRegistered) buttonText = 'Obsadené';
+
     if (isLoading) buttonText = '...';
     if (isPast) buttonText = 'Ukončené';
 
