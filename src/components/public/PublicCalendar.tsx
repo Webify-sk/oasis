@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import styles from '@/components/dashboard/Calendar.module.css'; // Reusing styles
-
-// ... imports
 
 interface TrainingSession {
     id: string;
@@ -30,6 +28,15 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
+
+    const todayRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        // Scroll to today if it exists in the current view
+        if (todayRef.current) {
+            todayRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [currentDate]);
 
     // Calendar logic
     const firstDayOfMonth = new Date(year, month, 1);
@@ -163,7 +170,12 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
 
                     const cellEvents = events.filter(e => e.date.toDateString() === cellDate.toDateString());
                     return (
-                        <div key={idx} className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''}`} style={{ minHeight: '80px' }}>
+                        <div
+                            key={idx}
+                            ref={isToday(cell.day, cell.type) ? todayRef : null}
+                            className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''}`}
+                            style={{ minHeight: '80px' }}
+                        >
                             <span className={styles.dayNumber}>{cell.day}</span>
                             {cellEvents.map((evt, i) => {
                                 const isPast = isEventPast(evt);
