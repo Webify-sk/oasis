@@ -16,6 +16,7 @@ interface TrainingSession {
     isRegistered?: boolean;
     totalCapacity?: number;
     bookedCount?: number;
+    isIndividual?: boolean;
 }
 
 interface PublicCalendarProps {
@@ -165,8 +166,10 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                 const booked = evt.bookedCount || 0;
                                 const capacity = evt.totalCapacity || 10;
 
-                                const bgColor = getOccupancyColor(booked, capacity);
-                                const borderColor = getOccupancyBorder(booked, capacity);
+                                // If individual, use specific red logic
+                                const bgColor = evt.isIndividual ? '#FEF2F2' : getOccupancyColor(booked, capacity);
+                                const borderColor = evt.isIndividual ? '#DC2626' : getOccupancyBorder(booked, capacity);
+                                const textColor = evt.isIndividual ? '#DC2626' : '#333';
 
                                 return (
                                     <div
@@ -182,7 +185,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                             backgroundColor: bgColor,
                                             borderLeft: `3px solid ${borderColor}`,
                                             marginBottom: '2px',
-                                            color: '#333'
+                                            color: textColor
                                         }}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -227,20 +230,37 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                             <p style={{ marginBottom: '4px' }}>📅 {selectedEvent.date.toLocaleDateString('sk-SK')}</p>
                             <p style={{ marginBottom: '4px' }}>👤 Tréner: {selectedEvent.trainer}</p>
 
-                            <div style={{
-                                marginTop: '1rem',
-                                padding: '0.75rem',
-                                backgroundColor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#fef2f2' : '#f0fdf4',
-                                borderRadius: '8px',
-                                border: `1px solid ${(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#fee2e2' : '#dcfce7'}`
-                            }}>
-                                <p style={{ margin: 0, fontWeight: 600, color: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#991b1b' : '#166534' }}>
-                                    {(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)
-                                        ? 'PLNE OBSADENÉ'
-                                        : `Voľné miesta: ${(selectedEvent.totalCapacity || 10) - (selectedEvent.bookedCount || 0)} z ${(selectedEvent.totalCapacity || 10)}`
-                                    }
-                                </p>
-                            </div>
+                            {selectedEvent.isIndividual ? (
+                                <div style={{
+                                    marginTop: '1rem',
+                                    padding: '0.75rem',
+                                    backgroundColor: '#FEF2F2',
+                                    borderRadius: '8px',
+                                    border: '1px solid #fee2e2'
+                                }}>
+                                    <p style={{ margin: 0, fontWeight: 600, color: '#DC2626' }}>
+                                        🔒 Individuálny tréning
+                                    </p>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#991b1b' }}>
+                                        Nie je možné sa prihlásiť online.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    marginTop: '1rem',
+                                    padding: '0.75rem',
+                                    backgroundColor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#fef2f2' : '#f0fdf4',
+                                    borderRadius: '8px',
+                                    border: `1px solid ${(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#fee2e2' : '#dcfce7'}`
+                                }}>
+                                    <p style={{ margin: 0, fontWeight: 600, color: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#991b1b' : '#166534' }}>
+                                        {(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)
+                                            ? 'PLNE OBSADENÉ'
+                                            : `Voľné miesta: ${(selectedEvent.totalCapacity || 10) - (selectedEvent.bookedCount || 0)} z ${(selectedEvent.totalCapacity || 10)}`
+                                        }
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
@@ -257,21 +277,23 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                             >
                                 Zavrieť
                             </button>
-                            <button
-                                onClick={() => handleBookClick(selectedEvent)}
-                                disabled={(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    background: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#ccc' : '#8C7568',
-                                    color: 'white',
-                                    cursor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? 'not-allowed' : 'pointer',
-                                    fontSize: '0.9rem'
-                                }}
-                            >
-                                Rezervovať
-                            </button>
+                            {!selectedEvent.isIndividual && (
+                                <button
+                                    onClick={() => handleBookClick(selectedEvent)}
+                                    disabled={(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)}
+                                    style={{
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '6px',
+                                        border: 'none',
+                                        background: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#ccc' : '#8C7568',
+                                        color: 'white',
+                                        cursor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? 'not-allowed' : 'pointer',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    Rezervovať
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

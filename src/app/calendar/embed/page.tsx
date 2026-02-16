@@ -51,6 +51,21 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
         .gte('start_time', startDate)
         .lt('start_time', endDate);
 
+    // 4b. Fetch Exceptions for the month
+    const { data: exceptions } = await supabase
+        .from('training_session_exceptions')
+        .select('*')
+        .in('training_type_id', trainingTypes?.map(t => t.id) || [])
+        .gte('session_start_time', startDate)
+        .lte('session_start_time', endDate);
+
+    // 4c. Fetch Vacations for the month
+    const { data: vacations } = await supabase
+        .from('vacations')
+        .select('*')
+        .lte('start_time', endDate)
+        .gte('end_time', startDate);
+
     const allBookings = monthlyBookings || [];
 
     // Debug logs can be removed or kept if needed, but the logic changes below
@@ -90,15 +105,40 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                     // The DB stores "08:30" as "08:30 UTC"
                     const sessionStartTimestamp = Date.UTC(year, month, day, hours, minutes, 0, 0);
 
+                    // Check for VACATIONS
+                    const isVacation = vacations?.some((v: any) => {
+                        const vStart = new Date(v.start_time).getTime();
+                        const vEnd = new Date(v.end_time).getTime();
+                        // sessionStartTimestamp is already UTC timestamp constructed from Face Value
+                        return sessionStartTimestamp >= vStart && sessionStartTimestamp < vEnd;
+                    });
+
+                    // Check for exception (Individual)
+                    const exception = exceptions?.find((e: any) => {
+                        const dbTime = new Date(e.session_start_time).getTime();
+                        // 1s tolerance
+                        return e.training_type_id === tt.id && Math.abs(dbTime - sessionStartTimestamp) < 1000;
+                    });
+                    const isIndividual = exception?.is_individual || false;
+
+                    const maxOccupancy = tt.capacity || 10;
+
                     // Calculate Occupancy with fuzzy matching
                     const currentBookings = allBookings.filter((b: any) => {
                         const bDate = new Date(b.start_time);
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
                     }).length;
 
-                    if (currentBookings > 0) {
-                        console.log(`DEBUG: Found ${currentBookings} bookings for ${tt.title} at ${term.time}`);
-                    }
+                    // If vacation, report max occupancy (full)
+                    // If individual, it might have differnet capacity but for public view, we mainly care about "is it full?"
+                    // Individual sessions usually have capacity 1 (or limited), but let's stick to standard logic:
+                    // If vacation -> return full.
+                    // If individual -> visual indication.
+
+                    const effectiveBookedCount = isVacation ? maxOccupancy : currentBookings;
+
+                    // For debug
+                    // if (currentBookings > 0) { ... }
 
                     // Construct local date for display props
                     const displayDate = new Date(dateObj);
@@ -110,9 +150,10 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                         title: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || '?',
                         date: displayDate,
-                        totalCapacity: tt.capacity || 10,
-                        bookedCount: currentBookings,
-                        isRegistered: false // Public view never shows registration
+                        totalCapacity: maxOccupancy,
+                        bookedCount: effectiveBookedCount,
+                        isRegistered: false, // Public view never shows registration
+                        isIndividual // Pass flag
                     });
                 });
             }
