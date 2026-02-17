@@ -1,4 +1,4 @@
-import { getCosmeticServices } from '@/actions/cosmetic-actions';
+import { getManagedServices } from '@/actions/cosmetic-actions';
 import { ServiceManager } from '@/components/cosmetics/ServiceManager';
 import { Button } from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
@@ -7,7 +7,7 @@ import clsx from 'clsx';
 import styles from '@/components/ui/Button.module.css';
 
 export default async function ServicesPage() {
-    const services = await getCosmeticServices();
+    const services = await getManagedServices();
 
     return (
         <div style={{ padding: '0rem' }}>
