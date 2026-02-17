@@ -608,6 +608,33 @@ export async function updateWeeklyAvailability(employeeId: string, schedule: any
 
 // --- Appointments ---
 
+// Helper for booking deadline logic
+function isBookingAllowed(startDate: Date): { allowed: boolean, deadlineMsg: string } {
+    const formatter = new Intl.DateTimeFormat('sk-SK', {
+        timeZone: 'Europe/Bratislava',
+        hour: 'numeric',
+        hour12: false
+    });
+    const hour = parseInt(formatter.format(startDate), 10);
+
+    let hoursBefore = 3; // Default for >= 12:00
+    if (hour <= 11) {
+        hoursBefore = 12; // Morning sessions need 12h notice
+    }
+
+    const deadline = new Date(startDate.getTime() - (hoursBefore * 60 * 60 * 1000));
+    const now = new Date();
+
+    // Allow booking if we are before the deadline
+    if (now > deadline) {
+        return {
+            allowed: false,
+            deadlineMsg: hour <= 11 ? '12 hodín' : '3 hodiny'
+        };
+    }
+    return { allowed: true, deadlineMsg: '' };
+}
+
 export async function createAppointment(data: {
     employee_id: string,
     service_id: string,
@@ -626,6 +653,13 @@ export async function createAppointment(data: {
     const isStaff = profile?.role === 'employee' || profile?.role === 'admin';
     if (!isStaff && profile?.email_verified === false) {
         return { error: 'Pre vytvorenie rezervácie musíte mať overený email.' };
+    }
+
+    // Check Booking Deadline
+    const startObj = new Date(data.start_time);
+    const { allowed, deadlineMsg } = isBookingAllowed(startObj);
+    if (!allowed) {
+        return { error: `Na tento termín sa už nedá objednať. (Deadline: ${deadlineMsg} vopred)` };
     }
 
     // TODO: Verify availability again before inserting (Race condition check)
@@ -952,10 +986,15 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
             })
 
             if (!isCollision) {
-                // Check if slot already exists (from overlapping ranges? unlikely but safe)
-                const timeStr = slotStart.toTimeString().slice(0, 5) // HH:MM
-                if (!slots.includes(timeStr)) {
-                    slots.push(timeStr)
+                // Check Deadline
+                const { allowed } = isBookingAllowed(slotStart);
+
+                if (allowed) {
+                    // Check if slot already exists (from overlapping ranges? unlikely but safe)
+                    const timeStr = slotStart.toTimeString().slice(0, 5) // HH:MM
+                    if (!slots.includes(timeStr)) {
+                        slots.push(timeStr)
+                    }
                 }
             }
 
