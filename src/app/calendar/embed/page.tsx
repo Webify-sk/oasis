@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { PublicCalendar } from '@/components/public/PublicCalendar';
+import { isBookingLocked } from '@/utils/booking-logic';
 
 // Force dynamic rendering to handle searchParams properly
 export const dynamic = 'force-dynamic';
@@ -157,7 +158,28 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                         totalCapacity: maxOccupancy,
                         bookedCount: effectiveBookedCount,
                         isRegistered: false, // Public view never shows registration
-                        isIndividual // Pass flag
+                        isIndividual, // Pass flag
+                        // Deadline Logic
+                        ...((() => {
+                            // We need an ISO string for isBookingLocked.
+                            // sessionStartTimestamp is Real UTC? No, it's FaceValue UTC constructed above.
+                            // `isBookingLocked` expects FaceValue ISO.
+                            const faceValueIso = new Date(sessionStartTimestamp).toISOString();
+                            // But wait, Date.UTC returns a number. new Date(number) creates a Date object. .toISOString() gives real UTC string.
+                            // If sessionStartTimestamp was constructed as Date.UTC(2026, 1, 18, 18, 0), it is 18:00 UTC.
+                            // So .toISOString() will be "2026-02-18T18:00:00.000Z".
+                            // This IS Face Value ISO (it says 18:00Z).
+                            // Our `isBookingLocked` logic expects exactly this.
+
+                            const check = isBookingLocked(faceValueIso);
+                            // Only lock if NOT full (if full, full status logic takes precedence in UI usually, but let's pass it anyway)
+                            // Actually, if full, we don't care about deadline as much, but if it's 0 occupancy and deadline passed, we want "Locked" instead of "Free".
+
+                            if (effectiveBookedCount === 0 && check.isLocked) {
+                                return { isLocked: true, deadlineMsg: check.deadlineMsg };
+                            }
+                            return { isLocked: false };
+                        })())
                     });
                 });
             }

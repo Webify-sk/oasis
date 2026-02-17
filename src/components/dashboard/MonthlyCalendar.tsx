@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { isBookingLocked } from '@/utils/booking-logic';
 import styles from './Calendar.module.css';
 
 interface TrainingSession {
@@ -271,6 +272,54 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                             </div>
                         )}
 
+                        {/* Locked check for Monthly Calendar Modal */}
+                        {(() => {
+                            if (!selectedEvent.isRegistered && !selectedEvent.isIndividual) {
+                                // Assuming we can reconstruct ISO from event.time and event.date? 
+                                // event.date is Date object 00:00:00 usually?
+                                // Wait, MonthlyCalendar `events` have `date` object.
+                                // Does `evt.time` match the format needed?
+                                // TrainingSession interface has `time: string` (e.g. "18:00").
+                                // We need to construct the full ISO string for `isBookingLocked`.
+
+                                const [hours, minutes] = selectedEvent.time.split('-')[0].trim().split(':').map(Number);
+                                // We need to match how TrainingCalendar constructs timestamps.
+                                // Ideally pass full ISO in event data.
+                                // But we can approximate:
+                                const d = new Date(selectedEvent.date);
+                                d.setHours(hours, minutes, 0, 0);
+                                // This 'd' is in local browser time? Or UTC? 
+                                // `selectedEvent.date` comes from parent.
+
+                                // Actually, `isBookingLocked` expects "Face Value ISO".
+                                // If we construct a Date object in browser, `d.toISOString()` will be real UTC (shifted).
+                                // We need to construct a string "YYYY-MM-DDTHH:mm:00.000Z" where HH is the face value hour.
+
+                                const y = d.getFullYear();
+                                const m = String(d.getMonth() + 1).padStart(2, '0');
+                                const day = String(d.getDate()).padStart(2, '0');
+                                const h = String(hours).padStart(2, '0');
+                                const min = String(minutes).padStart(2, '0');
+
+                                // Face Value ISO
+                                const iso = `${y}-${m}-${day}T${h}:${min}:00.000Z`;
+
+                                // Check occupancy 
+                                const currentOcc = selectedEvent.occupancy?.current || 0;
+
+                                if (currentOcc === 0) {
+                                    const check = isBookingLocked(iso);
+                                    if (check.isLocked) {
+                                        return (
+                                            <div style={{ backgroundColor: '#F3F4F6', color: '#6B7280', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                ⏳ Prihlasovanie bolo uzavreté (menej ako {check.deadlineMsg}).
+                                            </div>
+                                        );
+                                    }
+                                }
+                            }
+                            return null;
+                        })()}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                             <button
                                 onClick={() => setSelectedEvent(null)}
@@ -298,9 +347,10 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                 </button>
                             </Link>
                         </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                    </div >
+                </div >
+            )
+            }
+        </div >
     );
 }

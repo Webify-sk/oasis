@@ -15,6 +15,8 @@ interface TrainingSession {
     totalCapacity?: number;
     bookedCount?: number;
     isIndividual?: boolean;
+    isLocked?: boolean;
+    deadlineMsg?: string;
 }
 
 interface PublicCalendarProps {
@@ -198,9 +200,22 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                 const capacity = evt.totalCapacity || 10;
 
                                 // If individual, use specific red logic
-                                const bgColor = evt.isIndividual ? '#FEF2F2' : getOccupancyColor(booked, capacity);
-                                const borderColor = evt.isIndividual ? '#DC2626' : getOccupancyBorder(booked, capacity);
-                                const textColor = evt.isIndividual ? '#DC2626' : '#333';
+                                // If Locked (and empty), use grey/locked logic
+                                const isLocked = evt.isLocked || false;
+
+                                let bgColor = getOccupancyColor(booked, capacity);
+                                let borderColor = getOccupancyBorder(booked, capacity);
+                                let textColor = '#333';
+
+                                if (evt.isIndividual) {
+                                    bgColor = '#FEF2F2';
+                                    borderColor = '#DC2626';
+                                    textColor = '#DC2626';
+                                } else if (isLocked) {
+                                    bgColor = '#F3F4F6'; // gray-100
+                                    borderColor = '#9CA3AF'; // gray-400
+                                    textColor = '#6B7280'; // gray-500
+                                }
 
                                 return (
                                     <div
@@ -276,6 +291,21 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                         Nie je možné sa prihlásiť online.
                                     </p>
                                 </div>
+                            ) : selectedEvent.isLocked ? (
+                                <div style={{
+                                    marginTop: '1rem',
+                                    padding: '0.75rem',
+                                    backgroundColor: '#F3F4F6',
+                                    borderRadius: '8px',
+                                    border: '1px solid #E5E7EB'
+                                }}>
+                                    <p style={{ margin: 0, fontWeight: 600, color: '#4B5563' }}>
+                                        ⏳ Prihlasovanie uzavreté
+                                    </p>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+                                        Už nie je možné sa prihlásiť (menej ako {selectedEvent.deadlineMsg}).
+                                    </p>
+                                </div>
                             ) : (
                                 <div style={{
                                     marginTop: '1rem',
@@ -311,14 +341,14 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                             {!selectedEvent.isIndividual && (
                                 <button
                                     onClick={() => handleBookClick(selectedEvent)}
-                                    disabled={(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)}
+                                    disabled={(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) || selectedEvent.isLocked}
                                     style={{
                                         padding: '0.5rem 1rem',
                                         borderRadius: '6px',
                                         border: 'none',
-                                        background: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#ccc' : '#8C7568',
+                                        background: ((selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) || selectedEvent.isLocked) ? '#ccc' : '#8C7568',
                                         color: 'white',
-                                        cursor: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? 'not-allowed' : 'pointer',
+                                        cursor: ((selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) || selectedEvent.isLocked) ? 'not-allowed' : 'pointer',
                                         fontSize: '0.9rem'
                                     }}
                                 >

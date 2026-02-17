@@ -11,6 +11,7 @@ import { useVerification } from '@/components/auth/VerificationContext';
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { isBookingLocked } from '@/utils/booking-logic';
 
 interface Session {
     id: string | number;
@@ -239,29 +240,50 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
     if (isLoading) buttonText = '...';
     if (isPast) buttonText = 'Ukončené';
 
+    // Check dynamic deadline
+    // Only check if NOT registered (if registered, logic is about cancellation)
+    let isLocked = false;
+    if (!session.isUserRegistered && !isPast) {
+        // If occupancy > 0, deadline does NOT apply (based on backend logic: "Only if nobody is booked yet")
+        // Wait, backend logic: `if ((currentOccupancy || 0) === 0)`
+        // So if someone is booked, late booking is ALLOWED?
+        // "Dynamic Booking Deadline Logic (Only if nobody is booked yet)" -> Yes.
+        // So we should only lock if occupancy == 0.
+
+        if (session.occupancy.current === 0) {
+            const check = isBookingLocked(session.startTimeISO);
+            if (check.isLocked) {
+                isLocked = true;
+                buttonText = 'Uzavreté';
+            }
+        }
+    }
+
     return (
         <>
             <Button
                 size="sm"
                 onClick={handleActionClick}
                 className={clsx(styles.actionButton, {
-                    [styles.disabled]: isDisabled,
+                    [styles.disabled]: isDisabled || isLocked,
                     [styles.registered]: session.isUserRegistered,
-                    'opacity-50 cursor-not-allowed': (!isVerified && !session.isUserRegistered)
+                    'opacity-50 cursor-not-allowed': (!isVerified && !session.isUserRegistered) || isLocked
                 })}
-                disabled={isDisabled}
+                disabled={isDisabled || isLocked}
                 title={
                     session.isIndividual
                         ? "Tento termín je vyhradený pre individuálny tréning"
-                        : (!isVerified && !session.isUserRegistered)
-                            ? "Pre prihlásenie musíte mať overený email"
-                            : ""
+                        : isLocked
+                            ? "Prihlasovanie uzavreté (menej ako 3h/12h vopred)"
+                            : (!isVerified && !session.isUserRegistered)
+                                ? "Pre prihlásenie musíte mať overený email"
+                                : ""
                 }
                 variant={session.isUserRegistered ? "secondary" : "primary"}
                 style={{
                     minWidth: '100px',
-                    opacity: (isPast || (!isVerified && !session.isUserRegistered)) ? 0.6 : 1,
-                    cursor: (isPast || (!isVerified && !session.isUserRegistered) || (session.isIndividual && !session.isUserRegistered)) ? 'not-allowed' : 'pointer',
+                    opacity: (isPast || (!isVerified && !session.isUserRegistered) || isLocked) ? 0.6 : 1,
+                    cursor: (isPast || (!isVerified && !session.isUserRegistered) || (session.isIndividual && !session.isUserRegistered) || isLocked) ? 'not-allowed' : 'pointer',
                     backgroundColor: (session.isIndividual && !session.isUserRegistered) ? '#DC2626' : undefined, // Red for individual
                     borderColor: (session.isIndividual && !session.isUserRegistered) ? '#DC2626' : undefined,
                     color: (session.isIndividual && !session.isUserRegistered) ? 'white' : undefined

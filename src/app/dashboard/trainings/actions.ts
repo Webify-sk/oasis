@@ -60,33 +60,13 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
 
     // Dynamic Booking Deadline Logic (Only if nobody is booked yet)
     if ((currentOccupancy || 0) === 0) {
-        // Create date object from ISO string
-        const trainingDateObj = new Date(startTimeISO);
+        const { isBookingLocked } = await import('@/utils/booking-logic');
+        const { isLocked, deadlineMsg } = isBookingLocked(startTimeISO);
 
-        // Get hour in Europe/Bratislava timezone
-        // using Intl.DateTimeFormat to robustly handle DST and timezone
-        const formatter = new Intl.DateTimeFormat('sk-SK', {
-            timeZone: 'Europe/Bratislava',
-            hour: 'numeric',
-            hour12: false
-        });
-
-        const trainingHour = parseInt(formatter.format(trainingDateObj), 10);
-
-        let deadlineHours = 3; // Default for >= 12:00
-
-        if (trainingHour <= 11) {
-            deadlineHours = 12;
-        }
-
-        const deadline = new Date(trainingDateObj.getTime() - (deadlineHours * 60 * 60 * 1000));
-        const now = new Date();
-
-        if (now > deadline) {
-            const timeString = trainingHour <= 11 ? '12 hodín' : '3 hodiny';
+        if (isLocked) {
             return {
                 success: false,
-                message: `Na tento tréning sa už nedá prihlásiť. (Deadline pre prázdne tréningy: ${timeString} vopred)`
+                message: `Na tento tréning sa už nedá prihlásiť. (Deadline pre prázdne tréningy: ${deadlineMsg} vopred)`
             };
         }
     }
