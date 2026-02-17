@@ -716,6 +716,58 @@ export async function createAppointment(data: {
             console.error('Failed to send confirmation email:', emailError);
             // Don't fail the request if email fails, just log it
         }
+
+        // --- NEW: Send Notification to Employee ---
+        try {
+            // 1. Get Employee Email
+            const { data: employeeData } = await supabase
+                .from('employees')
+                .select('email, name')
+                .eq('id', data.employee_id)
+                .single();
+
+            if (employeeData && employeeData.email) {
+                const formattedDateEmp = format(new Date(data.start_time), 'd. MMMM yyyy HH:mm', { locale: sk });
+
+                // Get Client Name (from Profile or User Metadata)
+                const { data: clientProfile } = await supabase
+                    .from('profiles')
+                    .select('full_name, phone, email')
+                    .eq('id', user.id)
+                    .single();
+
+                const clientName = clientProfile?.full_name || user.user_metadata?.full_name || 'Klient';
+                const clientPhone = clientProfile?.phone || 'N/A';
+                const clientEmail = clientProfile?.email || user.email || 'N/A';
+
+                const empSubject = `Nová rezervácia: ${service.title} - ${clientName}`;
+                const empBody = `
+                    <p>Ahoj ${employeeData.name},</p>
+                    <p>máš novú rezerváciu na službu <strong>${service.title}</strong>.</p>
+                    
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDateEmp}</p>
+                        <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                        <p style="margin: 5px 0;"><strong>Email:</strong> ${clientEmail}</p>
+                        <p style="margin: 5px 0;"><strong>Telefón:</strong> ${clientPhone}</p>
+                        ${data.notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${data.notes}</p>` : ''}
+                    </div>
+
+                    <p>Viac detailov nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
+                `;
+
+                const empHtml = getEmailTemplate(empSubject, empBody);
+
+                await sendEmail({
+                    to: employeeData.email,
+                    subject: empSubject,
+                    html: empHtml
+                });
+                console.log('Employee notification sent to:', employeeData.email);
+            }
+        } catch (empError) {
+            console.error('Failed to send employee notification:', empError);
+        }
     }
 
     revalidatePath('/dashboard/cosmetics/appointments')
@@ -792,6 +844,64 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
     if (error) {
         console.error('Error updating appointment status:', error)
         return { error: 'Failed to update status' }
+    }
+
+    // Send Email Notification if Cancelled
+    if (status === 'cancelled') {
+        try {
+            // Fetch booking details including employee and client info
+            const { data: booking } = await supabase
+                .from('cosmetic_appointments')
+                .select(`
+                    *,
+                    cosmetic_services(title),
+                    employees(email, name),
+                    profiles(full_name)
+                `)
+                .eq('id', id)
+                .single();
+
+            // Check if we have employee email
+            // @ts-ignore
+            const empEmail = booking?.employees?.email;
+            // @ts-ignore
+            const empName = booking?.employees?.name;
+            // @ts-ignore
+            const serviceTitle = booking?.cosmetic_services?.title;
+            // @ts-ignore
+            const clientName = booking?.profiles?.full_name || 'Klient';
+            // @ts-ignore
+            const startTimeVal = booking?.start_time;
+
+            if (empEmail && booking) {
+                const formattedDate = format(new Date(startTimeVal), 'd. MMMM yyyy HH:mm', { locale: sk });
+
+                const subject = `Zrušená rezervácia: ${serviceTitle} - ${clientName}`;
+                const body = `
+                    <p>Ahoj ${empName},</p>
+                    <p>rezervácia na službu <strong>${serviceTitle}</strong> bola zrušená.</p>
+                    
+                    <div style="background-color: #fff0f0; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffcccc;">
+                        <p style="margin: 5px 0;"><strong>Pôvodný termín:</strong> ${formattedDate}</p>
+                        <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                    </div>
+
+                    <p>Aktuálny kalendár nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
+                 `;
+
+                const html = getEmailTemplate(subject, body);
+
+                await sendEmail({
+                    to: empEmail,
+                    subject: subject,
+                    html: html
+                });
+                console.log('Cancellation notification sent to employee:', empEmail);
+            }
+
+        } catch (emailError) {
+            console.error('Failed to send cancellation email to employee:', emailError);
+        }
     }
 
     revalidatePath('/dashboard/cosmetics/appointments')
@@ -1090,7 +1200,9 @@ export async function cancelAppointment(id: string) {
         .from('cosmetic_appointments')
         .select(`
             *,
-            cosmetic_services(title)
+            cosmetic_services(title),
+            employees(email, name),
+            profiles(full_name)
         `)
         .eq('id', id);
 
@@ -1150,6 +1262,46 @@ export async function cancelAppointment(id: string) {
         }
     }
 
+    // 4. Send Cancellation Email to Employee
+    // @ts-ignore
+    const empEmail = appointment?.employees?.email;
+    if (appointment && empEmail) {
+        try {
+            // @ts-ignore
+            const empName = appointment.employees?.name || 'Kolega';
+            // @ts-ignore
+            const serviceName = appointment.cosmetic_services?.title || 'Služba';
+            // @ts-ignore
+            const clientName = appointment.profiles?.full_name || 'Klient';
+            const formattedDate = format(new Date(appointment.start_time), 'd. MMMM yyyy HH:mm', { locale: sk });
+
+            const subject = `Zrušená rezervácia: ${serviceName} - ${clientName}`;
+            const body = `
+                <p>Ahoj ${empName},</p>
+                <p>klient zrušil rezerváciu na službu <strong>${serviceName}</strong>.</p>
+                
+                <div style="background-color: #fff0f0; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffcccc;">
+                     <p style="margin: 5px 0;"><strong>Pôvodný termín:</strong> ${formattedDate}</p>
+                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                </div>
+
+                <p>Aktuálny kalendár nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
+            `;
+
+            const html = getEmailTemplate(subject, body);
+
+            await sendEmail({
+                to: empEmail,
+                subject: subject,
+                html: html
+            });
+            console.log('Cancellation notification sent to employee:', empEmail);
+
+        } catch (empError) {
+            console.error('Failed to send employee cancellation email:', empError);
+        }
+    }
+
     revalidatePath('/dashboard/cosmetics/appointments')
     return { success: true }
 }
@@ -1183,7 +1335,7 @@ export async function createManualReservation(prevState: any, formData: FormData
     // Better: use date-fns-tz or similar if complex. key is to ensure consistent ISO string.
 
     // Get duration to calculate end time
-    const { data: service } = await supabase.from('cosmetic_services').select('duration_minutes').eq('id', serviceId).single();
+    const { data: service } = await supabase.from('cosmetic_services').select('duration_minutes, title').eq('id', serviceId).single();
     if (!service) return { error: 'Služba sa nenašla.' };
 
     const endDateTime = new Date(startDateTime.getTime() + service.duration_minutes * 60000);
@@ -1268,6 +1420,51 @@ export async function createManualReservation(prevState: any, formData: FormData
     if (error) {
         console.error('Error creating manual reservation:', error);
         return { error: 'Chyba pri vytváraní rezervácie: ' + error.message };
+    }
+
+    // --- Send Email to Employee ---
+    try {
+        const { data: employeeData } = await supabase
+            .from('employees')
+            .select('email, name')
+            .eq('id', employeeId)
+            .single();
+
+        if (employeeData && employeeData.email) {
+            const formattedDateEmp = format(startDateTime, 'd. MMMM yyyy HH:mm', { locale: sk });
+
+            // Use provided client info
+            const cName = clientName || 'Klient';
+            const cPhone = clientPhone || 'N/A';
+            const cEmail = clientEmail || 'N/A';
+
+            const empSubject = `Nová rezervácia (Manuálna): ${service.title || 'Služba'} - ${cName}`;
+            const empBody = `
+                <p>Ahoj ${employeeData.name},</p>
+                <p>bola vytvorená nová (manuálna) rezervácia na službu <strong>${service.title || 'Služba'}</strong>.</p>
+                
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDateEmp}</p>
+                    <p style="margin: 5px 0;"><strong>Klient:</strong> ${cName}</p>
+                    <p style="margin: 5px 0;"><strong>Email:</strong> ${cEmail}</p>
+                    <p style="margin: 5px 0;"><strong>Telefón:</strong> ${cPhone}</p>
+                    ${notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${notes}</p>` : ''}
+                </div>
+
+                <p>Viac detailov nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
+            `;
+
+            const empHtml = getEmailTemplate(empSubject, empBody);
+
+            await sendEmail({
+                to: employeeData.email,
+                subject: empSubject,
+                html: empHtml
+            });
+            console.log('Employee notification sent to:', employeeData.email);
+        }
+    } catch (empError) {
+        console.error('Failed to send employee notification (manual):', empError);
     }
 
     revalidatePath('/dashboard/cosmetics/appointments');
