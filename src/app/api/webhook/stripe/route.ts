@@ -204,14 +204,63 @@ export async function POST(req: Request) {
                     `
                 );
 
+                // Generate Invoice PDF for Voucher
+                let invoicePdfBuffer: Buffer | undefined;
+                try {
+                    const { generateInvoicePDF } = await import('@/utils/pdf-generator');
+                    const { COMPANY_DETAILS } = await import('@/lib/constants/company');
+
+                    // Re-use logic for invoice number generation or pass it if possible? 
+                    // We generated invNum earlier. 
+
+                    const billingDetails = {
+                        name: billingData.billing_name || session.customer_details?.name || 'Zákazník',
+                        address: [
+                            billingData.billing_address,
+                            billingData.billing_zip,
+                            billingData.billing_city,
+                            billingData.billing_country
+                        ].filter(Boolean).join(', ') || session.customer_details?.address?.line1 || ''
+                    };
+
+                    invoicePdfBuffer = await generateInvoicePDF({
+                        invoiceNumber: invNum,
+                        date: new Date().toLocaleDateString('sk-SK'),
+                        amount: (session.amount_total || 0) / 100,
+                        currency: session.currency || 'eur',
+                        description: `Nákup: Darčekový poukaz (${creditAmount} vstupov)`,
+                        buyerName: billingDetails.name,
+                        buyerAddress: billingDetails.address,
+                        supplierName: COMPANY_DETAILS.name,
+                        supplierAddress: COMPANY_DETAILS.address,
+                        supplierIco: COMPANY_DETAILS.ico,
+                        supplierDic: COMPANY_DETAILS.dic,
+                        supplierIcdph: COMPANY_DETAILS.icdph,
+                        variableSymbol: invNum.replace(/\D/g, '')
+                    });
+                } catch (pdfError) {
+                    console.error('Error generating invoice PDF for voucher:', pdfError);
+                }
+
+                const attachments = [];
+                if (pdfBuffer) {
+                    attachments.push({
+                        filename: `voucher-oasis-${code}.pdf`,
+                        content: pdfBuffer
+                    });
+                }
+                if (invoicePdfBuffer) {
+                    attachments.push({
+                        filename: `faktura-${invNum}.pdf`,
+                        content: invoicePdfBuffer
+                    });
+                }
+
                 await sendEmail({
                     to: session.customer_details.email, // or session.customer_email
                     subject: `Potvrdenie nákupu - Darčekový poukaz`,
                     html: buyerHtml,
-                    attachments: pdfBuffer ? [{
-                        filename: `voucher-oasis-${code}.pdf`,
-                        content: pdfBuffer
-                    }] : []
+                    attachments: attachments
                 });
             }
 
@@ -316,6 +365,8 @@ export async function POST(req: Request) {
                         ${statusLine}
                     </div>
 
+                    <p>Faktúru k nákupu nájdete v prílohe tohto emailu.</p>
+
                     <p>Tešíme sa na vašu návštevu v Oasis Lounge.</p>
                     <div style="text-align: center; margin-top: 20px;">
                         <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard" class="button">Prejsť do aplikácie</a>
@@ -323,10 +374,43 @@ export async function POST(req: Request) {
                     `
                 );
 
+                // Generate Invoice PDF
+                let invoicePdfBuffer: Buffer | undefined;
+                try {
+                    const { generateInvoicePDF } = await import('@/utils/pdf-generator');
+                    const { COMPANY_DETAILS } = await import('@/lib/constants/company');
+
+                    invoicePdfBuffer = await generateInvoicePDF({
+                        invoiceNumber: invNum,
+                        date: new Date().toLocaleDateString('sk-SK'),
+                        amount: (session.amount_total || 0) / 100,
+                        currency: session.currency || 'eur',
+                        description: `Nákup: ${packageName || 'Kreditný balíček'}`,
+                        buyerName: session.customer_details?.name || 'Zákazník',
+                        buyerAddress: [
+                            session.customer_details?.address?.line1,
+                            session.customer_details?.address?.city,
+                            session.customer_details?.address?.postal_code
+                        ].filter(Boolean).join(', ') || '',
+                        supplierName: COMPANY_DETAILS.name,
+                        supplierAddress: COMPANY_DETAILS.address,
+                        supplierIco: COMPANY_DETAILS.ico,
+                        supplierDic: COMPANY_DETAILS.dic,
+                        supplierIcdph: COMPANY_DETAILS.icdph,
+                        variableSymbol: invNum.replace(/\D/g, '')
+                    });
+                } catch (pdfError) {
+                    console.error('Error generating invoice PDF:', pdfError);
+                }
+
                 await sendEmail({
                     to: userEmail,
                     subject: `Potvrdenie objednávky - ${packageName || 'Kreditný balíček'}`,
-                    html: purchaseHtml
+                    html: purchaseHtml,
+                    attachments: invoicePdfBuffer ? [{
+                        filename: `faktura-${invNum}.pdf`,
+                        content: invoicePdfBuffer
+                    }] : []
                 });
             }
         }
