@@ -274,7 +274,7 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
                     session.isIndividual
                         ? "Tento termín je vyhradený pre individuálny tréning"
                         : isLocked
-                            ? "Prihlasovanie uzavreté (menej ako 3h/12h vopred)"
+                            ? "Prihlasovanie uzavreté. Už nie je možné sa prihlásiť."
                             : (!isVerified && !session.isUserRegistered)
                                 ? "Pre prihlásenie musíte mať overený email"
                                 : ""

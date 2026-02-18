@@ -303,7 +303,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                         ⏳ Prihlasovanie uzavreté
                                     </p>
                                     <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
-                                        Už nie je možné sa prihlásiť (menej ako {selectedEvent.deadlineMsg}).
+                                        Už nie je možné sa prihlásiť.
                                     </p>
                                 </div>
                             ) : (

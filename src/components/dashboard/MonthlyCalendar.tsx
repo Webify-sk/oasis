@@ -191,6 +191,23 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
 
                                 if (eventDate > limitDate) return null;
 
+                                // Calculate isLocked for visual styling
+                                const [h, m] = evt.time.split('-')[0].trim().split(':').map(Number);
+                                const d = new Date(evt.date);
+                                d.setHours(h, m, 0, 0);
+                                const y = d.getFullYear();
+                                const mo = String(d.getMonth() + 1).padStart(2, '0');
+                                const da = String(d.getDate()).padStart(2, '0');
+                                const ho = String(h).padStart(2, '0');
+                                const mi = String(m).padStart(2, '0');
+                                const iso = `${y}-${mo}-${da}T${ho}:${mi}:00.000Z`;
+
+                                let isLocked = false;
+                                if (!evt.isRegistered && (!evt.occupancy || evt.occupancy.current === 0)) {
+                                    const check = isBookingLocked(iso);
+                                    isLocked = check.isLocked;
+                                }
+
                                 return (
                                     <div
                                         key={i}
@@ -201,9 +218,21 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                             cursor: isPast ? 'default' : 'pointer',
                                             opacity: isPast ? 0.5 : 1,
                                             // Red background for individual sessions
-                                            backgroundColor: evt.isIndividual && !evt.isRegistered ? '#FEF2F2' : undefined,
-                                            borderLeft: evt.isIndividual && !evt.isRegistered ? '3px solid #DC2626' : undefined,
-                                            color: evt.isIndividual && !evt.isRegistered ? '#DC2626' : undefined
+                                            backgroundColor: (evt.isIndividual && !evt.isRegistered)
+                                                ? '#FEF2F2'
+                                                : (isLocked && !evt.isRegistered) // Grey for locked
+                                                    ? '#F3F4F6'
+                                                    : undefined,
+                                            borderLeft: (evt.isIndividual && !evt.isRegistered)
+                                                ? '3px solid #DC2626'
+                                                : (isLocked && !evt.isRegistered)
+                                                    ? '3px solid #9CA3AF'
+                                                    : undefined,
+                                            color: (evt.isIndividual && !evt.isRegistered)
+                                                ? '#DC2626'
+                                                : (isLocked && !evt.isRegistered)
+                                                    ? '#6B7280'
+                                                    : undefined
                                         }}
                                     >
                                         <strong>{evt.time}</strong> {evt.title}
@@ -312,7 +341,7 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                     if (check.isLocked) {
                                         return (
                                             <div style={{ backgroundColor: '#F3F4F6', color: '#6B7280', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                ⏳ Prihlasovanie bolo uzavreté (menej ako {check.deadlineMsg}).
+                                                ⏳ Prihlasovanie bolo uzavreté. Už nie je možné sa prihlásiť.
                                             </div>
                                         );
                                     }
