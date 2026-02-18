@@ -3,8 +3,15 @@ import { PublicVoucherList } from '@/components/public/PublicVoucherList';
 
 export const dynamic = 'force-dynamic';
 
-export default async function EmbedVouchersPage() {
+export default async function EmbedVouchersPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const supabase = await createClient();
+    const params = await searchParams;
+    const showSuccess = params.success === 'true';
+    const showCanceled = params.canceled === 'true';
 
     // Fetch Active Voucher Products
     const { data: vouchers, error } = await supabase
@@ -20,7 +27,11 @@ export default async function EmbedVouchersPage() {
 
     return (
         <div style={{ backgroundColor: 'transparent', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <PublicVoucherList vouchers={vouchers || []} />
+            <PublicVoucherList
+                vouchers={vouchers || []}
+                success={showSuccess}
+                canceled={showCanceled}
+            />
         </div>
     );
 }

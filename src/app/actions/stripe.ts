@@ -113,6 +113,10 @@ export async function createVoucherCheckoutSession(
         billing_country?: string;
         customer_email?: string;
         full_name?: string;
+    },
+    redirectUrls?: {
+        success: string;
+        cancel: string;
     }
 ) {
     const supabase = await createClient()
@@ -168,8 +172,8 @@ export async function createVoucherCheckoutSession(
                 },
             ],
             mode: 'payment',
-            success_url: `${origin}/dashboard/gift-vouchers?success=true`, // We might want a different success URL for guests later
-            cancel_url: `${origin}/dashboard/gift-vouchers?canceled=true`,
+            success_url: redirectUrls?.success || `${origin}/dashboard/gift-vouchers?success=true`,
+            cancel_url: redirectUrls?.cancel || `${origin}/dashboard/gift-vouchers?canceled=true`,
             customer_email: customerEmail, // If null, Stripe asks for it
             metadata: metadata
         })

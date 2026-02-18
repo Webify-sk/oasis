@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 
 
 function generateVoucherCode(length: number = 8): string {
@@ -53,6 +54,17 @@ export async function buyVoucher(formData: FormData) {
     }
 
     // 2. Create Stripe Checkout Session
+    const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    // Determine Redirect URLs
+    let redirectUrls;
+    if (isGuest) {
+        redirectUrls = {
+            success: `${origin}/vouchers/embed?success=true`,
+            cancel: `${origin}/vouchers/embed?canceled=true`
+        };
+    }
+
     const sessionRes = await createVoucherCheckoutSession(
         product.id,
         product.price,
@@ -60,7 +72,8 @@ export async function buyVoucher(formData: FormData) {
         recipientEmail,
         senderName,
         message,
-        billingData // NEW: Pass billing data
+        billingData, // NEW: Pass billing data
+        redirectUrls // NEW: Pass redirect URLs
     );
 
     if (sessionRes?.error) {

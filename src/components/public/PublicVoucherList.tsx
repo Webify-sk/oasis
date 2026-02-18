@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { PublicVoucherPurchaseForm } from './PublicVoucherPurchaseForm';
+
 interface VoucherProduct {
     id: string;
     title: string;
@@ -11,12 +14,15 @@ interface VoucherProduct {
 
 interface PublicVoucherListProps {
     vouchers: VoucherProduct[];
+    success?: boolean;
+    canceled?: boolean;
 }
 
-export function PublicVoucherList({ vouchers }: PublicVoucherListProps) {
-    const handleBuy = (productId: string) => {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
-        window.open(`${baseUrl}/dashboard/gift-vouchers?productId=${productId}`, '_blank');
+export function PublicVoucherList({ vouchers, success, canceled }: PublicVoucherListProps) {
+    const [selectedProduct, setSelectedProduct] = useState<VoucherProduct | null>(null);
+
+    const handleBuy = (product: VoucherProduct) => {
+        setSelectedProduct(product);
     };
 
     const isBeauty = (v: VoucherProduct) => {
@@ -81,7 +87,7 @@ export function PublicVoucherList({ vouchers }: PublicVoucherListProps) {
                 return (
                     <div
                         key={voucher.id}
-                        onClick={() => handleBuy(voucher.id)}
+                        onClick={() => handleBuy(voucher)}
                         style={{
                             borderRadius: '16px',
                             overflow: 'hidden',
@@ -163,8 +169,37 @@ export function PublicVoucherList({ vouchers }: PublicVoucherListProps) {
         </div>
     );
 
+    if (selectedProduct) {
+        return (
+            <PublicVoucherPurchaseForm
+                product={selectedProduct}
+                onBack={() => setSelectedProduct(null)}
+            />
+        );
+    }
+
     return (
         <div style={{ padding: '1rem' }}>
+            {success && (
+                <div style={{
+                    backgroundColor: '#F0FDF4',
+                    border: '1px solid #16A34A',
+                    color: '#166534',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    marginBottom: '2rem',
+                    textAlign: 'center',
+                    fontFamily: 'sans-serif'
+                }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>
+                        🎉 Platba úspešná!
+                    </h3>
+                    <p style={{ margin: 0 }}>
+                        Ďakujeme za váš nákup. Voucher bol vygenerovaný a odoslaný na email obdarovaného.
+                    </p>
+                </div>
+            )}
+
             {beautyVouchers.length > 0 && (
                 <div style={{ marginBottom: '3rem' }}>
                     <h2 style={{

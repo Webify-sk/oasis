@@ -245,9 +245,11 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
 
     // 4. Fetch User Credits (for instant client-side validation)
     let userCredits = 0;
+    let isUnlimited = false;
     if (user) {
-        const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
         userCredits = profile?.credits || 0;
+        isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
     }
 
     return (
@@ -271,7 +273,12 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
 
             <MyBookings bookings={myUpcomingBookings} />
 
-            <TrainingCalendar schedule={scheduleData} userCredits={userCredits} currentDays={daysToShow} />
+            <TrainingCalendar
+                schedule={scheduleData}
+                userCredits={userCredits}
+                currentDays={daysToShow}
+                isUnlimited={isUnlimited}
+            />
         </div>
     );
 }

@@ -84,10 +84,10 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         return { success: false, message: 'Na tento tréning ste už prihlásený.' };
     }
 
-    // Check user credits
+    // Check user credits and unlimited status
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('credits')
+        .select('credits, unlimited_expires_at')
         .eq('id', user.id)
         .single();
 
@@ -95,8 +95,10 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         return { success: false, message: 'Chyba pri načítaní profilu.' };
     }
 
-    // Only check credits if price > 0
-    if (priceCredits > 0 && (profile.credits || 0) < priceCredits) {
+    const isUnlimited = profile.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
+
+    // Only check credits if price > 0 AND not unlimited
+    if (!isUnlimited && priceCredits > 0 && (profile.credits || 0) < priceCredits) {
         return { success: false, message: `Nemáte dostatok vstupov. Cena tréningu je ${priceCredits} kreditov.` };
     }
 
@@ -113,8 +115,8 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         return { success: false, message: 'Chyba pri vytváraní rezervácie: ' + bookingError.message };
     }
 
-    // Deduct credit only if price > 0
-    if (priceCredits > 0) {
+    // Deduct credit only if price > 0 AND not unlimited
+    if (!isUnlimited && priceCredits > 0) {
         const { error: creditError } = await supabase
             .from('profiles')
             .update({ credits: (profile.credits || 0) - priceCredits })
@@ -126,6 +128,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
             console.error('Failed to deduct credit', creditError);
         }
     }
+
 
     revalidatePath('/dashboard/trainings');
     revalidatePath('/admin/trainings'); // Refresh admin view too
@@ -207,8 +210,12 @@ export async function cancelBooking(bookingId: string) {
 
     // 4. Refund credit if eligible and price > 0
     if (shouldRefund && priceCredits > 0) {
-        const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
-        if (profile) {
+        const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
+
+        const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
+
+        // Only refund if NOT unlimited
+        if (profile && !isUnlimited) {
             await supabase
                 .from('profiles')
                 .update({ credits: (profile.credits || 0) + priceCredits })

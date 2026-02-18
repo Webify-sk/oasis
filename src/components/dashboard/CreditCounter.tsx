@@ -10,9 +10,12 @@ export async function CreditCounter() {
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('credits')
+        .select('credits, unlimited_expires_at')
         .eq('id', user.id)
         .single();
+
+    // Check unlimited
+    const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
 
     return (
         <div style={{
@@ -27,7 +30,7 @@ export async function CreditCounter() {
             backgroundColor: '#fff',
             whiteSpace: 'nowrap'
         }}>
-            Vstupy: {profile?.credits || 0}
+            Vstupy: {isUnlimited ? <span style={{ fontSize: '1.2rem', lineHeight: '0.8' }}>∞</span> : (profile?.credits || 0)}
         </div>
     );
 }

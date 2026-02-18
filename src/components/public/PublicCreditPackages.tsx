@@ -81,8 +81,14 @@ export function PublicCreditPackages({ packages }: PublicCreditPackagesProps) {
                             marginBottom: '1rem',
                             opacity: 0.9
                         }}>
-                            {pkg.credits} Vstup{pkg.credits === 1 ? '' : (pkg.credits >= 2 && pkg.credits <= 4 ? 'y' : 'ov')}
-                            {pkg.bonus_credits > 0 && <span style={{ color: '#86efac', marginLeft: '0.5rem', fontSize: '0.9rem' }}>+{pkg.bonus_credits} bonus</span>}
+                            {pkg.credits > 900000 ? (
+                                <span style={{ fontSize: '1.4rem' }}>∞ Neobmedzené</span>
+                            ) : (
+                                <>
+                                    {pkg.credits} Vstup{pkg.credits === 1 ? '' : (pkg.credits >= 2 && pkg.credits <= 4 ? 'y' : 'ov')}
+                                    {pkg.bonus_credits > 0 && <span style={{ color: '#86efac', marginLeft: '0.5rem', fontSize: '0.9rem' }}>+{pkg.bonus_credits} bonus</span>}
+                                </>
+                            )}
                         </div>
 
                         <p style={{
@@ -113,7 +119,9 @@ export function PublicCreditPackages({ packages }: PublicCreditPackagesProps) {
                         position: 'relative'
                     }}>
                         <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-                            <div style={{ marginBottom: '4px' }}>1 hodina ≈ {(pkg.price / pkg.credits).toFixed(2)} €</div>
+                            {pkg.credits <= 900000 && (
+                                <div style={{ marginBottom: '4px' }}>1 hodina ≈ {(pkg.price / pkg.credits).toFixed(2)} €</div>
+                            )}
                             <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'white', lineHeight: 1 }}>
                                 {pkg.price} €
                             </div>

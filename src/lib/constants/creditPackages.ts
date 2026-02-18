@@ -20,7 +20,7 @@ export const CREDIT_PACKAGES = {
         price: 50000,
     },
     'unlimited': {
-        name: 'Oasis Unlimited',
+        name: 'Oasis Unlimited Movement Pass',
         credits: 999999, // unlimited representation? or just a flag. For now, high number.
         price: 250000,
     },

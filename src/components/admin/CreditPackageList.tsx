@@ -58,8 +58,14 @@ export function CreditPackageList({ packages }: { packages: CreditPackage[] }) {
                             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                     <CreditCard size={16} />
-                                    {pkg.credits} kreditov
-                                    {pkg.bonus_credits > 0 && <span style={{ color: '#059669', fontSize: '0.8rem' }}>(+{pkg.bonus_credits} bonus)</span>}
+                                    {pkg.credits > 900000 ? (
+                                        <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>∞</span>
+                                    ) : (
+                                        <>
+                                            {pkg.credits} kreditov
+                                            {pkg.bonus_credits > 0 && <span style={{ color: '#059669', fontSize: '0.8rem' }}>(+{pkg.bonus_credits} bonus)</span>}
+                                        </>
+                                    )}
                                 </span>
 
                                 <span style={{ fontWeight: 600, color: '#4A403A' }}>

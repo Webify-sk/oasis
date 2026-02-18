@@ -1,6 +1,9 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import path from 'path';
+import fs from 'fs';
 
-// Helper to remove accents for StandardFonts compatibility (WinAnsi)
+// Helper to remove accents for StandardFonts compatibility (WinAnsi) - ONLY used for default fonts if needed
 function removeAccents(str: string): string {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -15,33 +18,42 @@ export async function generateVoucherPDF(data: {
     // Create a new PDFDocument
     const pdfDoc = await PDFDocument.create();
 
-    // Embed the Helvetica font
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    // Use Times Roman for a more elegant look on the voucher title
-    const fontSerif = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+    // Register fontkit to support custom fonts
+    pdfDoc.registerFontkit(fontkit);
 
-    // Add a blank page to the document - Landscape A5-ish size for voucher
-    const page = pdfDoc.addPage([600, 400]);
-    const { width, height } = page.getSize();
+    // Embed Custom Font (Times New Roman for Diacritics - System Font)
+    const fontPath = path.join(process.cwd(), 'public', 'fonts', 'TimesNewRoman.ttf');
+    let customFont;
 
-    // Load Logo
-    let logoImage;
-    try {
-        const fs = await import('fs');
-        const path = await import('path');
-        const logoPath = path.join(process.cwd(), 'public', 'Logo_Brown.png');
-        if (fs.existsSync(logoPath)) {
-            const logoBytes = fs.readFileSync(logoPath);
-            logoImage = await pdfDoc.embedPng(logoBytes);
+    if (fs.existsSync(fontPath)) {
+        try {
+            const fontBytes = fs.readFileSync(fontPath);
+            customFont = await pdfDoc.embedFont(fontBytes);
+        } catch (e) {
+            console.error('Error embedding custom font:', e);
         }
-    } catch (e) {
-        // console.warn('Logo could not be loaded for PDF', e);
+    } else {
+        console.warn('Custom font not found, falling back to Helvetica:', fontPath);
     }
 
-    const BRAND_GREEN = rgb(0.37, 0.44, 0.36); // #5E715D
-    const LIGHT_BEIGE = rgb(0.99, 0.98, 0.96);
-    const GOLD_ACCENT = rgb(0.7, 0.6, 0.4);
+    // Embed Standard Fonts as fallback or for specific styling
+    const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontHelveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // Use custom font if available, otherwise standard
+    const mainFont = customFont || fontHelvetica;
+    const boldFont = customFont || fontHelveticaBold;
+
+    // A5 Landscape: 210mm x 148mm
+    const width = 595.28;
+    const height = 419.53;
+
+    const page = pdfDoc.addPage([width, height]);
+
+    // Ensure colors are correct
+    const BROWN = rgb(0.549, 0.459, 0.408); // #8C7568
+    const LIGHT_BEIGE = rgb(0.992, 0.957, 0.918); // #FDF4EA
+    const GOLD_ACCENT = rgb(0.784, 0.690, 0.647); // #C8B0A5
 
     // Background
     page.drawRectangle({
@@ -49,18 +61,17 @@ export async function generateVoucherPDF(data: {
         color: LIGHT_BEIGE,
     });
 
-    // Elegant Border
+    // Borders
     const margin = 20;
     page.drawRectangle({
         x: margin, y: margin,
         width: width - (margin * 2),
         height: height - (margin * 2),
-        borderColor: BRAND_GREEN,
+        borderColor: BROWN,
         borderWidth: 2,
-        color: rgb(1, 1, 1),
+        color: undefined,
     });
 
-    // Inner Thin Border (Double border effect)
     page.drawRectangle({
         x: margin + 5, y: margin + 5,
         width: width - (margin * 2) - 10,
@@ -70,157 +81,132 @@ export async function generateVoucherPDF(data: {
         color: undefined,
     });
 
-    // --- Header ---
-    let y = height - 100; // Start lower for Title by default
+    let y = height - 40;
 
-    // Logo (Centered at top)
-    if (logoImage) {
-        const logoHeight = 40;
-        const scale = logoHeight / logoImage.height;
-        const logoDims = logoImage.scale(scale);
+    // Logo
+    const logoPath = path.join(process.cwd(), 'public', 'Logo_Brown.png');
+    if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath);
+        const logoImage = await pdfDoc.embedPng(logoBytes);
+        const logoWidth = 120; // Slightly wider for this logo format
+        const logoScale = logoWidth / logoImage.width;
+        const logoHeight = logoImage.height * logoScale;
 
         page.drawImage(logoImage, {
-            x: (width - logoDims.width) / 2,
-            y: height - margin - logoHeight - 10, // Top of image is at height - 30. Bottom at height - 70.
-            width: logoDims.width,
-            height: logoDims.height,
+            x: (width - logoWidth) / 2,
+            y: y - logoHeight,
+            width: logoWidth,
+            height: logoHeight,
         });
-
-        // Push Title down significantly
-        y = height - margin - logoHeight - 50;
+        y -= (logoHeight + 50);
     } else {
-        y = height - 80;
+        y -= 40;
     }
 
     // Title
-    const titleText = 'DARCEKOVY POUKAZ';
-    const titleWidth = fontSerif.widthOfTextAtSize(titleText, 28);
-    page.drawText(titleText, {
+    const title = 'DARČEKOVÝ POUKAZ';
+    const titleSize = 32;
+    const titleWidth = mainFont.widthOfTextAtSize(title, titleSize);
+    page.drawText(title, {
         x: (width - titleWidth) / 2,
         y: y,
-        size: 28,
-        font: fontSerif,
-        color: BRAND_GREEN,
+        size: titleSize,
+        font: mainFont,
+        color: BROWN,
     });
-
-
-    // Amount / Value
     y -= 50;
+
+    // Amount
     const amountText = `${data.amount} VSTUPOV`;
-    const amountWidth = fontBold.widthOfTextAtSize(amountText, 20);
+    const amountSize = 24;
+    const amountWidth = mainFont.widthOfTextAtSize(amountText, amountSize);
     page.drawText(amountText, {
         x: (width - amountWidth) / 2,
         y: y,
-        size: 20,
-        font: fontBold,
+        size: amountSize,
+        font: mainFont,
         color: rgb(0.2, 0.2, 0.2),
     });
-
     y -= 30;
+
     // Separator
     page.drawLine({
-        start: { x: width / 2 - 50, y },
-        end: { x: width / 2 + 50, y },
+        start: { x: width / 2 - 40, y },
+        end: { x: width / 2 + 40, y },
         thickness: 1,
         color: GOLD_ACCENT,
     });
-
-    // --- Content ---
     y -= 40;
 
-    // Grid layout for details
-    const labelX = 100;
-    const valueX = 100; // Left align block
-    const lineHeight = 25;
-
-    const drawLineItem = (label: string, value: string, yPos: number, isCode = false) => {
-        // Label
-        // page.drawText(label, { x: labelX, y: yPos, size: 10, font, color: rgb(0.5, 0.5, 0.5) });
-        // Value centered
-        const text = isCode ? value : `${label}: ${value}`;
-        const textSize = isCode ? 18 : 14;
-        const textFont = isCode ? fontBold : font;
-        const textColor = isCode ? BRAND_GREEN : rgb(0.3, 0.3, 0.3);
-        const w = textFont.widthOfTextAtSize(text, textSize);
-
-        page.drawText(removeAccents(text), {
+    // Details logic
+    const drawCenteredText = (text: string, yPos: number, size: number, color = rgb(0.2, 0.2, 0.2)) => {
+        const w = mainFont.widthOfTextAtSize(text, size);
+        page.drawText(text, {
             x: (width - w) / 2,
             y: yPos,
-            size: textSize,
-            font: textFont,
-            color: textColor
+            size,
+            font: mainFont,
+            color
         });
     };
 
-    // Sender
-    drawLineItem('Daruje', data.sender, y);
-    y -= lineHeight;
+    drawCenteredText(`Daruje: ${data.sender}`, y, 16);
+    y -= 30;
 
-    // Message
     if (data.message) {
-        y -= 10;
-        const msg = `"${removeAccents(data.message)}"`;
-        const msgWidth = font.widthOfTextAtSize(msg, 12); // Italic simulation not avail in standard fonts easily without embedding, stick to normal
-        // Wrap text if too long? For now assume short.
-        page.drawText(msg, {
-            x: (width - msgWidth) / 2,
-            y,
-            size: 12,
-            font,
-            color: rgb(0.4, 0.4, 0.4),
-        });
-        y -= lineHeight + 10;
+        const msg = `"${data.message}"`;
+        const msgSize = 12;
+        drawCenteredText(msg, y, msgSize, rgb(0.4, 0.4, 0.4));
+        y -= 40;
     } else {
         y -= 10;
     }
 
     // Code Box
-    y -= 20;
-    const boxWidth = 220;
+    const boxWidth = 200;
     const boxHeight = 50;
     const boxX = (width - boxWidth) / 2;
+    const boxY = y - 40;
+
     page.drawRectangle({
         x: boxX,
-        y: y - 15,
+        y: boxY,
         width: boxWidth,
         height: boxHeight,
-        color: rgb(0.97, 0.97, 0.97),
-        borderColor: BRAND_GREEN,
+        color: rgb(1, 1, 1),
+        borderColor: BROWN,
         borderWidth: 1,
-        // borderDashPhase: 2, // dashed not easily supported in minimal api? checked pdf-lib docs: borderDashArray
-        borderDashArray: [5, 5],
     });
 
-    const codeText = removeAccents(data.code);
-    const codeWidth = fontBold.widthOfTextAtSize(codeText, 20);
-    page.drawText(codeText, {
+    const code = data.code;
+    const codeSize = 24;
+    const codeWidth = mainFont.widthOfTextAtSize(code, codeSize);
+    page.drawText(code, {
         x: (width - codeWidth) / 2,
-        y: y,
-        size: 20,
-        font: fontBold,
-        color: BRAND_GREEN
+        y: boxY + (boxHeight - codeSize) / 2 + 5,
+        size: codeSize,
+        font: mainFont,
+        color: BROWN
     });
 
-    y -= 45;
-    page.drawText('KOD POUKAZU', {
-        x: (width - font.widthOfTextAtSize('KOD POUKAZU', 8)) / 2,
-        y: y,
-        size: 8,
-        font,
+    page.drawText('KÓD POUKAZU', {
+        x: (width - mainFont.widthOfTextAtSize('KÓD POUKAZU', 10)) / 2,
+        y: boxY + boxHeight + 5,
+        size: 10,
+        font: mainFont,
         color: rgb(0.6, 0.6, 0.6)
     });
 
-    // --- Footer ---
-    const footerY = 40;
-    page.drawText('www.oasislounge.sk', {
-        x: width / 2 - fontBold.widthOfTextAtSize('www.oasislounge.sk', 10) / 2,
-        y: footerY,
-        size: 10,
-        font: fontBold,
-        color: BRAND_GREEN,
+    // Footer
+    const footerText = 'www.oasislounge.sk';
+    page.drawText(footerText, {
+        x: (width - mainFont.widthOfTextAtSize(footerText, 12)) / 2,
+        y: 45,
+        size: 12,
+        font: mainFont,
+        color: BROWN
     });
 
-    // Serialize the PDFDocument to bytes (a Uint8Array)
     const pdfBytes = await pdfDoc.save();
     return Buffer.from(pdfBytes);
 }
@@ -241,12 +227,13 @@ export async function generateInvoicePDF(data: {
     variableSymbol?: string;
 }) {
     const pdfDoc = await PDFDocument.create();
+
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const page = pdfDoc.addPage([595.28, 841.89]); // A4
     const { width, height } = page.getSize();
 
-    // Load Logo Logic (using fs if simplified layout fails, but imports inside function to avoid web bundle issues)
+    // Load Logo Logic 
     let logoImage;
     try {
         const fs = await import('fs');
@@ -279,7 +266,6 @@ export async function generateInvoicePDF(data: {
     // --- Header ---
     // Logo (Left)
     if (logoImage) {
-        // Scale logo to fit height of approx 50-60
         const scale = 50 / logoImage.height;
         const logoDims = logoImage.scale(scale);
         page.drawImage(logoImage, {

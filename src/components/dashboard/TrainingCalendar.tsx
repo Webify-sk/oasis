@@ -41,9 +41,10 @@ interface TrainingCalendarProps {
     schedule: DaySchedule[];
     userCredits: number;
     currentDays: number;
+    isUnlimited?: boolean;
 }
 
-export function TrainingCalendar({ schedule, userCredits, currentDays }: TrainingCalendarProps) {
+export function TrainingCalendar({ schedule, userCredits, currentDays, isUnlimited = false }: TrainingCalendarProps) {
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlightId');
 
@@ -109,6 +110,7 @@ export function TrainingCalendar({ schedule, userCredits, currentDays }: Trainin
                                     <ActionButton
                                         session={session}
                                         userCredits={userCredits}
+                                        isUnlimited={isUnlimited}
                                     />
                                 </div>
                             </div>
@@ -126,7 +128,7 @@ export function TrainingCalendar({ schedule, userCredits, currentDays }: Trainin
     );
 }
 
-function ActionButton({ session, userCredits }: { session: Session, userCredits: number }) {
+function ActionButton({ session, userCredits, isUnlimited }: { session: Session, userCredits: number, isUnlimited: boolean }) {
     const { isVerified } = useVerification();
     const [isLoading, setIsLoading] = React.useState(false);
 
@@ -161,8 +163,8 @@ function ActionButton({ session, userCredits }: { session: Session, userCredits:
 
     const executeBooking = async () => {
         // Client-side credit check
-        // Only check if price is > 0
-        if (!session.isUserRegistered && session.priceCredits > 0 && userCredits < session.priceCredits) {
+        // Only check if price is > 0 AND not unlimited
+        if (!session.isUserRegistered && session.priceCredits > 0 && !isUnlimited && userCredits < session.priceCredits) {
             setModal({
                 isOpen: true,
                 title: 'Chyba',

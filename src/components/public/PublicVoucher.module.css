@@ -1,0 +1,164 @@
+.container {
+    padding: 1rem;
+    max-width: 100%;
+    margin: 0 auto;
+    font-family: inherit;
+}
+
+.formCard {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    padding: 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.formTitle {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: #333;
+    text-align: center;
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.input,
+.textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.15s;
+    background: #f9fafb;
+    box-sizing: border-box; /* Important for iframe */
+}
+
+.input:focus,
+.textarea:focus {
+    background: #fff;
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.message {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.success {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.error {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.submitButton {
+    width: 100%;
+    background-color: #3b82f6;
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.submitButton:hover {
+    background-color: #2563eb;
+}
+
+.submitButton:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.backButton {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    padding: 0;
+}
+
+.backButton:hover {
+    color: #333;
+    text-decoration: underline;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.checkboxLabel:hover {
+    background-color: #f9fafb;
+}
+
+.checkboxInput {
+    margin-top: 3px;
+}
+
+/* Product Summary in Form */
+.productSummary {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.productSummaryTitle {
+    font-weight: 600;
+    margin: 0 0 0.2rem 0;
+    color: #111827;
+}
+
+.productSummaryPrice {
+    color: #4b5563;
+    font-size: 0.9rem;
+}

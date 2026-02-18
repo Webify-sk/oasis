@@ -242,18 +242,43 @@ export async function POST(req: Request) {
                 return new NextResponse('Database Error', { status: 500 })
             }
 
-            const currentCredits = profile?.credits || 0
-            const newCredits = currentCredits + creditsToAdd
+            // CHECK FOR UNLIMITED PACKAGE
+            // We identify unlimited by high credit count (e.g. > 5000) or title
+            const isUnlimited = creditsToAdd > 5000;
 
-            // 2. Update credits
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ credits: newCredits })
-                .eq('id', userId)
+            let newCredits = profile?.credits || 0;
+            let oneYearFromNow: Date | null = null;
 
-            if (updateError) {
-                console.error('Error updating credits:', updateError)
-                return new NextResponse('Database Update Error', { status: 500 })
+            if (isUnlimited) {
+                // Set unlimited_expires_at to 1 year from now
+                oneYearFromNow = new Date();
+                oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        unlimited_expires_at: oneYearFromNow.toISOString(),
+                    })
+                    .eq('id', userId)
+
+                if (updateError) {
+                    console.error('Error updating unlimited status:', updateError)
+                    return new NextResponse('Database Update Error', { status: 500 })
+                }
+            } else {
+                // NORMAL CREDIT UPDATE
+                const currentCredits = profile?.credits || 0
+                newCredits = currentCredits + creditsToAdd
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({ credits: newCredits })
+                    .eq('id', userId)
+
+                if (updateError) {
+                    console.error('Error updating credits:', updateError)
+                    return new NextResponse('Database Update Error', { status: 500 })
+                }
             }
 
             // CREATE INVOICE FOR CREDITS
@@ -271,20 +296,24 @@ export async function POST(req: Request) {
 
             // 4. Send confirmation email
             const userEmail = session.customer_details?.email || session.customer_email || session.metadata?.userEmail;
-            // const packageName = session.metadata?.packageName || 'Kreditný balíček'; // Already defined above
 
             if (userEmail) {
                 const { getEmailTemplate } = await import('@/utils/email-template');
+
+                const statusLine = isUnlimited && oneYearFromNow
+                    ? `<p style="margin: 5px 0;"><strong>Platnosť členstva do:</strong> ${oneYearFromNow.toLocaleDateString('sk-SK')}</p>`
+                    : `<p style="margin: 5px 0;"><strong>Nový stav kreditov:</strong> ${newCredits}</p>`;
+
                 const purchaseHtml = getEmailTemplate(
                     'Ďakujeme za Váš nákup!',
                     `
                     <h1 style="color: #5E715D;">Nákup úspešný</h1>
-                    <p>Vaša objednávka bola úspešne spracovaná a kredity boli pripísané na vaše konto.</p>
+                    <p>Vaša objednávka bola úspešne spracovaná.</p>
                     
                     <div class="highlight-box">
                         <p style="margin: 5px 0;"><strong>Zakúpený balíček:</strong> ${packageName || 'Kreditný balíček'}</p>
-                        <p style="margin: 5px 0;"><strong>Kredity:</strong> +${creditsToAdd} vstupov</p>
-                        <p style="margin: 5px 0;"><strong>Nový stav kreditov:</strong> ${newCredits}</p>
+                        ${isUnlimited ? '<p style="margin: 5px 0;"><strong>Typ:</strong> Neobmedzené členstvo</p>' : `<p style="margin: 5px 0;"><strong>Kredity:</strong> +${creditsToAdd} vstupov</p>`}
+                        ${statusLine}
                     </div>
 
                     <p>Tešíme sa na vašu návštevu v Oasis Lounge.</p>
