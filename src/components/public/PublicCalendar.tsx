@@ -17,7 +17,23 @@ interface TrainingSession {
     isIndividual?: boolean;
     isLocked?: boolean;
     deadlineMsg?: string;
+    duration?: number;
 }
+
+const MobileDateHeader = ({ date }: { date: Date }) => {
+    const dayName = date.toLocaleDateString('sk-SK', { weekday: 'long' });
+    const dateStr = date.toLocaleDateString('sk-SK', { day: 'numeric', month: 'short' }).toUpperCase();
+
+    // Capitalize first letter of day name
+    const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+    return (
+        <div className={styles.mobileDateHeader}>
+            <span className={styles.headerDayName}>{formattedDayName}</span>
+            <span className={styles.headerDate}>{dateStr}</span>
+        </div>
+    );
+};
 
 interface PublicCalendarProps {
     currentDate: Date;
@@ -130,22 +146,6 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
         window.open(`${baseUrl}/dashboard/trainings?date=${formatDate(evt.date)}`, '_blank');
     };
 
-    const getOccupancyColor = (booked: number, capacity: number) => {
-        if (!capacity) return '#e0f2fe'; // blue-50 (default available)
-        const ratio = booked / capacity;
-        if (ratio >= 1) return '#fee2e2'; // red-100 (full)
-        if (ratio >= 0.75) return '#ffedd5'; // orange-100 (almost full)
-        return '#e0f2fe'; // blue-50 (plenty of space)
-    };
-
-    const getOccupancyBorder = (booked: number, capacity: number) => {
-        if (!capacity) return '#0ea5e9'; // sky-500
-        const ratio = booked / capacity;
-        if (ratio >= 1) return '#ef4444'; // red-500
-        if (ratio >= 0.75) return '#f97316'; // orange-500
-        return '#0ea5e9'; // sky-500
-    };
-
     return (
         <div className={styles.container} style={{ height: 'auto', minHeight: '100%', padding: '10px' }}>
             <div className={styles.header}>
@@ -171,13 +171,24 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                     if (cell.type === 'next') cellDate = new Date(year, month + 1, cell.day);
 
                     const cellEvents = events.filter(e => e.date.toDateString() === cellDate.toDateString());
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const checkDate = new Date(cellDate);
+                    checkDate.setHours(0, 0, 0, 0);
+                    const isPastDay = checkDate < today;
+
                     return (
                         <div
                             key={idx}
                             ref={isToday(cell.day, cell.type) ? todayRef : null}
-                            className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''}`}
+                            className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''} ${isPastDay ? styles.pastDay : ''}`}
                             style={{ minHeight: '80px' }}
                         >
+                            <div className={styles.mobileHeaderContainer}>
+                                <MobileDateHeader date={cellDate} />
+                            </div>
+
                             <span className={styles.dayNumber}>{cell.day}</span>
                             {cellEvents.map((evt, i) => {
                                 const isPast = isEventPast(evt);
@@ -203,39 +214,64 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                 // If Locked (and empty), use grey/locked logic
                                 const isLocked = evt.isLocked || false;
 
-                                let bgColor = getOccupancyColor(booked, capacity);
-                                let borderColor = getOccupancyBorder(booked, capacity);
-                                let textColor = '#333';
-
-                                if (evt.isIndividual) {
-                                    bgColor = '#FEF2F2';
-                                    borderColor = '#DC2626';
-                                    textColor = '#DC2626';
-                                } else if (isLocked) {
-                                    bgColor = '#F3F4F6'; // gray-100
-                                    borderColor = '#9CA3AF'; // gray-400
-                                    textColor = '#6B7280'; // gray-500
-                                }
-
                                 return (
                                     <div
                                         key={i}
-                                        className={styles.event}
+                                        className={`${styles.event} ${booked >= capacity ? styles.full : ''}`}
                                         title={`${evt.time} - ${evt.title} (${booked}/${capacity})`}
                                         onClick={() => setSelectedEvent(evt)}
                                         style={{
                                             cursor: 'pointer',
                                             opacity: isPast ? 0.6 : 1,
-                                            fontSize: '0.7rem',
-                                            padding: '2px 4px',
-                                            backgroundColor: bgColor,
-                                            borderLeft: `3px solid ${borderColor}`,
-                                            marginBottom: '2px',
-                                            color: textColor
+                                            // Desktop inline overrides for specific states
+                                            backgroundColor: evt.isIndividual
+                                                ? '#FEF2F2'
+                                                : isLocked
+                                                    ? '#F3F4F6'
+                                                    : undefined,
+                                            borderLeft: evt.isIndividual
+                                                ? '3px solid #DC2626'
+                                                : isLocked
+                                                    ? '3px solid #9CA3AF'
+                                                    : undefined,
+                                            color: evt.isIndividual
+                                                ? '#DC2626'
+                                                : isLocked
+                                                    ? '#6B7280'
+                                                    : undefined
                                         }}
                                     >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span><strong>{evt.time}</strong> {evt.title}</span>
+                                        {/* Mobile View Content */}
+                                        <div className={styles.mobileEventContent}>
+                                            <div className={styles.timeColumn}>
+                                                <span className={styles.startTime}>{evt.time}</span>
+                                                <span className={styles.duration}>{evt.duration || 60} min</span>
+                                            </div>
+                                            <div className={styles.detailsColumn}>
+                                                <div className={styles.titleRow}>
+                                                    <span className={styles.eventTitle}>{evt.title}</span>
+                                                    <span
+                                                        className={styles.levelBadge}
+                                                        style={{
+                                                            backgroundColor: booked >= capacity ? '#FEF2F2' : '#F3F4F6',
+                                                            color: booked >= capacity ? '#DC2626' : '#374151',
+                                                            border: booked >= capacity ? '1px solid #FECACA' : '1px solid #E5E7EB'
+                                                        }}
+                                                    >
+                                                        Obsadenosť: {booked}/{capacity}
+                                                    </span>
+                                                </div>
+                                                <div className={styles.trainerRow}>
+                                                    <span className={styles.trainerName}>{evt.trainer}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Desktop View Content */}
+                                        <div className={styles.desktopEventContent}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span><strong>{evt.time}</strong> {evt.title}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 );
