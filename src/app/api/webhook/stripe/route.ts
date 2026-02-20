@@ -276,6 +276,7 @@ export async function POST(req: Request) {
         const credits = parseInt(session.metadata?.credits || '0')
         const bonus = parseInt(session.metadata?.bonus || '0')
         const creditsToAdd = credits + bonus
+        const appliedCouponId = session.metadata?.appliedCouponId;
 
         if (userId && creditsToAdd > 0) {
 
@@ -327,6 +328,18 @@ export async function POST(req: Request) {
                 if (updateError) {
                     console.error('Error updating credits:', updateError)
                     return new NextResponse('Database Update Error', { status: 500 })
+                }
+            }
+
+            // UPLATNENIE KUPÓNU (ak bol nejaký pri platbe použitý)
+            if (appliedCouponId) {
+                const { error: couponUpdateError } = await supabase
+                    .from('discount_coupons')
+                    .update({ used: true, used_at: new Date().toISOString() })
+                    .eq('id', appliedCouponId);
+
+                if (couponUpdateError) {
+                    console.error('Error marking coupon as used in webhook:', couponUpdateError);
                 }
             }
 

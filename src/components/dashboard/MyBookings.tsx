@@ -126,14 +126,14 @@ export function MyBookings({ bookings }: MyBookingsProps) {
                         const now = new Date();
                         const diffMs = startTime.getTime() - now.getTime();
                         const hours = diffMs / (1000 * 60 * 60);
-                        const isLessThant24h = hours < 24;
+                        const isLessThanLimit = hours < 12;
 
                         return (
                             <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
                                 Naozaj chcete zrušiť túto rezerváciu?<br />
-                                {isLessThant24h ? (
+                                {isLessThanLimit ? (
                                     <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
-                                        Keďže je to menej ako 24h pred tréningom, vstup Vám NEBUDE vrátený.
+                                        Keďže je to menej ako 12h pred tréningom, vstup Vám NEBUDE vrátený.
                                     </span>
                                 ) : (
                                     <span>

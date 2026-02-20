@@ -11,7 +11,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export async function createCheckoutSession(
-    packageId: string // Ensure this matches DB ID now
+    packageId: string, // Ensure this matches DB ID now
+    couponCode?: string // Optional discount code
 ) {
     const supabase = await createClient()
     try {
@@ -49,15 +50,66 @@ export async function createCheckoutSession(
             throw new Error('This package is no longer available.');
         }
 
+        let finalPrice = creditPackage.price;
+        let appliedCouponId = null;
+
+        // Validating and applying coupon
+        if (couponCode) {
+            const cleanCode = couponCode.trim().toUpperCase();
+            const { data: coupon, error: couponError } = await supabase
+                .from('discount_coupons')
+                .select('*')
+                .eq('code', cleanCode)
+                .single();
+
+            if (!couponError && coupon && coupon.active && !coupon.used && coupon.target_user_id === user.id) {
+                if (coupon.discount_type === 'percentage') {
+                    finalPrice = finalPrice - (finalPrice * (coupon.discount_value / 100));
+                } else if (coupon.discount_type === 'fixed') {
+                    finalPrice = finalPrice - coupon.discount_value;
+                }
+
+                if (finalPrice < 0) finalPrice = 0;
+                appliedCouponId = coupon.id;
+            } else {
+                return { error: 'Neplatný alebo už použitý kupón.' };
+            }
+        }
+
         // Price is stored in Euros in DB (e.g. 27.00)
         // Stripe expects cents for 'unit_amount'
-        const amount = Math.round(creditPackage.price * 100);
+        const amount = Math.round(finalPrice * 100);
 
-        if (isNaN(amount) || amount <= 0) {
+        if (isNaN(amount) || amount < 0) {
             throw new Error('Invalid price calculated from package.')
         }
 
         const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+        // Ak je cena po zľave 0 (100% zľava), nevyžadujeme Stripe Checkout.
+        // Priamo pripíšeme kredity a označíme kupón ako použitý
+        if (amount === 0) {
+            // Update coupon as used
+            await supabase
+                .from('discount_coupons')
+                .update({ used: true, used_at: new Date().toISOString() })
+                .eq('id', appliedCouponId);
+
+            // Log purchase
+            await supabase
+                .from('purchases')
+                .insert({
+                    user_id: user.id,
+                    package_id: packageId,
+                    amount: 0,
+                    status: 'completed',
+                    stripe_session_id: 'free_coupon_' + appliedCouponId,
+                });
+
+            // Revalidate necessary paths could be done here, 
+            // but the success URL reload in dashboard handles it.
+            return { url: `${origin}/dashboard/credit?success=true` };
+        }
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -84,7 +136,8 @@ export async function createCheckoutSession(
                 packageId: packageId,
                 packageName: creditPackage.title,
                 credits: creditPackage.credits, // Add this for webhook convenience
-                bonus: creditPackage.bonus_credits || 0
+                bonus: creditPackage.bonus_credits || 0,
+                ...(appliedCouponId && { appliedCouponId }) // Poslanie ID pre webhook
             }
         })
 

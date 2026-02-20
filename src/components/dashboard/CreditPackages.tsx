@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/Button';
 import styles from './CreditPackages.module.css';
 import { createCheckoutSession } from '@/app/actions/stripe';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Tag, Check, X } from 'lucide-react';
 import { updateProfile } from '@/app/dashboard/profile/actions';
+import { validateCouponAction } from '@/app/actions/coupons';
 
 // Define the type matching DB structure
 export interface CreditPackage {
@@ -47,6 +48,17 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
     const [privacyAccepted, setPrivacyAccepted] = useState(false);
     const [showErrors, setShowErrors] = useState(false);
 
+    // Coupon state
+    const [couponCode, setCouponCode] = useState('');
+    const [couponState, setCouponState] = useState<{
+        isValid: boolean | null;
+        message: string;
+        discountType?: 'percentage' | 'fixed';
+        discountValue?: number;
+        newPrice?: number;
+    }>({ isValid: null, message: '' });
+    const [validatingCoupon, setValidatingCoupon] = useState(false);
+
     // Form state
     const [formData, setFormData] = useState({
         full_name: '',
@@ -75,6 +87,8 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
         setTermsAccepted(false);
         setPrivacyAccepted(false);
         setShowErrors(false);
+        setCouponCode('');
+        setCouponState({ isValid: null, message: '' });
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,9 +128,12 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
             // We assume user is logged in
             await updateProfile(profileData);
 
-            // 2. Create Checkout Session
+            // 2. Create Checkout Session (passing coupon code if valid)
+            const activeCoupon = couponState.isValid ? couponCode : undefined;
+
             const result = await createCheckoutSession(
-                selectedPackage.id
+                selectedPackage.id,
+                activeCoupon
             ) as any;
 
             if (result && result.error) {
@@ -132,6 +149,33 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
             console.error('Checkout error:', error);
             alert('Nastala chyba pri vytváraní objednávky.');
             setLoadingId(null);
+        }
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!selectedPackage || !couponCode.trim()) return;
+
+        setValidatingCoupon(true);
+        setCouponState({ isValid: null, message: '' });
+
+        try {
+            const result = await validateCouponAction(couponCode, selectedPackage.price);
+
+            if (result.error) {
+                setCouponState({ isValid: false, message: result.error });
+            } else if (result.success) {
+                setCouponState({
+                    isValid: true,
+                    message: 'Kupón bol úspešne uplatnený.',
+                    discountType: result.discountType as 'percentage' | 'fixed',
+                    discountValue: result.discountValue,
+                    newPrice: result.newPrice
+                });
+            }
+        } catch (error) {
+            setCouponState({ isValid: false, message: 'Nastala chyba pri overovaní.' });
+        } finally {
+            setValidatingCoupon(false);
         }
     };
 
@@ -207,7 +251,82 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
 
                         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#F9FAFB', borderRadius: '8px' }}>
                             <p style={{ fontWeight: '600', marginBottom: '0.2rem' }}>{selectedPackage.title}</p>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Cena: <span style={{ color: '#000' }}>{selectedPackage.price} € s DPH</span></p>
+
+                            {couponState.isValid && couponState.newPrice !== undefined ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                    <p style={{ color: '#6b7280', fontSize: '0.9rem', textDecoration: 'line-through' }}>
+                                        Pôvodná cena: {selectedPackage.price} €
+                                    </p>
+                                    <p style={{ color: '#059669', fontSize: '1rem', fontWeight: 'bold' }}>
+                                        Nová cena: {couponState.newPrice.toFixed(2)} € s DPH
+                                    </p>
+                                </div>
+                            ) : (
+                                <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                                    Cena: <span style={{ color: '#000' }}>{selectedPackage.price} € s DPH</span>
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Coupon Section */}
+                        <div style={{ marginBottom: '1.5rem', padding: '1.2rem', backgroundColor: '#fdfbfb', border: '1px dashed #d1d5db', borderRadius: '8px' }}>
+                            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.6rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <Tag size={16} /> Máte zľavový kód?
+                            </h4>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input
+                                    type="text"
+                                    value={couponCode}
+                                    onChange={(e) => {
+                                        setCouponCode(e.target.value);
+                                        if (couponState.isValid !== null) setCouponState({ isValid: null, message: '' });
+                                    }}
+                                    placeholder="Vložiť kód"
+                                    disabled={validatingCoupon || couponState.isValid === true}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.6rem',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        textTransform: 'uppercase'
+                                    }}
+                                />
+                                <Button
+                                    variant="outline"
+                                    onClick={handleApplyCoupon}
+                                    disabled={!couponCode.trim() || validatingCoupon || couponState.isValid === true}
+                                    style={{ padding: '0 1rem' }}
+                                >
+                                    {validatingCoupon ? <Loader2 size={16} className="animate-spin" /> : 'Použiť'}
+                                </Button>
+                            </div>
+
+                            {couponState.message && (
+                                <div style={{
+                                    marginTop: '0.5rem',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    color: couponState.isValid ? '#059669' : '#dc2626'
+                                }}>
+                                    {couponState.isValid ? <Check size={14} /> : <X size={14} />}
+                                    {couponState.message}
+
+                                    {couponState.isValid && (
+                                        <button
+                                            onClick={() => {
+                                                setCouponCode('');
+                                                setCouponState({ isValid: null, message: '' });
+                                            }}
+                                            style={{ background: 'none', border: 'none', color: '#6b7280', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8rem', marginLeft: 'auto' }}
+                                        >
+                                            Zrušiť
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Invoice Data Form */}

@@ -211,12 +211,12 @@ export async function cancelBooking(bookingId: string) {
     const priceCredits = (Array.isArray(trainingTypeData) ? trainingTypeData[0]?.price_credits : trainingTypeData?.price_credits) ?? 1;
     const participantsCount = booking.participants_count || 1;
 
-    // 2. Check 24h rule
+    // 2. Check 12h rule
     const startTime = new Date(booking.start_time);
     const now = new Date();
     const diffMs = startTime.getTime() - now.getTime();
     const hoursValues = diffMs / (1000 * 60 * 60);
-    const shouldRefund = hoursValues >= 24;
+    const shouldRefund = hoursValues >= 12;
 
     // 3. Delete booking
     const { error: deleteError } = await supabase
@@ -262,7 +262,7 @@ export async function cancelBooking(bookingId: string) {
 
         const refundMessage = shouldRefund
             ? (totalRefund > 0 ? `a ${totalRefund} kr. ti bolo vrátené na účet.` : 'tento tréning bol zadarmo.')
-            : 'ale keďže je to menej ako 24h pred tréningom, <strong>vstup nebol vrátený</strong>.';
+            : 'ale keďže je to menej ako 12h pred tréningom, <strong>vstup nebol vrátený</strong>.';
 
         const html = getEmailTemplate(
             'Zrušenie rezervácie',
@@ -289,6 +289,6 @@ export async function cancelBooking(bookingId: string) {
 
     return {
         success: true,
-        message: shouldRefund ? 'Rezervácia zrušená, vstup bol vrátený.' : 'Rezervácia zrušená (bez vrátenia kreditu, < 24h).'
+        message: shouldRefund ? 'Rezervácia zrušená, vstup bol vrátený.' : 'Rezervácia zrušená (bez vrátenia kreditu, < 12h).'
     };
 }

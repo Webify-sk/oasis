@@ -159,7 +159,7 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
             const start = new Date(session.startTimeISO);
             const now = new Date();
             const diffHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
-            setIsLateCancellation(diffHours < 24);
+            setIsLateCancellation(diffHours < 12);
             setConfirmModalOpen(true);
             return;
         }
@@ -426,7 +426,7 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
                                 UPOZORNENIE
                             </p>
                             <p style={{ color: '#7F1D1D', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                                Odhlasujete sa menej ako 24 hodín pred začiatkom tréningu.<br />
+                                Odhlasujete sa menej ako 12 hodín pred začiatkom tréningu.<br />
                                 <strong>{session.priceCredits > 0 ? 'Váš vstup NEBUDE vrátený.' : 'Tréning je zadarmo, žiadny vstup sa nevracia.'}</strong>
                             </p>
                         </div>
