@@ -69,9 +69,17 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
     const openReschedule = (app: Appointment) => {
         console.log('Opening reschedule for:', app.id);
         const d = new Date(app.start_time);
-        // Correct timezone offset for datetime-local (local time)
-        const offset = d.getTimezoneOffset() * 60000;
-        const localIso = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+        // Correct timezone offset for datetime-local (Bratislava time)
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Europe/Bratislava',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+            hour12: false
+        }).formatToParts(d);
+
+        const p: any = {};
+        parts.forEach(part => p[part.type] = part.value);
+        const localIso = `${p.year}-${p.month}-${p.day}T${p.hour === '24' ? '00' : p.hour}:${p.minute}`;
 
         setSelectedApp(app);
         setNewDate(localIso);
@@ -105,7 +113,7 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '3rem' }}>
                 <div>
                     <p style={{ textTransform: 'uppercase', fontSize: '0.85rem', letterSpacing: '0.1em', color: '#888', marginBottom: '0.5rem' }}>
-                        {format(new Date(), 'd. MMMM yyyy', { locale: sk })}
+                        {new Date().toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                     <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '2.5rem', color: '#2c3e50', margin: 0 }}>
                         Vitajte, {employeeName.split(' ')[0]}
@@ -224,10 +232,10 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                             {/* Time Column */}
                                             <div style={{ paddingRight: '1.5rem', borderRight: '1px solid #eee', marginRight: '1.5rem', minWidth: '80px', textAlign: 'center' }}>
                                                 <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#2c3e50' }}>
-                                                    {format(new Date(app.start_time), 'HH:mm')}
+                                                    {new Date(app.start_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                                 <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase' }}>
-                                                    {format(new Date(app.start_time), 'EEE', { locale: sk })}
+                                                    {new Date(app.start_time).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', weekday: 'short' })}
                                                 </div>
                                             </div>
 

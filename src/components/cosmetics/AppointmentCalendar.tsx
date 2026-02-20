@@ -66,9 +66,9 @@ export function AppointmentCalendar({ initialAppointments }: { initialAppointmen
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                                     <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#333' }}>
-                                        {new Date(app.start_time).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' })}
+                                        {new Date(app.start_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                         {' - '}
-                                        {new Date(app.end_time).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' })}
+                                        {new Date(app.end_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                     <span style={{
                                         backgroundColor: '#f0f0f0',

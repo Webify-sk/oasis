@@ -167,7 +167,7 @@ export function WeeklyScheduler({ initialAppointments, employees }: WeeklySchedu
                                                     {app.cosmetic_services?.title}
                                                 </div>
                                                 <div style={{ fontSize: '0.7rem', color: '#777' }}>
-                                                    {format(new Date(app.start_time), 'HH:mm')}
+                                                    {new Date(app.start_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </div>
                                         );

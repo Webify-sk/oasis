@@ -23,8 +23,11 @@ interface EditAppointmentModalProps {
 }
 
 export function EditAppointmentModal({ appointment, onClose, onUpdate }: EditAppointmentModalProps) {
-    const [date, setDate] = useState(format(new Date(appointment.start_time), 'yyyy-MM-dd'));
-    const [time, setTime] = useState(format(new Date(appointment.start_time), 'HH:mm'));
+    const tzDate = new Date(appointment.start_time);
+    const dateStr = tzDate.toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', year: 'numeric', month: '2-digit', day: '2-digit' }).split('.').reverse().join('-').replace(/ /g, '');
+    const timeStr = tzDate.toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' });
+    const [date, setDate] = useState(dateStr);
+    const [time, setTime] = useState(timeStr);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSave = async () => {

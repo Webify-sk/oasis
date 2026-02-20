@@ -686,7 +686,15 @@ export async function createAppointment(data: {
     // Send Confirmation Email
     if (user.email && service) {
         try {
-            const formattedDate = format(new Date(data.start_time), 'd. MMMM yyyy HH:mm', { locale: sk });
+            // Use Europe/Bratislava for emails to avoid UTC shift
+            const formattedDate = new Date(data.start_time).toLocaleString('sk-SK', {
+                timeZone: 'Europe/Bratislava',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
 
             const emailSubject = `Potvrdenie rezervácie - ${service.title}`;
             const emailBody = `
@@ -727,7 +735,14 @@ export async function createAppointment(data: {
                 .single();
 
             if (employeeData && employeeData.email) {
-                const formattedDateEmp = format(new Date(data.start_time), 'd. MMMM yyyy HH:mm', { locale: sk });
+                const formattedDateEmp = new Date(data.start_time).toLocaleString('sk-SK', {
+                    timeZone: 'Europe/Bratislava',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
 
                 // Get Client Name (from Profile or User Metadata)
                 const { data: clientProfile } = await supabase
@@ -874,7 +889,14 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
             const startTimeVal = booking?.start_time;
 
             if (empEmail && booking) {
-                const formattedDate = format(new Date(startTimeVal), 'd. MMMM yyyy HH:mm', { locale: sk });
+                const formattedDate = new Date(startTimeVal).toLocaleString('sk-SK', {
+                    timeZone: 'Europe/Bratislava',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
 
                 const subject = `Zrušená rezervácia: ${serviceTitle} - ${clientName}`;
                 const body = `
@@ -943,7 +965,14 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     if (updatedAppointment && updatedAppointment.profiles && updatedAppointment.profiles.email) {
         try {
             const serviceTitle = updatedAppointment.cosmetic_services?.title || 'Služba';
-            const formattedDate = format(new Date(newStartTime), 'd. MMMM yyyy HH:mm', { locale: sk });
+            const formattedDate = new Date(newStartTime).toLocaleString('sk-SK', {
+                timeZone: 'Europe/Bratislava',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
 
             const emailSubject = `Zmena rezervácie - ${serviceTitle}`;
             const emailBody = `
@@ -1061,55 +1090,61 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
     }
 
     // 3. Get Existing Appointments
-    const startOfDay = `${date}T00:00:00`
-    const endOfDay = `${date}T23:59:59`
+    // Wide bounds to catch appointments shifted to previous/next days due to UTC offsets
+    const searchStart = new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const searchEnd = new Date(new Date(date).getTime() + 48 * 60 * 60 * 1000).toISOString();
 
     const { data: appointments } = await supabase
         .from('cosmetic_appointments')
         .select('start_time, end_time')
         .eq('employee_id', employeeId)
-        .gte('start_time', startOfDay)
-        .lte('start_time', endOfDay)
+        .gte('start_time', searchStart)
+        .lte('start_time', searchEnd)
         .filter('status', 'neq', 'cancelled')
 
     // 4. Generate Slots from ALL active ranges
     const slots: string[] = []
 
-    // Helper to add minutes
-    const addMinutes = (d: Date, m: number) => new Date(d.getTime() + m * 60000)
+    const { getRealUtcDate } = await import('@/utils/booking-logic');
 
     for (const range of activeSlots) {
         if (!range.start_time || !range.end_time) continue;
 
-        let currentTime = new Date(`${date}T${range.start_time}`)
-        const rangeEnd = new Date(`${date}T${range.end_time}`)
+        const [startH, startM] = range.start_time.split(':').map(Number);
+        const [endH, endM] = range.end_time.split(':').map(Number);
 
-        while (addMinutes(currentTime, duration) <= rangeEnd) {
-            const slotStart = currentTime
-            const slotEnd = addMinutes(currentTime, duration)
+        let currentMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
 
-            // Check collision with appointments
+        while (currentMinutes + duration <= endMinutes) {
+            const hStr = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+            const mStr = (currentMinutes % 60).toString().padStart(2, '0');
+            const slotLocalTimeStr = `${hStr}:${mStr}`;
+
+            // True UTC Date representing this slot
+            const slotStartUTC = getRealUtcDate(`${date}T${slotLocalTimeStr}:00`);
+            const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60000);
+
+            // Check collision with genuine DB UTC appointments
             const isCollision = appointments?.some(app => {
                 const appStart = new Date(app.start_time)
                 const appEnd = new Date(app.end_time)
-                return (slotStart < appEnd && slotEnd > appStart)
+                return (slotStartUTC < appEnd && slotEndUTC > appStart)
             })
 
             if (!isCollision) {
-                // Check Deadline
-                const { allowed } = isBookingAllowed(slotStart);
+                // Check Deadline using real UTC date (since isBookingAllowed applies European time locally)
+                const { allowed } = isBookingAllowed(slotStartUTC);
 
                 if (allowed) {
-                    // Check if slot already exists (from overlapping ranges? unlikely but safe)
-                    const timeStr = slotStart.toTimeString().slice(0, 5) // HH:MM
-                    if (!slots.includes(timeStr)) {
-                        slots.push(timeStr)
+                    if (!slots.includes(slotLocalTimeStr)) {
+                        slots.push(slotLocalTimeStr)
                     }
                 }
             }
 
             // Increment by 30 min intervals
-            currentTime = addMinutes(currentTime, 30)
+            currentMinutes += 30;
         }
     }
 
@@ -1236,7 +1271,14 @@ export async function cancelAppointment(id: string) {
     // 3. Send Cancellation Email
     if (appointment && appointment.cosmetic_services) {
         try {
-            const formattedDate = format(new Date(appointment.start_time), 'd. MMMM yyyy HH:mm', { locale: sk });
+            const formattedDate = new Date(appointment.start_time).toLocaleString('sk-SK', {
+                timeZone: 'Europe/Bratislava',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
             const serviceName = appointment.cosmetic_services.title;
 
             const emailSubject = `Zrušenie rezervácie - ${serviceName}`;
@@ -1273,7 +1315,14 @@ export async function cancelAppointment(id: string) {
             const serviceName = appointment.cosmetic_services?.title || 'Služba';
             // @ts-ignore
             const clientName = appointment.profiles?.full_name || 'Klient';
-            const formattedDate = format(new Date(appointment.start_time), 'd. MMMM yyyy HH:mm', { locale: sk });
+            const formattedDate = new Date(appointment.start_time).toLocaleString('sk-SK', {
+                timeZone: 'Europe/Bratislava',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
 
             const subject = `Zrušená rezervácia: ${serviceName} - ${clientName}`;
             const body = `
@@ -1330,16 +1379,16 @@ export async function createManualReservation(prevState: any, formData: FormData
     }
 
     // Construct timestamps
-    const startDateTime = new Date(`${date}T${time}:00`); // Local time? Needs careful handling of timezones if server is UTC.
-    // Assuming input is local and we store UTC.
-    // Better: use date-fns-tz or similar if complex. key is to ensure consistent ISO string.
+    const { getRealUtcDate } = await import('@/utils/booking-logic');
+    const startDateTime = getRealUtcDate(`${date}T${time}:00`);
 
     // Get duration to calculate end time
     const { data: service } = await supabase.from('cosmetic_services').select('duration_minutes, title').eq('id', serviceId).single();
     if (!service) return { error: 'Služba sa nenašla.' };
 
     const endDateTime = new Date(startDateTime.getTime() + service.duration_minutes * 60000);
-    const endTime = endDateTime.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
+    // Determine the local end time string for logic boundaries Check exceptions
+    const endTime = endDateTime.toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' });
 
     // --- Availability Check ---
 
@@ -1431,7 +1480,14 @@ export async function createManualReservation(prevState: any, formData: FormData
             .single();
 
         if (employeeData && employeeData.email) {
-            const formattedDateEmp = format(startDateTime, 'd. MMMM yyyy HH:mm', { locale: sk });
+            const formattedDateEmp = new Date(startDateTime).toLocaleString('sk-SK', {
+                timeZone: 'Europe/Bratislava',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
 
             // Use provided client info
             const cName = clientName || 'Klient';

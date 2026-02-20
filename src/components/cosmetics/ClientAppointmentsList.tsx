@@ -77,8 +77,8 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
         const date = new Date(appointment.start_time);
         setRescheduleData({
             id: appointment.id,
-            date: format(date, 'yyyy-MM-dd'),
-            start: format(date, 'HH:mm'),
+            date: date.toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', year: 'numeric', month: '2-digit', day: '2-digit' }).split('.').reverse().join('-').replace(/ /g, ''), // Quick hack to get YYYY-MM-DD from sk-SK or just use a robust padStart
+            start: date.toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' }),
             duration: appointment.cosmetic_services.duration_minutes
         });
         setIsRescheduleModalOpen(true);
@@ -272,8 +272,8 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                 borderRadius: '8px',
                 color: '#333'
             }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{format(start, 'dd', { locale: sk })}</span>
-                <span style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>{format(start, 'MMM', { locale: sk })}</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{start.toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: '2-digit' })}</span>
+                <span style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>{start.toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', month: 'short' })}</span>
             </div>
 
             {/* Details */}
@@ -285,7 +285,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <Clock size={16} />
-                        {format(start, 'HH:mm')} ({appointment.cosmetic_services?.duration_minutes} min)
+                        {start.toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })} ({appointment.cosmetic_services?.duration_minutes} min)
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <User size={16} />

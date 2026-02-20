@@ -173,9 +173,9 @@ export function VoucherCheck() {
 
                     <div style={{ fontSize: '0.9rem', color: '#4b5563', display: 'grid', gap: '0.5rem', marginBottom: '1.5rem' }}>
                         <div><strong>Hodnota:</strong> {voucher.product.price} €</div>
-                        <div><strong>Vytvorený:</strong> {format(new Date(voucher.created_at), 'd. MMMM yyyy', { locale: sk })}</div>
+                        <div><strong>Vytvorený:</strong> {new Date(voucher.created_at).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'long', year: 'numeric' })}</div>
                         {voucher.redeemed_at && (
-                            <div><strong>Uplatnený:</strong> {format(new Date(voucher.redeemed_at), 'd. MMMM yyyy HH:mm', { locale: sk })}</div>
+                            <div><strong>Uplatnený:</strong> {new Date(voucher.redeemed_at).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                         )}
                     </div>
 
