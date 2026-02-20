@@ -30,6 +30,7 @@ interface Session {
     bookingId?: string;
     isPast?: boolean;
     isIndividual?: boolean;
+    participantsCount?: number;
 }
 
 interface DaySchedule {
@@ -141,6 +142,12 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
 
     const isPast = session.isPast ?? (new Date(session.startTimeISO) < new Date());
 
+    const [joinModalOpen, setJoinModalOpen] = React.useState(false);
+
+    // Check dynamic deadline
+    // Only check if NOT registered (if registered, logic is about cancellation)
+
+
     const handleActionClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -157,18 +164,35 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
             return;
         }
 
-        // If not registered -> Book immediately (with credit check)
-        executeBooking();
+        // If not registered -> Open Join Modal
+        setJoinModalOpen(true);
     };
 
-    const executeBooking = async () => {
+    const executeBooking = async (count: number) => {
+        setJoinModalOpen(false);
+
+        // Calculate total cost
+        // Logic: 
+        // If Unlimited: User (1st) is free, +1 is NOT free? Or Unlimited covers everything?
+        // Let's assume Unlimited covers ONLY the user. +1 pays full price.
+        // Actually, for simplicity and typical gym logic: Unlimited = User is free. +1 = User pays for +1.
+        // So Cost = (IsUnlimited ? 0 : price) + (count - 1) * price.
+
+        // Wait, if I am standard user (not unlimited):
+        // 1 person = 1 * price
+        // 2 people = 2 * price
+
+        const price = session.priceCredits;
+        const selfCost = isUnlimited ? 0 : price;
+        const additionalCost = (count - 1) * price;
+        const totalCost = selfCost + additionalCost;
+
         // Client-side credit check
-        // Only check if price is > 0 AND not unlimited
-        if (!session.isUserRegistered && session.priceCredits > 0 && !isUnlimited && userCredits < session.priceCredits) {
+        if (totalCost > 0 && userCredits < totalCost) {
             setModal({
                 isOpen: true,
                 title: 'Chyba',
-                message: `Nemáte dostatok vstupov. Cena tréningu je ${session.priceCredits} kreditov.`,
+                message: `Nemáte dostatok vstupov. Potrebujete ${totalCost} kreditov.`,
                 isError: true
             });
             return;
@@ -176,7 +200,7 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
 
         setIsLoading(true);
         try {
-            const res = await bookTraining(session.trainingTypeId, session.startTimeISO);
+            const res = await bookTraining(session.trainingTypeId, session.startTimeISO, count);
             if (res) {
                 setModal({
                     isOpen: true,
@@ -263,6 +287,42 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
 
     return (
         <>
+            {/* Join Modal */}
+            <Modal
+                isOpen={joinModalOpen}
+                onClose={() => setJoinModalOpen(false)}
+                title="Prihlásenie na tréning"
+            >
+                <div style={{ padding: '1rem 0', textAlign: 'center' }}>
+                    <p style={{ marginBottom: '1.5rem', color: '#4B5563' }}>
+                        Koľko osôb chcete prihlásiť?
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                        <Button
+                            onClick={() => executeBooking(1)}
+                            style={{ minWidth: '120px', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0.75rem' }}
+                        >
+                            <span>Len ja</span>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                                ({isUnlimited ? 'Zadarmo' : `${session.priceCredits} kredit`} )
+                            </span>
+                        </Button>
+
+                        <Button
+                            onClick={() => executeBooking(2)}
+                            variant="outline"
+                            style={{ minWidth: '120px', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0.75rem' }}
+                            disabled={session.occupancy.current + 2 > session.occupancy.max} // Disable if not enough space
+                        >
+                            <span>Ja + 1</span>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                                ({isUnlimited ? `${session.priceCredits} kredit` : `${session.priceCredits * 2} kreditov`})
+                            </span>
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
             <Button
                 size="sm"
                 onClick={handleActionClick}
@@ -372,8 +432,8 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
                         </div>
                     ) : (
                         <p style={{ marginBottom: '1.5rem', color: '#4B5563', lineHeight: '1.5' }}>
-                            Naozaj chcete zrušiť túto rezerváciu?<br />
-                            {session.priceCredits > 0 ? 'Vstup Vám bude automaticky vrátený na účet.' : 'Tento tréning je zadarmo.'}
+                            Naozaj chcete zrušiť túto rezerváciu? {session.participantsCount && session.participantsCount > 1 ? `(Rezervácia pre ${session.participantsCount} osoby)` : ''}<br />
+                            {session.priceCredits > 0 ? `Vstup Vám bude automaticky vrátený na účet.` : 'Tento tréning je zadarmo.'}
                         </p>
                     )}
 

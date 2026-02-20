@@ -206,6 +206,9 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
                     }) || [];
 
+                    const currentOccupancy = slotBookings.reduce((sum: number, b: any) => sum + (b.participants_count || 1), 0);
+
+
                     const userBooking = user ? slotBookings.find((b: any) => b.user_id === user.id) : null;
                     const isUserRegistered = !!userBooking;
 
@@ -219,11 +222,12 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                         level: tt.level || 'Všetky úrovne',
                         priceCredits: tt.price_credits ?? 1,
                         occupancy: {
-                            current: isVacation ? (tt.capacity || 10) : slotBookings.length, // If vacation, show as FULL
+                            current: isVacation ? (tt.capacity || 10) : currentOccupancy, // If vacation, show as FULL
                             max: tt.capacity || 10
                         },
                         isUserRegistered,
                         bookingId: userBooking?.id,
+                        participantsCount: userBooking?.participants_count || 1,
                         isPast,
                         isIndividual // Pass the flag
                     });

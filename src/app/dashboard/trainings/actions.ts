@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-export async function bookTraining(trainingTypeId: string, startTimeISO: string) {
+export async function bookTraining(trainingTypeId: string, startTimeISO: string, participantsCount: number = 1) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -43,19 +43,21 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
 
     const priceCredits = trainingType.price_credits ?? 1;
 
-    // Check existing occupancy for this specific time slot
-    const { count: currentOccupancy, error: countError } = await supabase
+    // Calculate total occupancy (sum of participants_count)
+    const { data: slotBookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*', { count: 'exact', head: true })
+        .select('participants_count')
         .eq('training_type_id', trainingTypeId)
         .eq('start_time', startTimeISO);
 
-    if (countError) {
+    if (bookingsError) {
         return { success: false, message: 'Chyba pri overovaní kapacity.' };
     }
 
-    if ((currentOccupancy || 0) >= trainingType.capacity) {
-        return { success: false, message: 'Tréning je plne obsadený.' };
+    const currentOccupancy = slotBookings?.reduce((sum, b) => sum + (b.participants_count || 1), 0) || 0;
+
+    if (currentOccupancy + participantsCount > trainingType.capacity) {
+        return { success: false, message: 'Na tréningu nie je dostatok voľných miest.' };
     }
 
     // Dynamic Booking Deadline Logic (Only if nobody is booked yet)
@@ -97,9 +99,26 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
 
     const isUnlimited = profile.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
 
-    // Only check credits if price > 0 AND not unlimited
-    if (!isUnlimited && priceCredits > 0 && (profile.credits || 0) < priceCredits) {
-        return { success: false, message: `Nemáte dostatok vstupov. Cena tréningu je ${priceCredits} kreditov.` };
+    // Only check credits if price > 0 AND not unlimited (Unlimited covers only the user, +1 needs credits? Or unlimited covers both? Assuming +1 always needs credits or simple multiplier)
+    // Actually, usually Unlimited is for the user only. +1 implies paying for stored credits? 
+    // Requirement: "Ak budu 2 tak automaticky odpočítať 2 vstupy (ked sa odhlási tak refundovatt 2 kredity)"
+    // If user is Unlimited, they pay 0 for themselves. But for +1?
+    // Let's assume:
+    // If Unlimited: User is free, +1 costs 1 credit.
+    // If Not Unlimited: User costs 1 credit, +1 costs 1 credit -> Total 2 credits.
+
+    // However, simplicity first: "odpočítať 2 vstupy". 
+    // If Unlimited user brings +1, should it take 1 credit from their credit balance? Probably yes.
+    // Let's implement logic: Total Cost = (IsUnlimited ? 0 : 1) + (participantsCount - 1) * 1.
+    // Wait, price_credits might be > 1.
+    // Total Cost = (IsUnlimited ? 0 : priceCredits) + (participantsCount - 1) * priceCredits.
+
+    const selfCost = isUnlimited ? 0 : priceCredits;
+    const additionalCost = (participantsCount - 1) * priceCredits;
+    const totalCost = selfCost + additionalCost;
+
+    if ((profile.credits || 0) < totalCost) {
+        return { success: false, message: `Nemáte dostatok vstupov. Potrebujete ${totalCost} kreditov.` };
     }
 
     // Insert booking
@@ -108,18 +127,19 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string)
         .insert({
             user_id: user.id,
             training_type_id: trainingTypeId,
-            start_time: startTimeISO
+            start_time: startTimeISO,
+            participants_count: participantsCount
         });
 
     if (bookingError) {
         return { success: false, message: 'Chyba pri vytváraní rezervácie: ' + bookingError.message };
     }
 
-    // Deduct credit only if price > 0 AND not unlimited
-    if (!isUnlimited && priceCredits > 0) {
+    // Deduct credit
+    if (totalCost > 0) {
         const { error: creditError } = await supabase
             .from('profiles')
-            .update({ credits: (profile.credits || 0) - priceCredits })
+            .update({ credits: (profile.credits || 0) - totalCost })
             .eq('id', user.id);
 
         if (creditError) {
@@ -178,7 +198,7 @@ export async function cancelBooking(bookingId: string) {
     // 1. Fetch booking details *before* deletion to get start_time
     const { data: booking, error: fetchError } = await supabase
         .from('bookings')
-        .select('start_time, training_type:training_type_id(title, price_credits)')
+        .select('start_time, participants_count, training_type:training_type_id(title, price_credits)')
         .eq('id', bookingId)
         .eq('user_id', user.id)
         .single();
@@ -189,6 +209,7 @@ export async function cancelBooking(bookingId: string) {
 
     const trainingTypeData = booking.training_type as any;
     const priceCredits = (Array.isArray(trainingTypeData) ? trainingTypeData[0]?.price_credits : trainingTypeData?.price_credits) ?? 1;
+    const participantsCount = booking.participants_count || 1;
 
     // 2. Check 24h rule
     const startTime = new Date(booking.start_time);
@@ -209,16 +230,24 @@ export async function cancelBooking(bookingId: string) {
     }
 
     // 4. Refund credit if eligible and price > 0
-    if (shouldRefund && priceCredits > 0) {
+    let totalRefund = 0;
+    if (shouldRefund) {
         const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
 
         const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
 
-        // Only refund if NOT unlimited
-        if (profile && !isUnlimited) {
+        // Calculate refund amount
+        // If user was Unlimited, they paid 0 for themselves, so refund is only for +1 (if any)
+        // If user was NOT Unlimited, refund is for random participantsCount * priceCredits
+
+        const selfRefund = isUnlimited ? 0 : priceCredits;
+        const additionalRefund = (participantsCount - 1) * priceCredits;
+        totalRefund = selfRefund + additionalRefund;
+
+        if (profile && totalRefund > 0) {
             await supabase
                 .from('profiles')
-                .update({ credits: (profile.credits || 0) + priceCredits })
+                .update({ credits: (profile.credits || 0) + totalRefund })
                 .eq('id', user.id);
         }
     }
@@ -232,7 +261,7 @@ export async function cancelBooking(bookingId: string) {
         const { getEmailTemplate } = await import('@/utils/email-template');
 
         const refundMessage = shouldRefund
-            ? (priceCredits > 0 ? `a ${priceCredits} kr. ti bolo vrátené na účet.` : 'tento tréning bol zadarmo.')
+            ? (totalRefund > 0 ? `a ${totalRefund} kr. ti bolo vrátené na účet.` : 'tento tréning bol zadarmo.')
             : 'ale keďže je to menej ako 24h pred tréningom, <strong>vstup nebol vrátený</strong>.';
 
         const html = getEmailTemplate(

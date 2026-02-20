@@ -151,6 +151,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         date: dateObj,
                         isRegistered,
                         isIndividual, // Add flag
+                        duration: tt.duration_minutes || 60, // Default to 60 if missing
+                        level: tt.level || 'All levels',
                         occupancy: {
                             current: currentOccupancy,
                             max: maxOccupancy

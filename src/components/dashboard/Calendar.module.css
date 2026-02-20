@@ -134,13 +134,15 @@
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .container {
-        padding: 0 1rem 1rem 1rem;
+        padding: 0 0 1rem 0;
+        /* Remove side padding for full width list */
     }
 
     .header {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
+        padding: 0 1rem;
     }
 
     .monthTitle {
@@ -152,20 +154,28 @@
         display: none;
     }
 
-    /* Change Grid to Block/List */
+    /* Hide past days on mobile */
+    .pastDay {
+        display: none !important;
+    }
+
+    /* Change Grid to List */
     .grid {
-        display: block;
+        display: flex;
+        flex-direction: column;
         background: transparent;
         border: none;
-        gap: 1rem;
+        gap: 0;
     }
 
     .dayCell {
         min-height: auto;
-        border: 1px solid #e5e5e5;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        border-radius: 0;
+        margin-bottom: 0;
+        padding: 0;
+        background: transparent;
     }
 
     /* Hide empty filler days from prev/next month on mobile */
@@ -174,24 +184,157 @@
     }
 
     .dayNumber {
-        display: inline-block;
-        margin-right: 0.5rem;
-        margin-bottom: 0.5rem;
-        width: 28px;
-        height: 28px;
-        line-height: 28px;
+        display: none;
+        /* Hide standard day number in favor of mobile header */
     }
 
-    /* If a day has no events, maybe hide it or keep it small? 
-       For now, let's keep it but make it compact.
-    */
+    .mobileHeaderContainer {
+        display: block;
+        background-color: #4A403A;
+        /* Dark brown background color */
+        color: white;
+        padding: 0.5rem 1rem;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+    }
 
+    .headerDayName {
+        margin-right: 0.5rem;
+    }
+
+    .headerDate {
+        opacity: 0.8;
+    }
+
+    /* Event Styling for Mobile */
     .event {
-        font-size: 0.85rem;
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
+        margin: 0;
+        padding: 1rem;
+        border-radius: 0;
+        border-left: none;
+        /* We use internal borders or backgrounds */
+        background: white;
+        border-bottom: 1px solid #f0f0f0;
+        color: #333;
         white-space: normal;
-        /* Allow text wrap */
-        border-left-width: 4px;
+        display: block;
+    }
+
+    .event:hover {
+        background: #f9f9f9;
+        transform: none;
+        /* Disable potential transform effects */
+    }
+
+    /* Registered/Full styles override */
+    .registered,
+    .full {
+        border-left: none;
+    }
+
+    /* Hide desktop content, show mobile content */
+    .desktopEventContent {
+        display: none;
+    }
+
+    .mobileEventContent {
+        display: grid;
+        grid-template-columns: 80px 1fr auto;
+        gap: 0.5rem;
+        align-items: start;
+    }
+
+    .timeColumn {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .startTime {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1F2937;
+        line-height: 1.2;
+    }
+
+    .duration {
+        font-size: 0.8rem;
+        color: #6B7280;
+    }
+
+    .waitingList {
+        display: inline-block;
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: #DC2626;
+        font-weight: 600;
+    }
+
+    .detailsColumn {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .titleRow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .eventTitle {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #111827;
+        line-height: 1.3;
+    }
+
+    .levelBadge {
+        background-color: #FCA5A5;
+        /* Light Red/Orange */
+        color: white;
+        font-size: 0.65rem;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: 600;
+        background: #ed8936;
+        /* Orange color from screenshot roughly */
+    }
+
+    .trainerRow {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .locationRow {
+        font-size: 0.8rem;
+        color: #6B7280;
+    }
+
+    .statusIcon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+}
+
+/* Desktop styles */
+@media (min-width: 769px) {
+    .mobileHeaderContainer {
+        display: none;
+    }
+
+    .mobileEventContent {
+        display: none;
+    }
+
+    .desktopEventContent {
+        display: block;
     }
 }

@@ -19,7 +19,25 @@ interface TrainingSession {
         max: number;
     };
     isIndividual?: boolean;
+    duration?: number;
+    level?: string;
+    location?: string;
 }
+
+const MobileDateHeader = ({ date }: { date: Date }) => {
+    const dayName = date.toLocaleDateString('sk-SK', { weekday: 'long' });
+    const dateStr = date.toLocaleDateString('sk-SK', { day: 'numeric', month: 'short' }).toUpperCase();
+
+    // Capitalize first letter of day name
+    const formattedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+    return (
+        <div className={styles.mobileDateHeader}>
+            <span className={styles.headerDayName}>{formattedDayName}</span>
+            <span className={styles.headerDate}>{dateStr}</span>
+        </div>
+    );
+};
 
 interface MonthlyCalendarProps {
     currentDate: Date;
@@ -167,12 +185,28 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
 
                     const cellEvents = events.filter(e => e.date.toDateString() === cellDate.toDateString());
 
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const checkDate = new Date(cellDate);
+                    checkDate.setHours(0, 0, 0, 0);
+                    const isPastDay = checkDate < today;
+
                     return (
                         <div
                             key={idx}
                             ref={isToday(cell.day, cell.type) ? todayRef : null}
-                            className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''}`}
+                            className={`${styles.dayCell} ${cell.type !== 'current' ? styles.otherMonth : ''} ${isToday(cell.day, cell.type) ? styles.today : ''} ${isPastDay ? styles.pastDay : ''}`}
                         >
+                            {/* Mobile Header: Show only if it's the first event of the day or just once per cell if we want to mimic screenshot strictly (one header per day block) */}
+                            {/* Actually, in the screenshot, it looks like a list where headers are inserted. 
+                                Since we are iterating cells, we can put the header at top of cell if it has events.
+                                If no events, we might hide the cell on mobile? Screenshot shows contiguous days. 
+                                Let's assume we show header for every day that has events or is today.
+                            */}
+                            <div className={styles.mobileHeaderContainer}>
+                                <MobileDateHeader date={cellDate} />
+                            </div>
+
                             <span className={styles.dayNumber}>{cell.day}</span>
                             {cellEvents.map((evt, i) => {
                                 const isPast = isEventPast(evt);
@@ -235,7 +269,43 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                                     : undefined
                                         }}
                                     >
-                                        <strong>{evt.time}</strong> {evt.title}
+                                        {/* Mobile View Content */}
+                                        <div className={styles.mobileEventContent}>
+                                            <div className={styles.timeColumn}>
+                                                <span className={styles.startTime}>{evt.time}</span>
+                                                <span className={styles.duration}>{evt.duration || 60} min</span>
+                                            </div>
+                                            <div className={styles.detailsColumn}>
+                                                <div className={styles.titleRow}>
+                                                    <span className={styles.eventTitle}>{evt.title}</span>
+                                                    {evt.occupancy && (
+                                                        <span
+                                                            className={styles.levelBadge}
+                                                            style={{
+                                                                backgroundColor: evt.occupancy.current >= evt.occupancy.max ? '#FEF2F2' : '#F3F4F6',
+                                                                color: evt.occupancy.current >= evt.occupancy.max ? '#DC2626' : '#374151',
+                                                                border: evt.occupancy.current >= evt.occupancy.max ? '1px solid #FECACA' : '1px solid #E5E7EB'
+                                                            }}
+                                                        >
+                                                            Obsadenosť: {evt.occupancy.current}/{evt.occupancy.max}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className={styles.trainerRow}>
+                                                    <span className={styles.trainerName}>{evt.trainer}</span>
+                                                </div>
+                                            </div>
+                                            {evt.isRegistered && (
+                                                <div className={styles.statusIcon}>
+                                                    ✅
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Desktop View Content (Simple) */}
+                                        <div className={styles.desktopEventContent}>
+                                            <strong>{evt.time}</strong> {evt.title}
+                                        </div>
                                     </div>
                                 );
                             })}
