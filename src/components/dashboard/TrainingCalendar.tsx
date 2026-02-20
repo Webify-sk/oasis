@@ -317,7 +317,7 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
                         >
                             <span>Ja + 1</span>
                             <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                                ({isUnlimited ? `${session.priceCredits} kredit` : `${session.priceCredits * 2} kreditov`})
+                                ({isUnlimited ? `${session.priceCredits} kredit` : `${session.priceCredits * 2} kredity`})
                             </span>
                         </Button>
                     </div>

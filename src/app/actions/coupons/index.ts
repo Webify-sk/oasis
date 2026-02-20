@@ -34,12 +34,36 @@ export async function validateCouponAction(code: string, packagePrice: number) {
             return { error: 'Tento kupón bol deaktivovaný administrátorom.' };
         }
 
-        if (coupon.used) {
-            return { error: 'Tento kupón už bol uplatnený.' };
-        }
+        const isUniversal = coupon.target_user_id === null;
 
-        if (coupon.target_user_id !== user.id) {
-            return { error: 'Tento kupón nie je určený pre Váš účet.' };
+        if (isUniversal) {
+            const now = new Date();
+            if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+                return { error: 'Tento kupón ešte nie je platný.' };
+            }
+            if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+                return { error: 'Platnosť tohto kupónu už vypršala.' };
+            }
+
+            // Check if user already used this universal coupon
+            const { data: usage } = await supabase
+                .from('coupon_usages')
+                .select('id')
+                .eq('coupon_id', coupon.id)
+                .eq('user_id', user.id)
+                .single();
+
+            if (usage) {
+                return { error: 'Tento kupón ste už uplatnili.' };
+            }
+        } else {
+            if (coupon.used) {
+                return { error: 'Tento kupón už bol uplatnený.' };
+            }
+
+            if (coupon.target_user_id !== user.id) {
+                return { error: 'Tento kupón nie je určený pre Váš účet.' };
+            }
         }
 
         // Calculate new price

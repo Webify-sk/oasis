@@ -265,3 +265,113 @@ export async function updateVoucherProduct(formData: FormData) {
     return { success: true, message: 'Produkt aktualizovaný.' };
 }
 
+export async function verifyDashboardCode(code: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['admin', 'employee'].includes(profile?.role)) {
+        return { success: false, message: 'Unauthorized access' };
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+
+    // 1. Check if it's a gift voucher
+    const { data: voucher } = await supabase
+        .from('vouchers')
+        .select(`
+            *,
+            voucher_products (
+                title,
+                category,
+                price
+            )
+        `)
+        .eq('code', cleanCode)
+        .single();
+
+    if (voucher) {
+        return {
+            success: true,
+            data: {
+                type: 'voucher',
+                code: voucher.code,
+                is_redeemed: voucher.status === 'redeemed',
+                redeemed_at: voucher.updated_at,
+                product: voucher.voucher_products,
+                created_at: voucher.created_at
+            }
+        };
+    }
+
+    // 2. Check if it's a discount coupon
+    const { data: coupon } = await supabase
+        .from('discount_coupons')
+        .select('*')
+        .eq('code', cleanCode)
+        .single();
+
+    if (coupon) {
+        // Calculate if it's valid based on dates
+        const now = new Date();
+        const validFromDate = coupon.valid_from ? new Date(coupon.valid_from) : null;
+        const validUntilDate = coupon.valid_until ? new Date(coupon.valid_until) : null;
+
+        let isValidByDate = true;
+        if (validFromDate && now < validFromDate) isValidByDate = false;
+        if (validUntilDate && now > validUntilDate) isValidByDate = false;
+
+        const isFullyValid = coupon.active && !coupon.used && isValidByDate;
+
+        return {
+            success: true,
+            data: {
+                type: 'coupon',
+                id: coupon.id,
+                code: coupon.code,
+                discount_type: coupon.discount_type,
+                discount_value: coupon.discount_value,
+                active: coupon.active,
+                used: coupon.used,
+                valid_from: coupon.valid_from,
+                valid_until: coupon.valid_until,
+                target_user_id: coupon.target_user_id,
+                usage_limit: coupon.usage_limit,
+                is_valid: isFullyValid,
+                created_at: coupon.created_at
+            }
+        };
+    }
+
+    return { success: false, message: 'Kód alebo voucher sa nenašiel.' };
+}
+
+export async function invalidateDiscountCoupon(code: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['admin', 'employee'].includes(profile?.role)) {
+        return { success: false, message: 'Unauthorized access' };
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+
+    const { error: updateError } = await supabase
+        .from('discount_coupons')
+        .update({ active: false })
+        .eq('code', cleanCode);
+
+    if (updateError) {
+        return { success: false, message: 'Nepodarilo sa zmeniť stav kupónu.' };
+    }
+
+    // Revalidate relevant pages if needed
+    // revalidatePath('/dashboard');
+    return { success: true, message: 'Kupón bol úspešne zneaktívnený.' };
+}
+

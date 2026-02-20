@@ -128,3 +128,109 @@ export async function generateCouponsAction({ discountType, discountValue, targe
         return { error: 'Nastala chyba pri generovaní kupónov.' };
     }
 }
+
+export async function toggleCouponStatusAction(couponId: string, isActive: boolean) {
+    const supabase = await createClient();
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { error: 'Nie ste prihlásený.' };
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile || (profile.role !== 'admin' && profile.role !== 'employee')) {
+            return { error: 'Nemáte oprávnenie na túto akciu.' };
+        }
+
+        const { error: updateError } = await supabase
+            .from('discount_coupons')
+            .update({ active: isActive })
+            .eq('id', couponId);
+
+        if (updateError) {
+            console.error('Error updating coupon status:', updateError);
+            return { error: 'Nepodarilo sa zmeniť stav kupónu.' };
+        }
+
+        revalidatePath('/admin/coupons');
+        return { success: true };
+    } catch (error) {
+        console.error('Error updating coupon status:', error);
+        return { error: 'Nastala chyba pri zmene stavu kupónu.' };
+    }
+}
+
+interface CreateUniversalCouponParams {
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    validFrom: string;
+    validUntil: string;
+}
+
+export async function createUniversalCouponAction({ code, discountType, discountValue, validFrom, validUntil }: CreateUniversalCouponParams) {
+    const supabase = await createClient();
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return { error: 'Nie ste prihlásený.' };
+        }
+
+        // Verify admin/employee role
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile || (profile.role !== 'admin' && profile.role !== 'employee')) {
+            return { error: 'Nemáte oprávnenie na túto akciu.' };
+        }
+
+        if (!code || code.trim() === '') {
+            return { error: 'Zadajte kód kupónu.' };
+        }
+
+        const cleanCode = code.trim().toUpperCase();
+
+        const couponData = {
+            code: cleanCode,
+            discount_type: discountType,
+            discount_value: discountValue,
+            target_user_id: null,
+            created_by: user.id,
+            valid_from: new Date(validFrom).toISOString(),
+            valid_until: new Date(validUntil).toISOString(),
+            active: true,
+            used: false
+        };
+
+        const { error: insertError } = await supabase
+            .from('discount_coupons')
+            .insert([couponData]);
+
+        if (insertError) {
+            console.error('Error inserting universal coupon:', insertError);
+            if (insertError.code === '23505') { // unique violation
+                return { error: 'Kupón s týmto kódom už existuje.' };
+            }
+            return { error: `Nepodarilo sa vytvoriť univerzálny kupón: ${insertError.message}` };
+        }
+
+        revalidatePath('/admin/coupons');
+        return { success: true };
+
+    } catch (error: any) {
+        console.error('Error generating universal coupon:', error);
+        return { error: 'Nastala chyba pri generovaní kupónu.' };
+    }
+}

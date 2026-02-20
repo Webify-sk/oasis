@@ -52,6 +52,7 @@ export async function createCheckoutSession(
 
         let finalPrice = creditPackage.price;
         let appliedCouponId = null;
+        let isUniversalCoupon = false;
 
         // Validating and applying coupon
         if (couponCode) {
@@ -62,7 +63,27 @@ export async function createCheckoutSession(
                 .eq('code', cleanCode)
                 .single();
 
-            if (!couponError && coupon && coupon.active && !coupon.used && coupon.target_user_id === user.id) {
+            let isValid = false;
+
+            if (!couponError && coupon && coupon.active) {
+                if (coupon.target_user_id === null) {
+                    // Universal coupon logic
+                    const now = new Date();
+                    const isStarted = !coupon.valid_from || new Date(coupon.valid_from) <= now;
+                    const isNotExpired = !coupon.valid_until || new Date(coupon.valid_until) >= now;
+
+                    if (isStarted && isNotExpired) {
+                        isValid = true;
+                    }
+                } else {
+                    // Personal coupon logic
+                    if (!coupon.used && coupon.target_user_id === user.id) {
+                        isValid = true;
+                    }
+                }
+            }
+
+            if (isValid && coupon) {
                 if (coupon.discount_type === 'percentage') {
                     finalPrice = finalPrice - (finalPrice * (coupon.discount_value / 100));
                 } else if (coupon.discount_type === 'fixed') {
@@ -71,6 +92,7 @@ export async function createCheckoutSession(
 
                 if (finalPrice < 0) finalPrice = 0;
                 appliedCouponId = coupon.id;
+                isUniversalCoupon = coupon.target_user_id === null;
             } else {
                 return { error: 'Neplatný alebo už použitý kupón.' };
             }
@@ -89,11 +111,28 @@ export async function createCheckoutSession(
         // Ak je cena po zľave 0 (100% zľava), nevyžadujeme Stripe Checkout.
         // Priamo pripíšeme kredity a označíme kupón ako použitý
         if (amount === 0) {
-            // Update coupon as used
-            await supabase
-                .from('discount_coupons')
-                .update({ used: true, used_at: new Date().toISOString() })
-                .eq('id', appliedCouponId);
+            // Update coupon usage
+            if (isUniversalCoupon) {
+                // RPC is cleaner but we can just do raw lookup or let webhook handle. Here we must do client logic since it's immediate.
+                // We'll increment usage_count. Currently, RLS might not let user increment usage_count easily so we use an RPC, 
+                // but since we updated RLS FOR UPDATE using (target_user_id IS NULL), we can fetch and increment.
+                // Note: RLS might restrict it if we don't have atomic update. For now, since user can UPDATE:
+                const { data: currentCoupon } = await supabase.from('discount_coupons').select('usage_count').eq('id', appliedCouponId).single();
+                await supabase
+                    .from('discount_coupons')
+                    .update({ usage_count: (currentCoupon?.usage_count || 0) + 1 })
+                    .eq('id', appliedCouponId);
+
+                // Zaznamenať použitie kupónu pre tohto používateľa, aby ho nemohol použiť znova
+                await supabase
+                    .from('coupon_usages')
+                    .insert({ coupon_id: appliedCouponId, user_id: user.id });
+            } else {
+                await supabase
+                    .from('discount_coupons')
+                    .update({ used: true, used_at: new Date().toISOString() })
+                    .eq('id', appliedCouponId);
+            }
 
             // Log purchase
             await supabase

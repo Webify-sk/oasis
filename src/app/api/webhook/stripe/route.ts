@@ -333,13 +333,41 @@ export async function POST(req: Request) {
 
             // UPLATNENIE KUPÓNU (ak bol nejaký pri platbe použitý)
             if (appliedCouponId) {
-                const { error: couponUpdateError } = await supabase
+                const { data: currentCoupon } = await supabase
                     .from('discount_coupons')
-                    .update({ used: true, used_at: new Date().toISOString() })
-                    .eq('id', appliedCouponId);
+                    .select('target_user_id, usage_count')
+                    .eq('id', appliedCouponId)
+                    .single();
 
-                if (couponUpdateError) {
-                    console.error('Error marking coupon as used in webhook:', couponUpdateError);
+                if (currentCoupon) {
+                    if (currentCoupon.target_user_id === null) {
+                        // Universal coupon - increment usage
+                        const { error: couponUpdateError } = await supabase
+                            .from('discount_coupons')
+                            .update({ usage_count: (currentCoupon.usage_count || 0) + 1 })
+                            .eq('id', appliedCouponId);
+
+                        // Zaznamenať použitie kupónu pre tohto používateľa (ak je k dispozícii userId z metadata)
+                        if (userId) {
+                            await supabase
+                                .from('coupon_usages')
+                                .insert({ coupon_id: appliedCouponId, user_id: userId });
+                        }
+
+                        if (couponUpdateError) {
+                            console.error('Error incrementing usage for universal coupon in webhook:', couponUpdateError);
+                        }
+                    } else {
+                        // Personal coupon - mark used
+                        const { error: couponUpdateError } = await supabase
+                            .from('discount_coupons')
+                            .update({ used: true, used_at: new Date().toISOString() })
+                            .eq('id', appliedCouponId);
+
+                        if (couponUpdateError) {
+                            console.error('Error marking coupon as used in webhook:', couponUpdateError);
+                        }
+                    }
                 }
             }
 
