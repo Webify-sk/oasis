@@ -90,22 +90,32 @@ export async function generateCouponsAction({ discountType, discountValue, targe
                 : `${discountValue} €`;
 
             const emailHtml = getEmailTemplate(
-                'Získali ste zľavový kupón!',
+                'Prekvapenie z Oasis Open Day ✨',
                 `
-                    <p>Dobrý deň ${u.full_name || ''},</p>
-                    <p>Získali ste exkluzívny zľavový kupón na nákup kreditov v Oasis Lounge vo výške <strong>${discountText}</strong>.</p>
+                    <p>Ahoj,</p>
+                    <p>ďakujeme, že si bola súčasťou nášho Open Day ✨<br/>
+                    Tvoja prítomnosť pre nás znamenala viac, než si myslíš.</p>
+
+                    <p>A preto máme pre teba niečo špeciálne &ndash;<br/>
+                    <strong>20 % zľavu</strong> na všetky kozmetické a telové ošetrenia.</p>
+
+                    <p>Je čas dopriať si starostlivosť, ktorú si si možno odkladala.<br/>
+                    Je čas cítiť sa ešte krajšie, oddýchnutejšie a sebavedomejšie.</p>
                     
                     <div style="background-color: #f9f9f9; border-left: 4px solid #93745F; padding: 20px; margin: 30px 0; text-align: center;">
-                        <span style="font-size: 14px; color: #6b7280; text-transform: uppercase;">Váš unikátny kód</span><br/>
+                        <span style="font-size: 14px; color: #6b7280; text-transform: uppercase;">Tvoj unikátny kód</span><br/>
                         <span style="font-size: 28px; font-weight: bold; font-family: monospace; color: #111827; letter-spacing: 2px;">${userCoupon.code}</span>
                     </div>
 
-                    <p><strong>Ako si uplatním zľavu?</strong><br/>
-                    Stačí sa prihlásiť do Vášho profilu, prejsť do sekcie Kredit, a pri kúpe balíčka zadať tento kód do poľa pre zľavový kód.</p>
+                    <p>Zľava je určená exkluzívne pre účastníčky Open Day, preto si svoj termín rezervuj čo najskôr.</p>
+
+                    <p>Tešíme sa na tvoju ďalšiu návštevu a na chvíle, ktoré budú patriť len tebe 💫</p>
+
+                    <p>S láskou,<br/>Laura &amp; Leona</p>
 
                     <p style="margin-top: 30px;">
-                        <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/credit" class="button" style="display: inline-block; background-color: #93745F; color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                            Prejsť na nákup
+                        <a href="https://www.oasislounge.sk/" class="button" style="display: inline-block; background-color: #93745F; color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                            Rezervovať termín
                         </a>
                     </p>
                 `
@@ -113,7 +123,7 @@ export async function generateCouponsAction({ discountType, discountValue, targe
 
             return sendEmail({
                 to: u.email,
-                subject: '🎁 Získali ste zľavový kupón do Oasis Lounge',
+                subject: '✨ Tvoj darček z Oasis Open Day',
                 html: emailHtml
             });
         });
