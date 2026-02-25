@@ -16,24 +16,45 @@ function ResetPasswordForm() {
     const supabase = createClient();
 
     useEffect(() => {
-        // check if we already have a session (e.g. from persistent storage or immediate hash parse)
+        let isMounted = true;
+
         const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (isMounted && session) {
                 console.log('Initial session found');
                 setSessionReady(true);
+            } else if (isMounted) {
+                // Sometimes the session is already there but took a moment or we are waiting for the hash
+                // If there's an error or no session immediately, we still wait for onAuthStateChange
+                console.log('No immediate session, waiting for auth state change or hash processing...');
             }
         };
+
         checkSession();
 
-        // Listen for changes
+        // Listen for changes (this fires when the URL hash is processed by Supabase)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth Event:', event);
-            if (session) {
+            if (isMounted && session) {
                 setSessionReady(true);
             }
         });
-        return () => subscription.unsubscribe();
+
+        // Fallback: If after 3 seconds we still don't have a session, maybe the user is already logged in 
+        // or the link was invalid. We'll enable the form anyway and let the submission fail with a clear error
+        // if they really don't have a session, rather than locking them out forever.
+        // Actually, for recovery, we MUST have a session.
+        const timeoutId = setTimeout(() => {
+            if (isMounted) {
+                setSessionReady(true); // Allow them to try, better than indefinite hang
+            }
+        }, 3000);
+
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+            clearTimeout(timeoutId);
+        };
     }, [supabase]);
 
     const handleSubmit = async (e: React.FormEvent) => {
