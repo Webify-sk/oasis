@@ -128,9 +128,9 @@ export function VacationManager() {
                                 <Calendar size={16} color="#4A403A" />
                                 <span style={{ fontWeight: 600, color: '#4A403A' }}>
                                     {/* Display as UTC to match the stored "Face Value" */}
-                                    {new Date(vacation.start_time).toLocaleDateString('sk-SK', { timeZone: 'UTC' })} {new Date(vacation.start_time).toLocaleTimeString('sk-SK', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(vacation.start_time).toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava' })} {new Date(vacation.start_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                     {' - '}
-                                    {new Date(vacation.end_time).toLocaleDateString('sk-SK', { timeZone: 'UTC' })} {new Date(vacation.end_time).toLocaleTimeString('sk-SK', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(vacation.end_time).toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava' })} {new Date(vacation.end_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                             {vacation.description && (

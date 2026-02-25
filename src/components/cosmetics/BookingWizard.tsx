@@ -5,6 +5,7 @@ import { getCosmeticServices, getEmployees, getEmployeesForService, getAvailable
 import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, User, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useVerification } from '@/components/auth/VerificationContext';
+import { Calendar } from '@/components/ui/Calendar';
 
 interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; }
 interface Employee { id: string; name: string; color: string; }
@@ -30,7 +31,6 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [selectedHour, setSelectedHour] = useState<string | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
     // Initial Fetch
@@ -58,7 +58,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
             getEmployeesForService(selectedService.id).then(data => {
                 const fetchedEmployees = data as Employee[];
                 if (fetchedEmployees.length > 1) {
-                    setAllEmployees([{ id: 'any', name: 'Nezáleží (Priradí systém)', color: '#9ca3af' }, ...fetchedEmployees]);
+                    setAllEmployees([{ id: 'any', name: 'Nezáleží', color: '#9ca3af' }, ...fetchedEmployees]);
                 } else {
                     setAllEmployees(fetchedEmployees);
                 }
@@ -85,7 +85,6 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
 
     const handleDateChange = async (date: string) => {
         setSelectedDate(date);
-        setSelectedHour(null);
         setSelectedTime(null);
         if (selectedEmployee && selectedService) {
             setLoading(true);
@@ -148,13 +147,17 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
         setLoading(false);
     };
 
-    // Helper for grouping slots by hour
-    const slotsByHour = slots.reduce((acc, slot) => {
-        const hour = slot.split(':')[0];
-        if (!acc[hour]) acc[hour] = [];
-        acc[hour].push(slot);
-        return acc;
-    }, {} as Record<string, string[]>);
+    // Helper for grouping slots by Morning (< 12:00) and Afternoon (>= 12:00)
+    const slotsByHour = {
+        morning: slots.filter(slot => {
+            const hour = parseInt(slot.split(':')[0], 10);
+            return hour < 12;
+        }),
+        afternoon: slots.filter(slot => {
+            const hour = parseInt(slot.split(':')[0], 10);
+            return hour >= 12;
+        })
+    };
 
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
@@ -328,73 +331,82 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                     </button>
                     <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte termín</h2>
 
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Dátum</label>
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => handleDateChange(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]} // Disable past dates
-                            style={{ width: '100%', padding: '0.8rem', borderRadius: '6px', border: '1px solid #ddd' }}
-                        />
-                    </div>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2rem',
+                        marginBottom: '2rem',
+                        alignItems: 'center'
+                    }}>
+                        {/* Left Side: Calendar */}
+                        <div>
+                            <Calendar
+                                selectedDate={selectedDate}
+                                onDateSelect={handleDateChange}
+                                minDate={new Date().toISOString().split('T')[0]}
+                            />
+                        </div>
 
-                    <div style={{ marginBottom: '2rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Dostupné časy</label>
-                        {loading ? (
-                            <p style={{ color: '#888' }}>Načítavam...</p>
-                        ) : slots.length > 0 ? (
-                            selectedHour === null ? (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.8rem' }}>
-                                    {Object.keys(slotsByHour).map(hour => (
-                                        <button
-                                            key={hour}
-                                            onClick={() => setSelectedHour(hour)}
-                                            style={{
-                                                padding: '1rem 0.5rem',
-                                                borderRadius: '6px',
-                                                border: '1px solid #ddd',
-                                                backgroundColor: 'white',
-                                                color: '#333',
-                                                cursor: 'pointer',
-                                                fontWeight: 'bold',
-                                                fontSize: '1.1rem'
-                                            }}
-                                        >
-                                            {hour}:00
-                                        </button>
-                                    ))}
+                        {/* Bottom: Grouped Slots */}
+                        <div style={{ width: '100%' }}>
+                            {loading ? (
+                                <p style={{ color: '#888' }}>Načítavam...</p>
+                            ) : slots.length > 0 ? (
+                                <div>
+                                    {slotsByHour.morning.length > 0 && (
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <h3 style={{ fontSize: '1rem', color: '#666', marginBottom: '1rem', textTransform: 'uppercase' }}>Doobeda</h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
+                                                {slotsByHour.morning.map(time => (
+                                                    <button
+                                                        key={time}
+                                                        onClick={() => setSelectedTime(time)}
+                                                        style={{
+                                                            padding: '0.6rem',
+                                                            borderRadius: '6px',
+                                                            border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
+                                                            backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
+                                                            color: selectedTime === time ? '#1e7e34' : '#333',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        {time}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {slotsByHour.afternoon.length > 0 && (
+                                        <div>
+                                            <h3 style={{ fontSize: '1rem', color: '#666', marginBottom: '1rem', textTransform: 'uppercase' }}>Poobede</h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
+                                                {slotsByHour.afternoon.map(time => (
+                                                    <button
+                                                        key={time}
+                                                        onClick={() => setSelectedTime(time)}
+                                                        style={{
+                                                            padding: '0.6rem',
+                                                            borderRadius: '6px',
+                                                            border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
+                                                            backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
+                                                            color: selectedTime === time ? '#1e7e34' : '#333',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        {time}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <div>
-                                    <button onClick={() => setSelectedHour(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666', fontSize: '0.9rem' }}>
-                                        <ChevronLeft size={14} /> Späť na hodiny
-                                    </button>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
-                                        {slotsByHour[selectedHour].map(time => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                style={{
-                                                    padding: '0.6rem',
-                                                    borderRadius: '6px',
-                                                    border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
-                                                    backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
-                                                    color: selectedTime === time ? '#1e7e34' : '#333',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )
-                        ) : (
-                            <p style={{ color: '#d93025', backgroundColor: '#fff0f0', padding: '1rem', borderRadius: '6px' }}>
-                                Pre tento deň nie sú dostupné žiadne termíny. Skúste iný deň.
-                            </p>
-                        )}
+                                <p style={{ color: '#d93025', backgroundColor: '#fff0f0', padding: '1rem', borderRadius: '6px' }}>
+                                    Pre tento deň nie sú dostupné žiadne termíny. Skúste iný deň.
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     <button

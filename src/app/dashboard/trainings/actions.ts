@@ -147,6 +147,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
 
     revalidatePath('/dashboard/trainings');
     revalidatePath('/admin/trainings'); // Refresh admin view too
+    revalidatePath('/dashboard');
 
     // Send Booking Confirmation Email
     try {
@@ -249,6 +250,7 @@ export async function cancelBooking(bookingId: string) {
 
     revalidatePath('/dashboard/trainings');
     revalidatePath('/admin/trainings');
+    revalidatePath('/dashboard');
 
     // 5. Send Cancellation Email
     try {

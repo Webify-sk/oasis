@@ -843,6 +843,7 @@ export async function createAppointment(data: {
     }
 
     revalidatePath('/dashboard/cosmetics/appointments')
+    revalidatePath('/dashboard')
     return { success: true }
 }
 
@@ -984,6 +985,7 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
     }
 
     revalidatePath('/dashboard/cosmetics/appointments')
+    revalidatePath('/dashboard')
     return { success: true }
 }
 
@@ -1061,6 +1063,7 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     }
 
     revalidatePath('/dashboard/cosmetics/appointments')
+    revalidatePath('/dashboard')
     return { success: true }
 }
 
@@ -1434,6 +1437,7 @@ export async function cancelAppointment(id: string) {
     }
 
     revalidatePath('/dashboard/cosmetics/appointments')
+    revalidatePath('/dashboard')
     return { success: true }
 }
 
@@ -1606,6 +1610,7 @@ export async function createManualReservation(prevState: any, formData: FormData
     }
 
     revalidatePath('/dashboard/cosmetics/appointments');
+    revalidatePath('/dashboard');
     return { success: true, message: 'Rezervácia bola úspešne vytvorená.' };
 }
 

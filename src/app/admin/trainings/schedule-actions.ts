@@ -58,6 +58,7 @@ export async function toggleSessionIndividual(
     revalidatePath('/admin/trainings');
     revalidatePath(`/admin/trainings/${trainingTypeId}`);
     revalidatePath('/dashboard/trainings');
+    revalidatePath('/dashboard');
 
     return { success: true };
 }
