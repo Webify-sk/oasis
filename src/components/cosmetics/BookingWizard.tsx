@@ -25,6 +25,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [employees, setEmployees] = useState<Employee[]>([]); // Filtered via logic ideally, or fetch all and filter client side
     const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
     const [slots, setSlots] = useState<string[]>([]);
+    const [availableDates, setAvailableDates] = useState<string[]>([]);
 
     // Selection
     const [selectedCategory, setSelectedCategory] = useState<'beauty' | 'body' | null>(null);
@@ -32,6 +33,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    const [isMorningOpen, setIsMorningOpen] = useState(false);
+    const [isAfternoonOpen, setIsAfternoonOpen] = useState(false);
 
     // Initial Fetch
     useEffect(() => {
@@ -86,6 +89,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const handleDateChange = async (date: string) => {
         setSelectedDate(date);
         setSelectedTime(null);
+        setIsMorningOpen(false);
+        setIsAfternoonOpen(false);
         if (selectedEmployee && selectedService) {
             setLoading(true);
 
@@ -116,8 +121,28 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     useEffect(() => {
         if (step === 4 && selectedEmployee && selectedService) {
             handleDateChange(selectedDate);
+
+            // Initial month fetch for availability highlights
+            const d = new Date(selectedDate);
+            handleMonthChange(d.getFullYear(), d.getMonth() + 1);
         }
     }, [step, selectedEmployee, selectedDate]);
+
+    const handleMonthChange = async (year: number, month: number) => {
+        if (!selectedEmployee || !selectedService) return;
+
+        try {
+            const action = selectedEmployee.id === 'any'
+                ? (await import('@/actions/cosmetic-actions')).getAvailableDaysInMonthAnyEmployee
+                : (await import('@/actions/cosmetic-actions')).getAvailableDaysInMonth;
+
+            const dates = await action(selectedEmployee.id, selectedService.id, year, month);
+            setAvailableDates(dates);
+        } catch (error) {
+            console.error('Failed to fetch available dates for month:', error);
+            setAvailableDates([]);
+        }
+    };
 
     const handleConfirm = async () => {
         if (!selectedService || !selectedEmployee || !selectedTime) return;
@@ -191,7 +216,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                             ⚠️ Pre rezerváciu termínu musíte mať overený email. Prosím skontrolujte si emailovú schránku.
                         </div>
                     )}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
                         <div
                             onClick={() => handleCategorySelect('beauty')}
                             style={{
@@ -344,6 +369,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                                 selectedDate={selectedDate}
                                 onDateSelect={handleDateChange}
                                 minDate={new Date().toISOString().split('T')[0]}
+                                availableDates={availableDates}
+                                onMonthChange={handleMonthChange}
                             />
                         </div>
 
@@ -354,50 +381,92 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                             ) : slots.length > 0 ? (
                                 <div>
                                     {slotsByHour.morning.length > 0 && (
-                                        <div style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1rem', color: '#666', marginBottom: '1rem', textTransform: 'uppercase' }}>Doobeda</h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
-                                                {slotsByHour.morning.map(time => (
-                                                    <button
-                                                        key={time}
-                                                        onClick={() => setSelectedTime(time)}
-                                                        style={{
-                                                            padding: '0.6rem',
-                                                            borderRadius: '6px',
-                                                            border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
-                                                            backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
-                                                            color: selectedTime === time ? '#1e7e34' : '#333',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        {time}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <div style={{ marginBottom: '1.5rem', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <button
+                                                onClick={() => setIsMorningOpen(!isMorningOpen)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '1rem',
+                                                    backgroundColor: '#f9f9f9',
+                                                    border: 'none',
+                                                    borderBottom: isMorningOpen ? '1px solid #ddd' : 'none',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1.1rem',
+                                                    color: '#333'
+                                                }}
+                                            >
+                                                DOOBEDA
+                                                <span style={{ transform: isMorningOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                                            </button>
+                                            {isMorningOpen && (
+                                                <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem', backgroundColor: 'white' }}>
+                                                    {slotsByHour.morning.map(time => (
+                                                        <button
+                                                            key={time}
+                                                            onClick={() => setSelectedTime(time)}
+                                                            style={{
+                                                                padding: '0.6rem',
+                                                                borderRadius: '6px',
+                                                                border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
+                                                                backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
+                                                                color: selectedTime === time ? '#1e7e34' : '#333',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {time}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
                                     {slotsByHour.afternoon.length > 0 && (
-                                        <div>
-                                            <h3 style={{ fontSize: '1rem', color: '#666', marginBottom: '1rem', textTransform: 'uppercase' }}>Poobede</h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
-                                                {slotsByHour.afternoon.map(time => (
-                                                    <button
-                                                        key={time}
-                                                        onClick={() => setSelectedTime(time)}
-                                                        style={{
-                                                            padding: '0.6rem',
-                                                            borderRadius: '6px',
-                                                            border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
-                                                            backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
-                                                            color: selectedTime === time ? '#1e7e34' : '#333',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        {time}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <div style={{ marginBottom: '1.5rem', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <button
+                                                onClick={() => setIsAfternoonOpen(!isAfternoonOpen)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '1rem',
+                                                    backgroundColor: '#f9f9f9',
+                                                    border: 'none',
+                                                    borderBottom: isAfternoonOpen ? '1px solid #ddd' : 'none',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1.1rem',
+                                                    color: '#333'
+                                                }}
+                                            >
+                                                POOBEDE
+                                                <span style={{ transform: isAfternoonOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                                            </button>
+                                            {isAfternoonOpen && (
+                                                <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem', backgroundColor: 'white' }}>
+                                                    {slotsByHour.afternoon.map(time => (
+                                                        <button
+                                                            key={time}
+                                                            onClick={() => setSelectedTime(time)}
+                                                            style={{
+                                                                padding: '0.6rem',
+                                                                borderRadius: '6px',
+                                                                border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
+                                                                backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
+                                                                color: selectedTime === time ? '#1e7e34' : '#333',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {time}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

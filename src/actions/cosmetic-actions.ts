@@ -719,7 +719,23 @@ export async function createAppointment(data: {
         return { error: `Na tento termín sa už nedá objednať. (Deadline: ${deadlineMsg} vopred)` };
     }
 
-    // TODO: Verify availability again before inserting (Race condition check)
+    // Verify availability again before inserting (Race condition check)
+    const { data: overlappingAppointments, error: conflictError } = await supabase
+        .from('cosmetic_appointments')
+        .select('id')
+        .eq('employee_id', data.employee_id)
+        .lt('start_time', data.end_time)
+        .gt('end_time', data.start_time)
+        .neq('status', 'cancelled');
+
+    if (conflictError) {
+        console.error('Error checking for conflicting appointments:', conflictError);
+        return { error: 'Nastala chyba pri overovaní dostupnosti termínu. Prosím, skúste to znova.' };
+    }
+
+    if (overlappingAppointments && overlappingAppointments.length > 0) {
+        return { error: 'Tento termín už bol bohužiaľ obsadený iným zákazníkom. Prosím, vyberte si iný termín.' };
+    }
 
     const { error } = await supabase
         .from('cosmetic_appointments')
@@ -1086,6 +1102,147 @@ export async function deleteEmployee(id: string) {
 }
 
 // --- Slot Calculation Logic ---
+
+export async function getAvailableDaysInMonth(employeeId: string, serviceId: string, year: number, month: number) {
+    const supabase = await createClient();
+
+    // 1. Get Service Duration
+    const { data: service } = await supabase
+        .from('cosmetic_services')
+        .select('duration_minutes')
+        .eq('id', serviceId)
+        .single();
+
+    if (!service) return [];
+    const duration = service.duration_minutes;
+
+    const startDateObj = new Date(year, month - 1, 1);
+    const endDateObj = new Date(year, month, 0);
+
+    const startStr = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endStr = `${year}-${String(month).padStart(2, '0')}-${String(endDateObj.getDate()).padStart(2, '0')}`;
+
+    const { data: exceptions } = await supabase
+        .from('employee_availability_exceptions')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .gte('exception_date', startStr)
+        .lte('exception_date', endStr);
+
+    const { data: regularAvailability } = await supabase
+        .from('employee_availability')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('is_recurring', true)
+        .eq('is_available', true);
+
+    const searchStart = new Date(startDateObj.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const searchEnd = new Date(endDateObj.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+    const { data: appointments } = await supabase
+        .from('cosmetic_appointments')
+        .select('start_time, end_time')
+        .eq('employee_id', employeeId)
+        .gte('start_time', searchStart)
+        .lte('start_time', searchEnd)
+        .filter('status', 'neq', 'cancelled');
+
+    const { getRealUtcDate } = await import('@/utils/booking-logic');
+
+    const daysInMonth = endDateObj.getDate();
+    const availableDates: string[] = [];
+    const nowLocal = new Date();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        const currentDateObj = new Date(year, month - 1, day);
+        if (currentDateObj < new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate())) {
+            continue;
+        }
+
+        const activeSlots = [];
+        const dayExceptions = exceptions?.filter(e => e.exception_date === dateStr) || [];
+
+        if (dayExceptions.length > 0) {
+            const available = dayExceptions.filter(e => e.is_available);
+            if (available.length > 0) {
+                activeSlots.push(...available.map(e => ({ start_time: e.start_time, end_time: e.end_time })));
+            }
+        } else {
+            const dayOfWeek = currentDateObj.getDay();
+            const regularSlots = regularAvailability?.filter(r => r.day_of_week === dayOfWeek) || [];
+            if (regularSlots.length > 0) {
+                activeSlots.push(...regularSlots.map(s => ({ start_time: s.start_time, end_time: s.end_time })));
+            }
+        }
+
+        if (activeSlots.length === 0) continue;
+
+        let hasAvailableSlot = false;
+
+        for (const range of activeSlots) {
+            if (!range.start_time || !range.end_time || hasAvailableSlot) break;
+
+            const [startH, startM] = range.start_time.split(':').map(Number);
+            const [endH, endM] = range.end_time.split(':').map(Number);
+
+            let currentMinutes = startH * 60 + startM;
+            const endMinutes = endH * 60 + endM;
+
+            while (currentMinutes + duration <= endMinutes) {
+                const hStr = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+                const mStr = (currentMinutes % 60).toString().padStart(2, '0');
+                const slotLocalTimeStr = `${hStr}:${mStr}`;
+
+                const slotStartUTC = getRealUtcDate(`${dateStr}T${slotLocalTimeStr}:00`);
+                const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60000);
+
+                const isCollision = appointments?.some(app => {
+                    const appStart = new Date(app.start_time);
+                    const appEnd = new Date(app.end_time);
+                    return (slotStartUTC < appEnd && slotEndUTC > appStart);
+                });
+
+                if (!isCollision) {
+                    const { allowed } = isBookingAllowed(slotStartUTC);
+                    if (allowed) {
+                        hasAvailableSlot = true;
+                        break;
+                    }
+                }
+                currentMinutes += 10;
+            }
+        }
+
+        if (hasAvailableSlot) {
+            availableDates.push(dateStr);
+        }
+    }
+
+    return availableDates;
+}
+
+export async function getAvailableDaysInMonthAnyEmployee(employeeId: string, serviceId: string, year: number, month: number) {
+    const supabase = await createClient();
+
+    // Get all active employees for this service
+    const { data: employeeIds } = await supabase
+        .from('employee_services')
+        .select('employee_id, employees!inner(is_active)')
+        .eq('service_id', serviceId)
+        .eq('employees.is_active', true);
+
+    if (!employeeIds || employeeIds.length === 0) return [];
+
+    const allPromises = employeeIds.map(emp => getAvailableDaysInMonth(emp.employee_id, serviceId, year, month));
+    const results = await Promise.all(allPromises);
+
+    const uniqueDates = new Set<string>();
+    results.forEach(dates => dates.forEach(d => uniqueDates.add(d)));
+
+    return Array.from(uniqueDates).sort();
+}
 
 export async function getAvailableSlots(employeeId: string, serviceId: string, date: string) {
     // date format: 'YYYY-MM-DD'

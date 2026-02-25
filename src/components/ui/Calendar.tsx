@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     format,
@@ -20,15 +20,23 @@ interface CalendarProps {
     selectedDate: string;
     onDateSelect: (date: string) => void;
     minDate?: string;
+    availableDates?: string[];
+    onMonthChange?: (year: number, month: number) => void;
 }
 
-export function Calendar({ selectedDate, onDateSelect, minDate }: CalendarProps) {
+export function Calendar({ selectedDate, onDateSelect, minDate, availableDates = [], onMonthChange }: CalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(
         selectedDate ? new Date(selectedDate) : new Date()
     );
 
     const selectedDateObj = selectedDate ? new Date(selectedDate) : null;
     const minDateObj = minDate ? new Date(minDate) : startOfDay(new Date());
+
+    useEffect(() => {
+        if (onMonthChange) {
+            onMonthChange(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+        }
+    }, [currentMonth]);
 
     const renderHeader = () => {
         return (
@@ -137,16 +145,18 @@ export function Calendar({ selectedDate, onDateSelect, minDate }: CalendarProps)
                             }
                         }}
                         style={{
-                            padding: '0.5rem',
+                            padding: '0.2rem', // Reduced padding for mobile
                             display: 'flex',
                             justifyContent: 'center',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            flexDirection: 'column'
                         }}
                     >
                         <div style={{
                             width: '40px',
                             height: '40px',
                             display: 'flex',
+                            flexDirection: 'column',
                             justifyContent: 'center',
                             alignItems: 'center',
                             borderRadius: '8px', // Match mockup squircle
@@ -154,7 +164,8 @@ export function Calendar({ selectedDate, onDateSelect, minDate }: CalendarProps)
                             backgroundColor: isSelected ? '#3b82f6' : 'transparent', // Blue from mockup
                             color: isSelected ? 'white' : (!isCurrentMonth || isPast) ? '#d1d5db' : '#333',
                             fontWeight: isSelected ? 'bold' : 'normal',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            position: 'relative'
                         }}
                             onMouseEnter={(e) => {
                                 if (!isPast && !isSelected) {
@@ -167,7 +178,25 @@ export function Calendar({ selectedDate, onDateSelect, minDate }: CalendarProps)
                                 }
                             }}
                         >
-                            {formattedDate}
+                            <span>{formattedDate}</span>
+                            {/* Green dot indicator for available dates */}
+                            {(() => {
+                                const offset = cloneDay.getTimezoneOffset();
+                                const localDateStr = new Date(cloneDay.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+                                if (availableDates.includes(localDateStr) && !isPast && !isSelected) {
+                                    return (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '4px',
+                                            width: '4px',
+                                            height: '4px',
+                                            borderRadius: '50%',
+                                            backgroundColor: '#10b981' // Green indicator
+                                        }} />
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
                     </div>
                 );
@@ -187,9 +216,11 @@ export function Calendar({ selectedDate, onDateSelect, minDate }: CalendarProps)
         <div style={{
             backgroundColor: 'white',
             borderRadius: '12px',
-            padding: '1rem',
+            padding: '1rem 0.5rem', // Reduced side padding
             width: '100%',
-            maxWidth: '350px' // Control width
+            maxWidth: '350px',
+            margin: '0 auto', // Center it
+            boxSizing: 'border-box'
         }}>
             {renderHeader()}
             {renderDays()}
