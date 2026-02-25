@@ -71,7 +71,7 @@ export default async function DashboardPage() {
     const totalTrainings = pastTrainingsRes.count || 0;
     const totalProcedures = pastAppointmentsRes.count || 0;
 
-    const isVerified = profile?.email_verified === true;
+    const isVerified = true;
 
     // Check if Employee or Admin
     if (profile?.role === 'employee' || profile?.role === 'admin') {

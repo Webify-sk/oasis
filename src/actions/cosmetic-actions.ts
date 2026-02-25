@@ -647,13 +647,8 @@ export async function createAppointment(data: {
 
     if (!user) return { error: 'Unauthorized' }
 
-    // Check Verification (Skip for staff)
-    const { data: profile } = await supabase.from('profiles').select('email_verified, role').eq('id', user.id).single();
-
-    const isStaff = profile?.role === 'employee' || profile?.role === 'admin';
-    if (!isStaff && profile?.email_verified === false) {
-        return { error: 'Pre vytvorenie rezervácie musíte mať overený email.' };
-    }
+    // Fetch role
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
     // Check Booking Deadline
     const startObj = new Date(data.start_time);

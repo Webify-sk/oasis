@@ -11,17 +11,12 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         return { success: false, message: 'Musíte byť prihlásený.' };
     }
 
-    // Check Verification (Skip for staff)
+    // Fetch role
     const { data: profileCheck } = await supabase
         .from('profiles')
-        .select('email_verified, role')
+        .select('role')
         .eq('id', user.id)
         .single();
-
-    const isStaff = profileCheck?.role === 'employee' || profileCheck?.role === 'admin';
-    if (!isStaff && profileCheck?.email_verified === false) {
-        return { success: false, message: 'Pre prihlásenie na tréning musíte mať overený email.' };
-    }
 
     // Check if training is in the past
     const trainingDate = new Date(startTimeISO);

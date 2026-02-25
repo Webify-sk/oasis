@@ -108,33 +108,22 @@ export async function createUser(fromState: any, formData: FormData) {
             // Proceeding might be better than failing hard?
         }
 
-        // 3. Send Verification Email (Soft Verification)
+        // 3. Send Welcome Email (No verification needed)
         try {
-            const token = crypto.randomUUID();
-
-            await supabaseAdmin
-                .from('profiles')
-                .update({
-                    verification_token: token,
-                    email_verified: false
-                })
-                .eq('id', user.id);
-
             const { sendEmail } = await import('@/utils/email');
             const { getEmailTemplate } = await import('@/utils/email-template');
 
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
-            const verifyLink = `${baseUrl}/auth/verify-email?token=${token}`;
 
             const html = getEmailTemplate(
-                'Overenie emailu - Oasis Lounge',
+                'Vitajte v Oasis Lounge',
                 `
                 <p>Dobrý deň,</p>
                 <p>bol vám vytvorený nový účet v Oasis Lounge.</p>
-                <p>Pre plný prístup k rezerváciám a službám prosím potvrďte svoj email kliknutím na tlačidlo nižšie.</p>
+                <p>Môžete sa prihlásiť a získať plný prístup k rezerváciám a službám.</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${verifyLink}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Overiť email</a>
+                    <a href="${baseUrl}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Prihlásiť sa</a>
                 </div>
 
                 <p>Vaše prihlasovacie meno je tento email a heslo vám bolo nastavené administrátorom.</p>
@@ -144,12 +133,12 @@ export async function createUser(fromState: any, formData: FormData) {
 
             await sendEmail({
                 to: email,
-                subject: 'Vitajte v Oasis Lounge - Overenie emailu',
+                subject: 'Vitajte v Oasis Lounge',
                 html: html
             });
 
         } catch (mailError) {
-            console.error('Failed to send verification email:', mailError);
+            console.error('Failed to send welcome email:', mailError);
         }
 
         // Handle Employee Promotion

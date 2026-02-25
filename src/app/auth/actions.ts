@@ -76,61 +76,40 @@ export async function signup(formData: FormData) {
         return { error: error.message }
     }
 
-    // 2. Soft Verification Setup
+    // Send Welcome Email
     if (authData.user && authData.user.email) {
         try {
-            // Generate simple token (or use uuid if available, but random string is fine for this)
-            const token = crypto.randomUUID();
-
-            // Update Profile with Token
-            // We assume profile exists due to Trigger. If trigger is slow, this might fail or we might need a small delay/retry?
-            // Usually trigger is sync or very fast.
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    verification_token: token,
-                    email_verified: false
-                })
-                .eq('id', authData.user.id);
-
-            if (updateError) {
-                console.error('Failed to set verification token:', updateError);
-            }
-
-            // Send Verification Email
             const { sendEmail } = await import('@/utils/email');
             const { getEmailTemplate } = await import('@/utils/email-template');
 
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
-            const verifyLink = `${baseUrl}/auth/verify-email?token=${token}`;
 
             const html = getEmailTemplate(
-                'Overenie emailu - Oasis Lounge',
+                'Vitajte v Oasis Lounge',
                 `
                 <p>Dobrý deň,</p>
-                <p>ďakujeme za registráciu v Oasis Lounge.</p>
-                <p>Pre plný prístup k rezerváciám a službám prosím potvrďte svoj email kliknutím na tlačidlo nižšie.</p>
+                <p>ďakujeme za registráciu a vitajte v Oasis Lounge.</p>
+                <p>Váš účet bol úspešne vytvorený a teraz máte plný prístup k rezerváciám a našim službám.</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${verifyLink}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Overiť email</a>
+                    <a href="${baseUrl}" class="button" style="display: inline-block; background-color: #5E715D; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Prejsť do profilu</a>
                 </div>
 
-                <p>Ak ste sa neregistrovali, tento email môžete ignorovať.</p>
+                <p>Tešíme sa na vašu návštevu.</p>
                 <p>Tím Oasis Lounge</p>
                 `
             );
 
             await sendEmail({
                 to: authData.user.email,
-                subject: 'Overenie emailu - Oasis Lounge',
+                subject: 'Vitajte v Oasis Lounge',
                 html: html
             });
 
         } catch (e) {
-            console.error('Error in verification flow:', e);
+            console.error('Error sending welcome email:', e);
         }
     }
-
     revalidatePath('/', 'layout')
     redirect('/dashboard')
 }

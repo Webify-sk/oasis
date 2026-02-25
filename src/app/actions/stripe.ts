@@ -22,17 +22,12 @@ export async function createCheckoutSession(
             redirect('/login')
         }
 
-        // Check Verification (Skip for staff)
+        // Fetch role
         const { data: profile } = await supabase
             .from('profiles')
-            .select('email_verified, role')
+            .select('role')
             .eq('id', user.id)
             .single()
-
-        const isStaff = profile?.role === 'employee' || profile?.role === 'admin'
-        if (!isStaff && profile?.email_verified === false) {
-            return { error: 'Pre nákup kreditov musíte mať overený email.' }
-        }
 
         // FETCH PACKAGE FROM DB
         const { data: creditPackage, error: packageError } = await supabase
