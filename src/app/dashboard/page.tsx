@@ -82,26 +82,41 @@ export default async function DashboardPage() {
         return <EmployeeDashboard appointments={appointments} employeeName={profile.full_name || 'Kolega'} activeServicesCount={services.length} />;
     }
 
-    // Helper to format date nicely
-    const formatBookingDate = (dateStr: string) => {
+    // Helper to format date nicely. Trainings use "Face Value UTC", while appointments use real UTC.
+    const formatBookingDate = (dateStr: string, isTraining: boolean) => {
         const d = new Date(dateStr);
+        const timeZoneToUse = isTraining ? 'UTC' : 'Europe/Bratislava';
+
+        let dateResult = d.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: timeZoneToUse });
+        if (isTraining) {
+            // For trainings in Face Value UTC, we shouldn't let local parsing shift the day
+            // But toLocaleDateString with timeZone='UTC' handles this nicely.
+        }
+
         return {
-            time: d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bratislava' }),
-            date: d.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Bratislava' }),
-            relative: getRelativeTime(d)
+            time: d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: timeZoneToUse }),
+            date: dateResult,
+            relative: getRelativeTime(d, isTraining)
         };
     };
 
-    function getRelativeTime(date: Date) {
+    function getRelativeTime(date: Date, isTraining: boolean) {
+        // If training, date is in FaceValue UTC. If not training, it's real UTC.
+        // For simplicity of "Days" math, we just compare timestamps.
         const now = new Date();
-        const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        // If FaceValue UTC training, shift 'now' to match its scale:
+        const comparatorNow = isTraining
+            ? new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes()))
+            : now;
+
+        const diffDays = Math.ceil((date.getTime() - comparatorNow.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays === 0) return 'Dnes';
         if (diffDays === 1) return 'Zajtra';
         return `O ${diffDays} dni`;
     }
 
-    const nextSession = nextBooking ? formatBookingDate(nextBooking.start_time) : null;
-    const nextProcedure = nextAppointment ? formatBookingDate(nextAppointment.start_time) : null;
+    const nextSession = nextBooking ? formatBookingDate(nextBooking.start_time, true) : null;
+    const nextProcedure = nextAppointment ? formatBookingDate(nextAppointment.start_time, false) : null;
 
     return (
         <div className={`${styles.container} animate-fadeInUp`}>

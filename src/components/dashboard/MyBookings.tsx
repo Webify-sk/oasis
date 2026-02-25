@@ -65,14 +65,16 @@ export function MyBookings({ bookings }: MyBookingsProps) {
                         const d = new Date(booking.start_time);
 
                         // Format Date
-                        const dayName = d.toLocaleDateString('sk-SK', { weekday: 'long', timeZone: 'Europe/Bratislava' });
+                        const dayName = d.toLocaleDateString('sk-SK', { weekday: 'long', timeZone: 'UTC' });
                         const capDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-                        const monthName = d.toLocaleDateString('sk-SK', { month: 'long', timeZone: 'Europe/Bratislava' });
+                        const monthName = d.toLocaleDateString('sk-SK', { month: 'long', timeZone: 'UTC' });
                         const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-                        const dateStr = `${capDay}, ${d.getDate()}. ${capMonth}`;
+                        // Extract UTC date instead of local date to avoid shifting days
+                        const dayNumber = d.getUTCDate();
+                        const dateStr = `${capDay}, ${dayNumber}. ${capMonth}`;
 
                         // Format Time
-                        const timeStr = d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bratislava' });
+                        const timeStr = d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
 
                         const title = booking.training_type?.title || 'Neznámy tréning';
                         const level = booking.training_type?.level || '';
