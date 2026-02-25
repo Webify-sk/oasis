@@ -62,6 +62,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
             .select(`
                 id,
                 start_time,
+                participants_count,
                 training_type:training_types (
                     title,
                     level

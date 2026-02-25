@@ -36,6 +36,7 @@ export function AuthForm() {
     const [formData, setFormData] = useState({
         full_name: '',
         date_of_birth: '',
+        phone: '',
         email: ''
     });
 
@@ -54,7 +55,7 @@ export function AuthForm() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         // Only persist non-sensitive data
-        if (['full_name', 'date_of_birth', 'email'].includes(name)) {
+        if (['full_name', 'date_of_birth', 'phone', 'email'].includes(name)) {
             const updatedData = { ...formData, [name]: value };
             setFormData(updatedData);
             localStorage.setItem('registration_draft', JSON.stringify(updatedData));
@@ -199,85 +200,115 @@ export function AuthForm() {
 
             {mode === 'register' && (
                 <>
-                    <Input
-                        name="full_name"
-                        type="text"
-                        placeholder="Meno a Priezvisko"
-                        required
-                        value={formData.full_name}
-                        onChange={handleChange}
-                    />
-                    <Input
-                        name="date_of_birth"
-                        type="date"
-                        placeholder="Dátum narodenia"
-                        required
-                        style={{ fontFamily: 'inherit' }}
-                        value={formData.date_of_birth}
-                        onChange={handleChange}
-                    />
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Meno a Priezvisko *</label>
+                        <Input
+                            name="full_name"
+                            type="text"
+                            placeholder="Meno a Priezvisko"
+                            required
+                            value={formData.full_name}
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Dátum narodenia *</label>
+                        <Input
+                            name="date_of_birth"
+                            type="date"
+                            placeholder="Dátum narodenia"
+                            required
+                            style={{ fontFamily: 'inherit' }}
+                            value={formData.date_of_birth}
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Telefónne číslo *</label>
+                        <Input
+                            name="phone"
+                            type="tel"
+                            placeholder="Napr. 09... alebo +421..."
+                            required
+                            value={formData.phone}
+                            onChange={handleChange}
+                        />
+                    </div>
                 </>
             )}
 
-            <Input
-                name="email"
-                type="email"
-                placeholder="Email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-            />
+            <div>
+                {mode === 'register' && (
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Emailová adresa *</label>
+                )}
+                <Input
+                    name="email"
+                    type="email"
+                    placeholder="Email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                />
+            </div>
 
             {mode !== 'forgot-password' && (
-                <div style={{ position: 'relative' }}>
-                    <Input
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Heslo"
-                        required
-                        style={{ marginBottom: mode === 'register' ? '1rem' : '1rem' }}
-                    />
-                    <button
-                        type="button"
-                        onClick={togglePasswordVisibility}
-                        style={{
-                            position: 'absolute',
-                            right: '10px',
-                            top: '12px', // Adjusted for padding
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#9CA3AF'
-                        }}
-                    >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
+                <div>
+                    {mode === 'register' && (
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Heslo *</label>
+                    )}
+                    <div style={{ position: 'relative' }}>
+                        <Input
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Heslo"
+                            required
+                            style={{ marginBottom: '1rem' }}
+                        />
+                        <button
+                            type="button"
+                            onClick={togglePasswordVisibility}
+                            style={{
+                                position: 'absolute',
+                                right: '10px',
+                                top: '12px',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#9CA3AF'
+                            }}
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
             )}
 
             {mode === 'register' && (
-                <div style={{ position: 'relative' }}>
-                    <Input
-                        name="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Zopakujte heslo"
-                        required
-                    />
-                    <button
-                        type="button"
-                        onClick={toggleConfirmPasswordVisibility}
-                        style={{
-                            position: 'absolute',
-                            right: '10px',
-                            top: '12px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#9CA3AF'
-                        }}
-                    >
-                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Zopakujte heslo *</label>
+                    <div style={{ position: 'relative' }}>
+                        <Input
+                            name="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Zopakujte heslo"
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={toggleConfirmPasswordVisibility}
+                            style={{
+                                position: 'absolute',
+                                right: '10px',
+                                top: '12px',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#9CA3AF'
+                            }}
+                        >
+                            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
             )}
 

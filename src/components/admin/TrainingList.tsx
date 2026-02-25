@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 interface Attendee {
     full_name: string | null;
     email: string | null;
+    participants_count?: number;
 }
 
 interface TrainingSession {
@@ -165,7 +166,7 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                                                 <div style={{ fontWeight: 600, color: '#8C7568' }}>
                                                     {new Date(session.start).toLocaleString('sk-SK', { timeZone: 'UTC', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                                                     <span style={{ marginLeft: '8px', color: '#666', fontWeight: 400, fontSize: '0.8rem' }}>
-                                                        ({session.attendees.length} prihlásených)
+                                                        ({session.attendees.reduce((total, a) => total + (a.participants_count || 1), 0)} prihlásených)
                                                     </span>
                                                 </div>
                                                 <div style={{ color: '#888' }}>
@@ -182,6 +183,11 @@ export function TrainingList({ trainings }: { trainings: TrainingType[] }) {
                                                                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: i < session.attendees.length - 1 ? '1px solid #f0f0f0' : 'none', paddingBottom: i < session.attendees.length - 1 ? '4px' : '0' }}>
                                                                         <span style={{ fontWeight: 500, color: '#333' }}>
                                                                             {attendee.full_name || 'Neznámy'}
+                                                                            {(attendee.participants_count || 1) > 1 && (
+                                                                                <span style={{ color: '#8C7568', marginLeft: '6px', fontWeight: 600 }}>
+                                                                                    (+{(attendee.participants_count || 1) - 1})
+                                                                                </span>
+                                                                            )}
                                                                         </span>
                                                                         <span style={{ color: '#666', fontSize: '0.8rem' }}>
                                                                             {attendee.email}

@@ -10,6 +10,7 @@ import styles from './MyBookings.module.css';
 interface MyBooking {
     id: string;
     start_time: string;
+    participants_count?: number;
     training_type: {
         title: string;
         level: string;
@@ -82,7 +83,14 @@ export function MyBookings({ bookings }: MyBookingsProps) {
                         return (
                             <div key={booking.id} className={styles.card}>
                                 <div className={styles.cardContent}>
-                                    <h4 className={styles.trainingTitle}>{title}</h4>
+                                    <h4 className={styles.trainingTitle}>
+                                        {title}
+                                        {(booking.participants_count || 1) > 1 && (
+                                            <span style={{ color: '#8C7568', marginLeft: '6px', fontWeight: 600 }}>
+                                                (+{(booking.participants_count || 1) - 1})
+                                            </span>
+                                        )}
+                                    </h4>
                                     <div className={styles.details}>
                                         <div className={styles.detailRow}>
                                             <Calendar size={16} />

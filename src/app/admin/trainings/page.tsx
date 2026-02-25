@@ -27,7 +27,8 @@ export default async function AdminTrainingsPage() {
         .select(`
             start_time,
             training_type_id,
-            user_id
+            user_id,
+            participants_count
         `)
         .gte('start_time', fromDate)
         .order('start_time', { ascending: true });
@@ -60,8 +61,10 @@ export default async function AdminTrainingsPage() {
         // Manual join
         const attendee = profilesMap.get(b.user_id);
 
+        const pc = b.participants_count || 1;
+
         // Total Count
-        totalCounts.set(tid, (totalCounts.get(tid) || 0) + 1);
+        totalCounts.set(tid, (totalCounts.get(tid) || 0) + pc);
 
         // Session Grouping
         if (!trainingSessions.has(tid)) {
@@ -73,7 +76,7 @@ export default async function AdminTrainingsPage() {
             sessions.set(time, []);
         }
         if (attendee) {
-            sessions.get(time)!.push(attendee);
+            sessions.get(time)!.push({ ...attendee, participants_count: pc });
         }
     });
 

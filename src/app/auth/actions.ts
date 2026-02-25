@@ -40,12 +40,15 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
     const supabase = await createClient()
 
+    const phone = formData.get('phone') as string;
+
     const data = {
         email: formData.get('email') as string,
         password: formData.get('password') as string,
         options: {
             data: {
                 full_name: formData.get('full_name') as string,
+                phone: phone,
                 date_of_birth: formData.get('date_of_birth') as string, // Will be parsed by trigger if updated
             }
         }
@@ -66,6 +69,10 @@ export async function signup(formData: FormData) {
         }
     } else {
         return { error: 'Dátum narodenia je povinný.' };
+    }
+
+    if (!phone || phone.length < 9) {
+        return { error: 'Telefónne číslo je povinné a musí obsahovať minimálne 9 znakov.' };
     }
 
     // 1. Sign Up
