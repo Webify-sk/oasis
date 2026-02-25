@@ -1,0 +1,4 @@
+﻿src/components/cosmetics/BookingWizard.tsx(141,21): error TS2339: Property 'assignedEmployee' does not exist on type '{ success: boolean; error?: undefined; } | { success: boolean; error: string; assignedEmployee?: undefined; } | { success: boolean; assignedEmployee: any; error?: undefined; }'.
+  Property 'assignedEmployee' does not exist on type '{ success: boolean; error?: undefined; }'.
+src/components/cosmetics/BookingWizard.tsx(142,41): error TS2339: Property 'assignedEmployee' does not exist on type '{ success: boolean; error?: undefined; } | { success: boolean; error: string; assignedEmployee?: undefined; } | { success: boolean; assignedEmployee: any; error?: undefined; }'.
+  Property 'assignedEmployee' does not exist on type '{ success: boolean; error?: undefined; }'.

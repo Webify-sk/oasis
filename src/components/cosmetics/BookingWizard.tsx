@@ -6,7 +6,7 @@ import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft
 import { useRouter } from 'next/navigation';
 import { useVerification } from '@/components/auth/VerificationContext';
 
-interface Service { id: string; title: string; price: number; duration_minutes: number; }
+interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; }
 interface Employee { id: string; name: string; color: string; }
 
 interface BookingWizardProps {
@@ -26,9 +26,11 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [slots, setSlots] = useState<string[]>([]);
 
     // Selection
+    const [selectedCategory, setSelectedCategory] = useState<'beauty' | 'body' | null>(null);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [selectedHour, setSelectedHour] = useState<string | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
     // Initial Fetch
@@ -41,41 +43,56 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
             if (initialServiceId) {
                 const preSelected = fetchedServices.find(s => s.id === initialServiceId);
                 if (preSelected) {
+                    setSelectedCategory((preSelected.category as 'beauty' | 'body') || 'beauty');
                     setSelectedService(preSelected);
-                    setStep(2);
+                    setStep(3);
                 }
             }
         });
     }, [initialServiceId]);
 
-    // When Step 2 becomes active (or service selected), fetch relevant employees
+    // When Step 3 becomes active (or service selected), fetch relevant employees
     useEffect(() => {
-        if (selectedService && step === 2) {
+        if (selectedService && step === 3) {
             setLoading(true);
             getEmployeesForService(selectedService.id).then(data => {
-                setAllEmployees(data as Employee[]); // Reusing state name but now it's filtered
+                const fetchedEmployees = data as Employee[];
+                if (fetchedEmployees.length > 1) {
+                    setAllEmployees([{ id: 'any', name: 'Nezáleží (Priradí systém)', color: '#9ca3af' }, ...fetchedEmployees]);
+                } else {
+                    setAllEmployees(fetchedEmployees);
+                }
                 setLoading(false);
             });
         }
     }, [selectedService, step]);
 
-    const handleServiceSelect = (service: Service) => {
+    const handleCategorySelect = (category: 'beauty' | 'body') => {
         if (!isVerified) return;
-        setSelectedService(service);
+        setSelectedCategory(category);
         setStep(2);
+    };
+
+    const handleServiceSelect = (service: Service) => {
+        setSelectedService(service);
+        setStep(3);
     };
 
     const handleEmployeeSelect = (employee: Employee) => {
         setSelectedEmployee(employee);
-        setStep(3);
+        setStep(4);
     };
 
     const handleDateChange = async (date: string) => {
         setSelectedDate(date);
+        setSelectedHour(null);
         setSelectedTime(null);
         if (selectedEmployee && selectedService) {
             setLoading(true);
-            const availSlots = await getAvailableSlots(selectedEmployee.id, selectedService.id, date);
+
+            // Allow dynamic server action import here to prevent top-level client component errors if needed, or import at top
+            const action = selectedEmployee.id === 'any' ? (await import('@/actions/cosmetic-actions')).getAvailableSlotsAnyEmployee : getAvailableSlots;
+            const availSlots = await action(selectedEmployee.id, selectedService.id, date);
 
             // Filter past times if selecting today
             const now = new Date();
@@ -96,9 +113,9 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
         }
     };
 
-    // Trigger slot fetch on entering step 3
+    // Trigger slot fetch on entering step 4
     useEffect(() => {
-        if (step === 3 && selectedEmployee && selectedService) {
+        if (step === 4 && selectedEmployee && selectedService) {
             handleDateChange(selectedDate);
         }
     }, [step, selectedEmployee, selectedDate]);
@@ -111,7 +128,9 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
         const start = new Date(startTime);
         const end = new Date(start.getTime() + selectedService.duration_minutes * 60000);
 
-        const res = await createAppointment({
+        const action = selectedEmployee.id === 'any' ? (await import('@/actions/cosmetic-actions')).createAppointmentAnyEmployee : createAppointment;
+
+        const res = await action({
             employee_id: selectedEmployee.id,
             service_id: selectedService.id,
             start_time: start.toISOString(),
@@ -119,12 +138,23 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
         });
 
         if (res.success) {
-            setStep(4);
+            if ('assignedEmployee' in res && res.assignedEmployee) {
+                setSelectedEmployee(res.assignedEmployee as Employee);
+            }
+            setStep(5);
         } else {
-            alert('Chyba pri rezervácii.');
+            alert('Chyba pri rezervácii: ' + (res.error || 'Neznáma chyba'));
         }
         setLoading(false);
     };
+
+    // Helper for grouping slots by hour
+    const slotsByHour = slots.reduce((acc, slot) => {
+        const hour = slot.split(':')[0];
+        if (!acc[hour]) acc[hour] = [];
+        acc[hour].push(slot);
+        return acc;
+    }, {} as Record<string, string[]>);
 
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
@@ -132,7 +162,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
             {/* Progress Bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', position: 'relative' }}>
                 <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '2px', backgroundColor: '#f0f0f0', zIndex: 0 }}></div>
-                {[1, 2, 3, 4].map(s => (
+                {[1, 2, 3, 4, 5].map(s => (
                     <div key={s} style={{
                         width: '30px', height: '30px',
                         borderRadius: '50%',
@@ -149,35 +179,90 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                 ))}
             </div>
 
-            {/* Step 1: Services */}
+            {/* Step 1: Category */}
             {step === 1 && (
                 <div>
-                    <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte procedúru</h2>
+                    <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte typ služby</h2>
                     {!isVerified && (
                         <div style={{ backgroundColor: '#FEFCE8', border: '1px solid #FEF08A', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', color: '#854D0E', textAlign: 'center' }}>
                             ⚠️ Pre rezerváciu termínu musíte mať overený email. Prosím skontrolujte si emailovú schránku.
                         </div>
                     )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div
+                            onClick={() => handleCategorySelect('beauty')}
+                            style={{
+                                padding: '2rem',
+                                border: '2px solid #eee',
+                                borderRadius: '12px',
+                                cursor: !isVerified ? 'not-allowed' : 'pointer',
+                                textAlign: 'center',
+                                transition: 'all 0.2s',
+                                opacity: !isVerified ? 0.6 : 1,
+                                backgroundColor: !isVerified ? '#f9f9f9' : 'white',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '1rem'
+                            }}
+                            onMouseEnter={(e) => { if (isVerified) { e.currentTarget.style.borderColor = '#5E715D'; e.currentTarget.style.backgroundColor = '#fafafa'; } }}
+                            onMouseLeave={(e) => { if (isVerified) { e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.backgroundColor = 'white'; } }}
+                        >
+                            <Sparkles size={48} color="#5E715D" />
+                            <h3 style={{ margin: 0 }}>Beauty</h3>
+                            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Kozmetika, mihalnice a ďalšie skrášľovacie procedúry</p>
+                        </div>
+                        <div
+                            onClick={() => handleCategorySelect('body')}
+                            style={{
+                                padding: '2rem',
+                                border: '2px solid #eee',
+                                borderRadius: '12px',
+                                cursor: !isVerified ? 'not-allowed' : 'pointer',
+                                textAlign: 'center',
+                                transition: 'all 0.2s',
+                                opacity: !isVerified ? 0.6 : 1,
+                                backgroundColor: !isVerified ? '#f9f9f9' : 'white',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '1rem'
+                            }}
+                            onMouseEnter={(e) => { if (isVerified) { e.currentTarget.style.borderColor = '#5E715D'; e.currentTarget.style.backgroundColor = '#fafafa'; } }}
+                            onMouseLeave={(e) => { if (isVerified) { e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.backgroundColor = 'white'; } }}
+                        >
+                            <User size={48} color="#5E715D" />
+                            <h3 style={{ margin: 0 }}>Body</h3>
+                            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Masáže, telové ošetrenia a relax</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 2: Services */}
+            {step === 2 && (
+                <div>
+                    <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666' }}>
+                        <ChevronLeft size={16} /> Späť
+                    </button>
+                    <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte procedúru</h2>
                     <div style={{ display: 'grid', gap: '1rem' }}>
-                        {services.map(service => (
+                        {services.filter(s => (s.category || 'beauty') === selectedCategory).map(service => (
                             <div
                                 key={service.id}
                                 onClick={() => handleServiceSelect(service)}
-                                title={!isVerified ? "Pre rezerváciu musíte overiť email" : ""}
                                 style={{
                                     padding: '1.5rem',
                                     border: '1px solid #eee',
                                     borderRadius: '8px',
-                                    cursor: !isVerified ? 'not-allowed' : 'pointer',
+                                    cursor: 'pointer',
                                     transition: 'background-color 0.2s',
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    opacity: !isVerified ? 0.6 : 1,
-                                    backgroundColor: !isVerified ? '#f9f9f9' : undefined
+                                    alignItems: 'center'
                                 }}
-                                onMouseEnter={(e) => { if (isVerified) e.currentTarget.style.backgroundColor = '#fafafa'; }}
-                                onMouseLeave={(e) => { if (isVerified) e.currentTarget.style.backgroundColor = 'white'; }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                             >
                                 <div>
                                     <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>{service.title}</h3>
@@ -189,14 +274,19 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                                 <span style={{ fontWeight: 'bold', color: '#5E715D' }}>{service.price} €</span>
                             </div>
                         ))}
+                        {services.filter(s => (s.category || 'beauty') === selectedCategory).length === 0 && (
+                            <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                                V tejto kategórii momentálne nemáme dostupné žiadne služby.
+                            </p>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* Step 2: Employees */}
-            {step === 2 && (
+            {/* Step 3: Employees */}
+            {step === 3 && (
                 <div>
-                    <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666' }}>
+                    <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666' }}>
                         <ChevronLeft size={16} /> Späť
                     </button>
                     <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte špecialistu</h2>
@@ -230,10 +320,10 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                 </div>
             )}
 
-            {/* Step 3: Date & Time */}
-            {step === 3 && (
+            {/* Step 4: Date & Time */}
+            {step === 4 && (
                 <div>
-                    <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666' }}>
+                    <button onClick={() => setStep(3)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666' }}>
                         <ChevronLeft size={16} /> Späť
                     </button>
                     <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte termín</h2>
@@ -254,24 +344,52 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                         {loading ? (
                             <p style={{ color: '#888' }}>Načítavam...</p>
                         ) : slots.length > 0 ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
-                                {slots.map(time => (
-                                    <button
-                                        key={time}
-                                        onClick={() => setSelectedTime(time)}
-                                        style={{
-                                            padding: '0.6rem',
-                                            borderRadius: '6px',
-                                            border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
-                                            backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
-                                            color: selectedTime === time ? '#1e7e34' : '#333',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {time}
+                            selectedHour === null ? (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.8rem' }}>
+                                    {Object.keys(slotsByHour).map(hour => (
+                                        <button
+                                            key={hour}
+                                            onClick={() => setSelectedHour(hour)}
+                                            style={{
+                                                padding: '1rem 0.5rem',
+                                                borderRadius: '6px',
+                                                border: '1px solid #ddd',
+                                                backgroundColor: 'white',
+                                                color: '#333',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold',
+                                                fontSize: '1.1rem'
+                                            }}
+                                        >
+                                            {hour}:00
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div>
+                                    <button onClick={() => setSelectedHour(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', color: '#666', fontSize: '0.9rem' }}>
+                                        <ChevronLeft size={14} /> Späť na hodiny
                                     </button>
-                                ))}
-                            </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.8rem' }}>
+                                        {slotsByHour[selectedHour].map(time => (
+                                            <button
+                                                key={time}
+                                                onClick={() => setSelectedTime(time)}
+                                                style={{
+                                                    padding: '0.6rem',
+                                                    borderRadius: '6px',
+                                                    border: selectedTime === time ? '2px solid #5E715D' : '1px solid #ddd',
+                                                    backgroundColor: selectedTime === time ? '#e6f4ea' : 'white',
+                                                    color: selectedTime === time ? '#1e7e34' : '#333',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                {time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
                         ) : (
                             <p style={{ color: '#d93025', backgroundColor: '#fff0f0', padding: '1rem', borderRadius: '6px' }}>
                                 Pre tento deň nie sú dostupné žiadne termíny. Skúste iný deň.
@@ -300,8 +418,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                 </div>
             )}
 
-            {/* Step 4: Success */}
-            {step === 4 && (
+            {/* Step 5: Success */}
+            {step === 5 && (
                 <div style={{ textAlign: 'center', padding: '2rem 0' }}>
                     <div style={{
                         width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#e6f4ea', color: '#1e7e34',

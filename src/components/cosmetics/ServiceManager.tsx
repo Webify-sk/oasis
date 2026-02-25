@@ -16,6 +16,7 @@ interface Service {
     duration_minutes: number;
     price: number;
     is_active: boolean;
+    category?: string;
 }
 
 export function ServiceManager({ initialServices }: { initialServices: Service[] }) {
@@ -73,6 +74,9 @@ export function ServiceManager({ initialServices }: { initialServices: Service[]
                                 <div className={styles.duration}>
                                     <Clock size={14} />
                                     <span>{service.duration_minutes} min</span>
+                                </div>
+                                <div className={styles.duration} style={{ textTransform: 'capitalize' }}>
+                                    <span>{service.category === 'body' ? 'Body (Telo)' : 'Beauty (Kozmetika)'}</span>
                                 </div>
                             </div>
 

@@ -81,6 +81,7 @@ export async function createCosmeticService(prevState: any, formData: FormData) 
     const description = formData.get('description') as string
     const duration = parseInt(formData.get('duration_minutes') as string)
     const price = parseFloat(formData.get('price') as string)
+    const category = formData.get('category') as string || 'beauty'
 
     const { error } = await supabase
         .from('cosmetic_services')
@@ -89,6 +90,7 @@ export async function createCosmeticService(prevState: any, formData: FormData) 
             description,
             duration_minutes: duration,
             price,
+            category,
             is_active: true,
             owner_id // Link to employee
         })
@@ -113,6 +115,7 @@ export async function updateCosmeticService(id: string, prevState: any, formData
     const duration = parseInt(formData.get('duration_minutes') as string)
     const price = parseFloat(formData.get('price') as string)
     const is_active = formData.get('is_active') === 'on'
+    const category = formData.get('category') as string || 'beauty'
 
     const { error } = await supabase
         .from('cosmetic_services')
@@ -121,6 +124,7 @@ export async function updateCosmeticService(id: string, prevState: any, formData
             description,
             duration_minutes: duration,
             price,
+            category,
             is_active
         })
         .eq('id', id)
@@ -635,6 +639,64 @@ function isBookingAllowed(startDate: Date): { allowed: boolean, deadlineMsg: str
     return { allowed: true, deadlineMsg: '' };
 }
 
+export async function createAppointmentAnyEmployee(data: {
+    employee_id: string, // will be 'any', ignored
+    service_id: string,
+    start_time: string, // ISO string
+    end_time: string,   // ISO string
+    notes?: string
+}) {
+    const supabase = await createClient();
+
+    // 1. Get all active employees for this service
+    const { data: employees } = await supabase
+        .from('employee_services')
+        .select('employee_id, employees!inner(id, name, color, is_active)')
+        .eq('service_id', data.service_id)
+        .eq('employees.is_active', true);
+
+    if (!employees || employees.length === 0) {
+        return { success: false, error: 'Žiadny zamestnanec nie je priradený k tejto službe.' };
+    }
+
+    // Extract the local date part (e.g., '2026-02-26') from the ISO string to check availability
+    const dateObj = new Date(data.start_time);
+    const localDateStr = dateObj.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD
+    const localTimeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    let assignedEmployeeId: string | null = null;
+    let assignedEmployeeDetails: any = null;
+
+    // 2. Find the first employee available at this specific time
+    for (const emp of employees) {
+        const slots = await getAvailableSlots(emp.employee_id, data.service_id, localDateStr);
+        if (slots.includes(localTimeStr)) {
+            assignedEmployeeId = emp.employee_id;
+            assignedEmployeeDetails = emp.employees;
+            break;
+        }
+    }
+
+    if (!assignedEmployeeId) {
+        return { success: false, error: 'Nepodarilo sa nájsť voľného špecialistu pre tento termín. Niekto iný si ho pravdepodobne práve rezervoval.' };
+    }
+
+    // 3. Delegate to the standard createAppointment function
+    const result = await createAppointment({
+        ...data,
+        employee_id: assignedEmployeeId
+    });
+
+    if (result.success) {
+        return {
+            success: true,
+            assignedEmployee: assignedEmployeeDetails
+        };
+    }
+
+    return result;
+}
+
 export async function createAppointment(data: {
     employee_id: string,
     service_id: string,
@@ -1138,12 +1200,37 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
                 }
             }
 
-            // Increment by 30 min intervals
-            currentMinutes += 30;
+            // Increment by 10 min intervals
+            currentMinutes += 10;
         }
     }
 
     return slots.sort() // Sort slots chronologically
+}
+
+export async function getAvailableSlotsAnyEmployee(employeeId: string, serviceId: string, date: string) {
+    const supabase = await createClient()
+
+    // 1. Get all active employees who can perform this service
+    const { data: employees } = await supabase
+        .from('employee_services')
+        .select('employee_id, employees!inner(is_active)')
+        .eq('service_id', serviceId)
+        .eq('employees.is_active', true);
+
+    if (!employees || employees.length === 0) return [];
+
+    // 2. Fetch slots for each employee
+    const allSlotsPromises = employees.map(emp => getAvailableSlots(emp.employee_id, serviceId, date));
+    const allSlotsArrays = await Promise.all(allSlotsPromises);
+
+    // 3. Merge and deduplicate slots
+    const mergedSlots = new Set<string>();
+    allSlotsArrays.forEach(slots => {
+        slots.forEach(slot => mergedSlots.add(slot));
+    });
+
+    return Array.from(mergedSlots).sort();
 }
 
 export async function promoteToEmployee(userId: string, name: string, email: string) {

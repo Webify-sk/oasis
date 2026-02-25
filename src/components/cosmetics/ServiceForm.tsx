@@ -14,6 +14,7 @@ interface Service {
     duration_minutes: number;
     price: number;
     is_active: boolean;
+    category?: string;
 }
 
 const initialState = {
@@ -66,6 +67,19 @@ export function ServiceForm({ initialData }: { initialData?: Service }) {
                             placeholder="napr. Masáž tváre"
                             style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }}
                         />
+                    </div>
+
+                    <div className={styles.formGroup} style={{ marginTop: '1.5rem' }}>
+                        <label className={styles.label}>Kategória služby</label>
+                        <select
+                            name="category"
+                            defaultValue={initialData?.category || 'beauty'}
+                            required
+                            style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: 'white' }}
+                        >
+                            <option value="beauty">Beauty (Kozmetika/Mihalnice)</option>
+                            <option value="body">Body (Masáže/Telo)</option>
+                        </select>
                     </div>
 
                     <div className={styles.formGroup}>
