@@ -4,8 +4,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import styles from './cosmetics.module.css';
 import { ServiceManager } from '@/components/cosmetics/ServiceManager';
+import { BookingWizard } from '@/components/cosmetics/BookingWizard';
 
-export default async function CosmeticsPage() {
+export default async function CosmeticsPage(props: any) {
+    const searchParams = props.searchParams ? await props.searchParams : {};
+    const serviceId = searchParams?.serviceId;
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -24,11 +28,6 @@ export default async function CosmeticsPage() {
         }
     }
 
-    if (!isEmployeeOrAdmin) {
-        const { getCosmeticServices } = await import('@/actions/cosmetic-actions');
-        services = await getCosmeticServices();
-    }
-
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
             {/* Header */}
@@ -36,10 +35,9 @@ export default async function CosmeticsPage() {
                 <div>
                     <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Beauty & Body</p>
                     <h1 style={{ fontSize: '2.5rem', fontFamily: "var(--font-heading)", color: '#93745F', margin: 0 }}>
-                        {isEmployeeOrAdmin ? 'Správa Kozmetiky' : 'Naša Ponuka'}
+                        {isEmployeeOrAdmin ? 'Správa Kozmetiky' : 'Rezervácia termínu'}
                     </h1>
                 </div>
-                {/* Employee Actions now handled via ServiceManager or removed if not needed since Manager is inline */}
             </div>
 
             {/* Stats Cards - Only for Employees/Admins */}
@@ -83,57 +81,10 @@ export default async function CosmeticsPage() {
                 </>
             )}
 
-            {/* Client View: Services List */}
+            {/* Client View: Booking Wizard */}
             {!isEmployeeOrAdmin && (
-                <div>
-                    <div className={styles.grid}>
-                        {services.map((service) => (
-                            <div key={service.id} className={styles.card}>
-                                {/* Decor header */}
-                                <div className={styles.cardDecor}></div>
-
-                                <div className={styles.cardContent}>
-                                    <div className={styles.cardHeader}>
-                                        <h3 className={styles.cardTitle}>{service.title}</h3>
-                                        <div className={styles.cardPrice}>{service.price} €</div>
-                                    </div>
-
-                                    {service.description && (
-                                        <p className={styles.description}>
-                                            {service.description}
-                                        </p>
-                                    )}
-
-                                    <div className={styles.cardFooter}>
-                                        <div className={styles.metaRow}>
-                                            <div className={styles.duration}>
-                                                <Clock size={14} />
-                                                <span>{service.duration_minutes} min</span>
-                                            </div>
-                                        </div>
-
-                                        <Link href={`/dashboard/cosmetics/book?serviceId=${service.id}`} style={{ display: 'block' }}>
-                                            <button className={styles.bookButton}>
-                                                Rezervovať termín
-                                            </button>
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {services.length === 0 && (
-                        <div className={styles.emptyState}>
-                            <div className={styles.iconCircle}>
-                                <Sparkles size={32} />
-                            </div>
-                            <h3 style={{ fontSize: '1.2rem', color: '#333', marginBottom: '0.5rem' }}>Žiadne služby</h3>
-                            <p>Momentálne nie sú k dispozícii žiadne služby.</p>
-                        </div>
-                    )}
-
-
+                <div style={{ maxWidth: '800px', margin: '0 auto', paddingTop: '1rem' }}>
+                    <BookingWizard initialServiceId={serviceId} />
                 </div>
             )}
         </div>

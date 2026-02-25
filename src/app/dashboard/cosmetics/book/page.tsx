@@ -1,21 +1,12 @@
-import { BookingWizard } from '@/components/cosmetics/BookingWizard';
+import { redirect } from 'next/navigation';
 
-export default async function BookingPage({
-    searchParams,
-}: {
-    searchParams: { serviceId?: string }
-}) {
-    // Next.js 15+ searchParams is async, but this looks like Next 14/15 interop or standard server component usage.
-    // If using strict Next 15, we await it. If older, it's just props.
-    // Assuming standard Next.js App Router pattern:
-    const { serviceId } = await searchParams;
+export default async function BookingPage(props: any) {
+    const searchParams = props.searchParams ? await props.searchParams : {};
+    const serviceId = searchParams?.serviceId;
 
-    return (
-        <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '2rem', fontFamily: "var(--font-heading)", fontSize: '2.5rem', color: '#93745F' }}>
-                Rezervácia termínu
-            </h1>
-            <BookingWizard initialServiceId={serviceId} />
-        </div>
-    );
+    if (serviceId) {
+        redirect(`/dashboard/cosmetics?serviceId=${serviceId}`);
+    } else {
+        redirect('/dashboard/cosmetics');
+    }
 }
