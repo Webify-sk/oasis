@@ -191,7 +191,8 @@ export async function getEmployees() {
         .from('employees')
         .select(`
             *,
-            profiles(full_name)
+            profiles(full_name),
+            employee_services(service_id)
         `)
         .order('name', { ascending: true })
 
@@ -203,7 +204,8 @@ export async function getEmployees() {
     // Map to flatten the structure and prioritize profile name
     return data.map(emp => ({
         ...emp,
-        name: emp.profiles?.full_name || emp.name
+        name: emp.profiles?.full_name || emp.name,
+        service_ids: emp.employee_services?.map((es: any) => es.service_id) || []
     }));
 }
 
@@ -1635,47 +1637,9 @@ export async function createManualReservation(prevState: any, formData: FormData
 
     // --- Availability Check ---
 
-    // 1. Check Exceptions (Vacation/Specific availability)
-    const { data: exceptions } = await supabase
-        .from('employee_availability_exceptions')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .eq('exception_date', date);
-
-    if (exceptions && exceptions.length > 0) {
-        // Assume daily exception mostly. If multiple, it's complex, but usually one per day.
-        const exception = exceptions[0];
-        if (!exception.is_available) {
-            return { error: 'Zamestnanec má v tento deň voľno (výnimka).' };
-        }
-        // If available override, we check time boundaries if set
-        if (exception.start_time && exception.end_time) {
-            if (time < exception.start_time || endTime > exception.end_time) {
-                return { error: `Zamestnanec je dostupný len od ${exception.start_time} do ${exception.end_time}.` };
-            }
-        }
-    } else {
-        // 2. Check Regular Weekly Schedule
-        const dayOfWeek = new Date(date).getDay(); // 0 = Sunday
-        const { data: schedule } = await supabase
-            .from('employee_availability')
-            .select('*')
-            .eq('employee_id', employeeId)
-            .eq('is_recurring', true)
-            .eq('day_of_week', dayOfWeek)
-            .eq('is_available', true)
-            .maybeSingle();
-
-        if (!schedule) {
-            return { error: 'Zamestnanec v tento deň (podľa rozvrhu) nepracuje.' };
-        }
-
-        if (schedule.start_time && schedule.end_time) {
-            if (time < schedule.start_time || endTime > schedule.end_time) {
-                return { error: `Mimo pracovných hodín (${schedule.start_time} - ${schedule.end_time}).` };
-            }
-        }
-    }
+    // We intentionally skip checking "Exceptions" (vacations) and "Regular Weekly Schedules" here,
+    // because manual reservations created by employees/admins should be able to override these limitations
+    // as requested by the user.
 
     // 3. Check Conflicts with existing appointments
     const { count: conflictCount } = await checkConflictingAppointments(employeeId, date, time, endTime);
@@ -1771,4 +1735,121 @@ export async function createManualReservation(prevState: any, formData: FormData
     return { success: true, message: 'Rezervácia bola úspešne vytvorená.' };
 }
 
+// --- Admin Reservations ---
 
+export async function getAdminCosmeticAppointments() {
+    await requireAdmin();
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('cosmetic_appointments')
+        .select(`
+            *,
+            cosmetic_services(title, duration_minutes, price),
+            employees(name, color),
+            profiles(full_name, email, phone)
+        `)
+        .order('start_time', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching admin cosmetic appointments:', error);
+        return [];
+    }
+
+    return data;
+}
+
+export async function createAdminCosmeticAppointment(data: {
+    employee_id: string;
+    service_id: string;
+    start_time: string;
+    end_time: string;
+    notes?: string;
+    client_name?: string;
+    client_email?: string;
+    client_phone?: string;
+    user_id?: string;
+}) {
+    await requireAdmin();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('cosmetic_appointments')
+        .insert({
+            employee_id: data.employee_id,
+            service_id: data.service_id,
+            start_time: data.start_time,
+            end_time: data.end_time,
+            notes: data.notes,
+            status: 'confirmed',
+            user_id: data.user_id || null,
+            client_name: data.client_name || null,
+            client_email: data.client_email || null,
+            client_phone: data.client_phone || null
+        });
+
+    if (error) {
+        console.error('Error creating admin appointment:', error);
+        return { error: 'Nepodarilo sa vytvoriť rezerváciu.' };
+    }
+
+    revalidatePath('/admin/cosmetics/reservations');
+    revalidatePath('/dashboard/cosmetics/appointments');
+    return { success: true };
+}
+
+export async function updateAdminCosmeticAppointment(id: string, data: {
+    start_time: string;
+    end_time: string;
+    employee_id: string;
+    service_id: string;
+    notes?: string;
+    client_name?: string;
+    client_email?: string;
+    client_phone?: string;
+}) {
+    await requireAdmin();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('cosmetic_appointments')
+        .update({
+            start_time: data.start_time,
+            end_time: data.end_time,
+            employee_id: data.employee_id,
+            service_id: data.service_id,
+            notes: data.notes,
+            client_name: data.client_name || null,
+            client_email: data.client_email || null,
+            client_phone: data.client_phone || null
+        })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error updating admin appointment:', error);
+        return { error: 'Nepodarilo sa upraviť rezerváciu.' };
+    }
+
+    revalidatePath('/admin/cosmetics/reservations');
+    revalidatePath('/dashboard/cosmetics/appointments');
+    return { success: true };
+}
+
+export async function deleteAdminCosmeticAppointment(id: string) {
+    await requireAdmin();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('cosmetic_appointments')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting admin appointment:', error);
+        return { error: 'Nepodarilo sa zmazať rezerváciu.' };
+    }
+
+    revalidatePath('/admin/cosmetics/reservations');
+    revalidatePath('/dashboard/cosmetics/appointments');
+    return { success: true };
+}

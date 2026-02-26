@@ -67,6 +67,8 @@
   */
     border: 1px solid var(--color-border);
     min-height: 500px;
+    min-width: 0;
+    /* Critical for flex items to allow their children to overflow and trigger scrolling rather than expanding the parent */
 }
 
 @media (max-width: 768px) {

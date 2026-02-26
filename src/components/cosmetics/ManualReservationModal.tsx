@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 // import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'; 
 import { X, Calendar, Clock, User, Mail, Phone, FileText, AlertCircle, Loader2 } from 'lucide-react';
-import { getCosmeticServices, getEmployeesForService, createManualReservation } from '@/actions/cosmetic-actions';
+import { getManagedServices, getEmployeesForService, createManualReservation } from '@/actions/cosmetic-actions';
 // import { toast } from 'sonner';
 
 export function ManualReservationModal() {
@@ -52,7 +52,7 @@ export function ManualReservationModal() {
     }, [selectedService]);
 
     async function loadServices() {
-        const data = await getCosmeticServices();
+        const data = await getManagedServices();
         setServices(data || []);
     }
 

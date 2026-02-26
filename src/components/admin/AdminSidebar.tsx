@@ -18,6 +18,7 @@ const navItems = [
     { name: 'Faktúry', href: '/admin/invoices', icon: FileText },
     { name: 'Kozmetika - Služby', href: '/admin/cosmetics/services', icon: List },
     { name: 'Kozmetika - Staff', href: '/admin/cosmetics/staff', icon: Users },
+    { name: 'Kozmetika - Rezervácie', href: '/admin/cosmetics/reservations', icon: Calendar },
 ];
 
 import { useUserRole } from '@/hooks/useUserRole';
