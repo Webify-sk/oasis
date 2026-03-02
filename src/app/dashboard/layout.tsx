@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { VerificationProvider } from '@/components/auth/VerificationContext';
 import { VerificationBanner } from '@/components/auth/VerificationBanner';
+import { PhonePromptModal } from '@/components/dashboard/PhonePromptModal';
 
 export default async function DashboardLayout({
     children,
@@ -20,7 +21,7 @@ export default async function DashboardLayout({
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('email_verified, role')
+        .select('email_verified, role, phone')
         .eq('id', user.id)
         .single();
 
@@ -30,11 +31,16 @@ export default async function DashboardLayout({
     // const isVerified = isStaff || (profile?.email_verified !== false);
     const isVerified = true;
 
+    console.log('[DEBUG LAYOUT] profile.role:', profile?.role, ' | profile.phone:', profile?.phone, ' | type:', typeof profile?.phone);
+
     return (
         <VerificationProvider isVerified={isVerified}>
             <div className={styles.container}>
                 <Header />
                 <VerificationBanner isVerified={isVerified} />
+                {profile && !['admin', 'employee', 'trainer'].includes(profile.role) && (
+                    <PhonePromptModal isPhoneMissing={!profile.phone} userId={user.id} />
+                )}
                 <div className={styles.pageWrapper}>
                     <div className={styles.dashboardGrid}>
                         <aside className={styles.sidebarWrapper}>

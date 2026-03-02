@@ -58,6 +58,35 @@ export function TrainerForm({ initialData }: { initialData?: any }) {
                     <label style={labelStyle}>E-mail</label>
                     <input name="email" type="email" defaultValue={state?.inputs?.email ?? initialData?.email} style={inputStyle} placeholder="email@priklad.com" />
 
+                    {!initialData && (
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ ...labelStyle, marginTop: '0.5rem' }}>Heslo pre účet</label>
+                                <input
+                                    name="password"
+                                    type="password"
+                                    style={inputStyle}
+                                    placeholder="Minimálne 6 znakov"
+                                    minLength={6}
+                                />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ ...labelStyle, marginTop: '0.5rem' }}>Potvrdenie hesla</label>
+                                <input
+                                    name="password_confirm"
+                                    type="password"
+                                    style={inputStyle}
+                                    placeholder="Zopakujte heslo"
+                                    minLength={6}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.5rem', marginBottom: 0 }}>
+                        {!initialData ? 'Ak vyplníte e-mail a heslo, automaticky sa vytvorí používateľský účet, s ktorým sa bude môcť tréner prihlásiť.' : ''}
+                    </p>
+
                     <label style={labelStyle}>Telefón</label>
                     <input name="phone" defaultValue={state?.inputs?.phone ?? initialData?.phone} style={inputStyle} placeholder="0912 345 678" />
 

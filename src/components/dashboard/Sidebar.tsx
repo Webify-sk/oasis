@@ -41,6 +41,12 @@ const navGroups = [
             { name: 'Darčekové poukazy', href: '/dashboard/gift-vouchers', icon: Gift },
             { name: 'Faktúry', href: '/dashboard/invoices', icon: FileText },
         ]
+    },
+    {
+        title: 'Trénerská Zóna',
+        items: [
+            { name: 'Moje tréningy', href: '/dashboard/trainer', icon: Dumbbell, trainerOnly: true },
+        ]
     }
 ];
 
@@ -73,10 +79,32 @@ export function Sidebar() {
                     ];
                     if (hiddenForEmployee.includes(item.href)) return false;
                 }
+
+                if (role === 'trainer') {
+                    const hiddenForTrainer = [
+                        '/dashboard/trainings',
+                        '/dashboard/calendar',
+                        '/dashboard/credit',
+                        '/dashboard/milestones',
+                        '/dashboard/gift-vouchers',
+                        '/dashboard/invoices',
+                        '/dashboard/cosmetics',
+                        '/dashboard/cosmetics/appointments',
+                        '/dashboard/cosmetics/availability'
+                    ];
+                    if (hiddenForTrainer.includes(item.href)) return false;
+                }
+
                 if (role !== 'employee' && role !== 'admin') {
                     // @ts-ignore
                     if (item.employeeOnly) return false;
                 }
+
+                if (role !== 'trainer' && role !== 'admin') {
+                    // @ts-ignore
+                    if (item.trainerOnly) return false;
+                }
+
                 return true;
             });
 

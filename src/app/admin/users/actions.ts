@@ -44,12 +44,18 @@ export async function upsertUser(prevState: any, formData: FormData) {
         };
     }
 
-    // Handle Employee Promotion
+    // Handle Employee or Trainer Promotion
     if (role === 'employee') {
         const email = formData.get('email') as string;
         if (email) {
             const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
             await promoteToEmployee(id, full_name, email);
+        }
+    } else if (role === 'trainer') {
+        const email = formData.get('email') as string;
+        if (email) {
+            const { promoteToTrainer } = await import('@/app/admin/trainers/actions');
+            await promoteToTrainer(id, full_name, email, phone);
         }
     }
 
@@ -141,10 +147,13 @@ export async function createUser(fromState: any, formData: FormData) {
             console.error('Failed to send welcome email:', mailError);
         }
 
-        // Handle Employee Promotion
+        // Handle Employee or Trainer Promotion
         if (role === 'employee') {
             const { promoteToEmployee } = await import('@/actions/cosmetic-actions');
             await promoteToEmployee(user.id, full_name, email);
+        } else if (role === 'trainer') {
+            const { promoteToTrainer } = await import('@/app/admin/trainers/actions');
+            await promoteToTrainer(user.id, full_name, email, phone);
         }
 
     } catch (e) {

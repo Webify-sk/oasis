@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     const [profileRes, bookingsRes, appointmentsRes, pastTrainingsRes, pastAppointmentsRes] = await Promise.all([
         supabase
             .from('profiles')
-            .select('full_name, credits, role, email_verified')
+            .select('full_name, credits, role, email_verified, phone')
             .eq('id', user.id)
             .single(),
         supabase
@@ -82,6 +82,12 @@ export default async function DashboardPage() {
         return <EmployeeDashboard appointments={appointments} employeeName={profile.full_name || 'Kolega'} activeServicesCount={services.length} />;
     }
 
+    // Check if Trainer
+    if (profile?.role === 'trainer') {
+        const { TrainerDashboardView } = await import('@/components/dashboard/TrainerDashboardView');
+        return <TrainerDashboardView />;
+    }
+
     // Helper to format date nicely. Trainings use "Face Value UTC", while appointments use real UTC.
     const formatBookingDate = (dateStr: string, isTraining: boolean) => {
         const d = new Date(dateStr);
@@ -120,7 +126,6 @@ export default async function DashboardPage() {
 
     return (
         <div className={`${styles.container} animate-fadeInUp`}>
-
             {/* Header Section (Welcome + Credits) */}
             <div className={styles.headerContainer}>
                 <div className={styles.welcomeSection}>

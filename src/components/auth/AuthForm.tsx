@@ -41,6 +41,17 @@ export function AuthForm() {
     });
 
     useEffect(() => {
+        // Clear any previous phone prompt shown flags when arriving at the login form
+        try {
+            Object.keys(sessionStorage).forEach(key => {
+                if (key.startsWith('phonePromptSeen_')) {
+                    sessionStorage.removeItem(key);
+                }
+            });
+        } catch (e) {
+            // ignore
+        }
+
         const savedData = localStorage.getItem('registration_draft');
         if (savedData) {
             try {

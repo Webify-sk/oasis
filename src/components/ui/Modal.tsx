@@ -11,9 +11,10 @@ interface ModalProps {
     title: string;
     children: React.ReactNode;
     actions?: React.ReactNode;
+    titleAlign?: 'left' | 'center' | 'right';
 }
 
-export function Modal({ isOpen, onClose, title, children, actions }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, actions, titleAlign }: ModalProps) {
     const [mounted, setMounted] = React.useState(false);
 
     useEffect(() => {
@@ -48,7 +49,7 @@ export function Modal({ isOpen, onClose, title, children, actions }: ModalProps)
         }}>
             <div className={styles.modal}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h2 className={styles.title} style={{ margin: 0 }}>{title}</h2>
+                    <h2 className={styles.title} style={{ margin: 0, textAlign: titleAlign || 'center' }}>{title}</h2>
                     <button
                         onClick={onClose}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '0.25rem' }}
