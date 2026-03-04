@@ -13,6 +13,16 @@ export interface AdminInvoice {
     status: string;
     variable_symbol: string;
     user_id: string;
+
+    // New Editable Billing fields
+    billing_name: string | null;
+    billing_street: string | null;
+    billing_city: string | null;
+    billing_zip: string | null;
+    billing_country: string | null;
+    discount_amount: number | null;
+    service_type: string | null;
+
     user: {
         email: string;
         full_name: string | null;
@@ -35,11 +45,6 @@ export async function getAllInvoices() {
         console.error('Error fetching all invoices:', error);
         return [];
     }
-
-    // Map the result to match the interface if necessary
-    // Supabase returns user as an object or array depending on relationship, 
-    // strictly speaking it returns what we asked for.
-    // We might need to cast or ensure types.
 
     return data as unknown as AdminInvoice[];
 }
@@ -71,6 +76,57 @@ export async function deleteInvoice(invoiceId: string) {
     if (error) {
         console.error('Error deleting invoice:', error);
         throw new Error('Nepodarilo sa vymazať faktúru.');
+    }
+
+    revalidatePath('/admin/invoices');
+    return { success: true };
+}
+
+export async function updateInvoice(invoiceId: string, updates: Partial<AdminInvoice>) {
+    await requireAdmin();
+
+    const supabase = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+
+    // Map fields matching database columns exactly from Partial<AdminInvoice>
+    const updatePayload = {
+        description: updates.description,
+        amount: updates.amount,
+        created_at: updates.created_at,
+        status: updates.status,
+        variable_symbol: updates.variable_symbol,
+        billing_name: updates.billing_name,
+        billing_street: updates.billing_street,
+        billing_city: updates.billing_city,
+        billing_zip: updates.billing_zip,
+        billing_country: updates.billing_country,
+        discount_amount: updates.discount_amount,
+        service_type: updates.service_type
+    };
+
+    // Remove undefined values so Supabase doesn't attempt to overwrite them blindly
+    Object.keys(updatePayload).forEach(key => {
+        if (updatePayload[key as keyof typeof updatePayload] === undefined) {
+            delete updatePayload[key as keyof typeof updatePayload];
+        }
+    });
+
+    const { error } = await supabase
+        .from('invoices')
+        .update(updatePayload)
+        .eq('id', invoiceId);
+
+    if (error) {
+        console.error('Error updating invoice:', error);
+        throw new Error('Nepodarilo sa aktualizovať faktúru.');
     }
 
     revalidatePath('/admin/invoices');

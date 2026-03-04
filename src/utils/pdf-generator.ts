@@ -225,6 +225,8 @@ export async function generateInvoicePDF(data: {
     supplierDic?: string;
     supplierIcdph?: string;
     variableSymbol?: string;
+    discountAmount?: number;
+    serviceType?: string;
 }) {
     const pdfDoc = await PDFDocument.create();
 
@@ -338,8 +340,21 @@ export async function generateInvoicePDF(data: {
 
     y -= 20;
     drawText(data.description, 50, y, 11);
-    drawText('1 ks', 350, y, 11, false, undefined, 'right'); // Quantity placeholder
-    drawText(`${data.amount.toFixed(2)} ${data.currency.toUpperCase()} s DPH`, width - 50, y, 11, true, undefined, 'right');
+
+    // Default service type or custom
+    const serviceString = data.serviceType ? data.serviceType : '1 ks';
+    drawText(serviceString, 350, y, 11, false, undefined, 'right');
+
+    // Item Base Amount (before discount, assuming total amount is AFTER discount)
+    // Actually, it's easier to show the current amount and then a discount line if it exists
+    const itemAmount = (data.amount + (data.discountAmount || 0));
+    drawText(`${itemAmount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 11, true, undefined, 'right');
+
+    if (data.discountAmount && data.discountAmount > 0) {
+        y -= 20;
+        drawText('Zlava', 50, y, 11, false, rgb(0.8, 0.2, 0.2));
+        drawText(`-${data.discountAmount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 11, true, rgb(0.8, 0.2, 0.2), 'right');
+    }
 
     y -= 20;
     page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });

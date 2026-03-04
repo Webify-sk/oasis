@@ -53,14 +53,20 @@ export async function GET(
     // 5. Prepare Data
     const formattedDate = new Date(invoice.created_at).toLocaleDateString('sk-SK');
 
+    // Prioritize Invoice snapshot data over Profile data
+    const bStreet = invoice.billing_street || profile?.billing_street || '';
+    const bCity = invoice.billing_city || profile?.billing_city || '';
+    const bZip = invoice.billing_zip || profile?.billing_zip || '';
+    const bCountry = invoice.billing_country || profile?.billing_country || 'Slovensko';
+
     // Construct Buyer Address
     const buyerAddress = [
-        profile?.billing_street,
-        `${profile?.billing_zip || ''} ${profile?.billing_city || ''}`.trim(),
-        profile?.billing_country || 'Slovensko'
+        bStreet,
+        `${bZip} ${bCity}`.trim(),
+        bCountry
     ].filter(Boolean).join('\n') || 'Adresa nezadaná';
 
-    const buyerName = profile?.billing_name || profile?.full_name || 'Zakaznik';
+    const buyerName = invoice.billing_name || profile?.billing_name || profile?.full_name || 'Zakaznik';
 
     // 4. Generate PDF
     try {
@@ -76,7 +82,10 @@ export async function GET(
             supplierAddress: 'Pribinova 25\n811 09 Bratislava - mestská časť Staré Mesto\nSlovensko',
             supplierIco: 'IČO: 56418078',
             supplierDic: 'DIČ: 2122300895',
-            supplierIcdph: 'IČ DPH: SK2122300895'
+            supplierIcdph: 'IČ DPH: SK2122300895',
+            variableSymbol: invoice.variable_symbol,
+            serviceType: invoice.service_type,
+            discountAmount: invoice.discount_amount ? parseFloat(invoice.discount_amount) : undefined
         });
 
         // 5. Return PDF
