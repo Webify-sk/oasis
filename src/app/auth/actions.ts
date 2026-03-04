@@ -162,11 +162,15 @@ export async function resetPassword(email: string) {
         return { success: false, message: 'Nepodarilo sa vygenerovať link pre obnovu hesla. Skontrolujte email.' };
     }
 
-    // 3. Send Email via Nodemailer
-    if (data && data.properties?.action_link) {
+    // 3. Send Email via Nodemailer using OTP instead of action_link
+    if (data && data.properties?.email_otp) {
         try {
             const { sendEmail } = await import('@/utils/email');
             const { getEmailTemplate } = await import('@/utils/email-template');
+
+            // Construct cross-browser OTP link
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
+            const otpLink = `${baseUrl}/auth/reset-password?token=${data.properties.email_otp}&email=${encodeURIComponent(email)}`;
 
             const html = getEmailTemplate(
                 'Obnovenie hesla',
@@ -176,7 +180,7 @@ export async function resetPassword(email: string) {
                 <p>Kliknite na tlačidlo nižšie pre nastavenie nového hesla:</p>
                 
                 <div style="text-align: center;">
-                    <a href="${data.properties.action_link}" class="button">Obnoviť heslo</a>
+                    <a href="${otpLink}" class="button">Obnoviť heslo</a>
                 </div>
 
                 <p style="font-size: 12px; color: #888; margin-top: 30px;">Ak ste o túto zmenu nežiadali, tento email môžete ignorovať.</p>
