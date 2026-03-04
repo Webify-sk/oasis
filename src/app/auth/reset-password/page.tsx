@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { sendPasswordChangedNotification } from '@/app/auth/actions';
 
@@ -13,26 +13,53 @@ function ResetPasswordForm() {
     const [error, setError] = useState('');
     const [sessionReady, setSessionReady] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createClient();
 
     useEffect(() => {
         let isMounted = true;
 
-        const checkSession = async () => {
+        const checkSessionAndOtp = async () => {
+            const token = searchParams.get('token');
+            const email = searchParams.get('email');
+
+            // 1. Check for Cross-Browser OTP Token in URL
+            if (token && email) {
+                console.log('Found OTP token in URL, attempting to verify...');
+                const { data, error: otpError } = await supabase.auth.verifyOtp({
+                    email,
+                    token,
+                    type: 'recovery',
+                });
+
+                if (isMounted) {
+                    if (otpError) {
+                        console.error('OTP Verification Error:', otpError);
+                        setError('Odkaz na zmenu hesla je neplatný alebo vypršal. Vyžiadajte si nový.');
+                        // Don't set session ready so they can't submit
+                    } else if (data.session) {
+                        console.log('OTP verified successfully, session created');
+                        // Clean up URL to hide token
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        setSessionReady(true);
+                    }
+                }
+                return; // Stop here if we handled OTP
+            }
+
+            // 2. Fallback: Check existing session or standard hash-based PKCE
             const { data: { session }, error } = await supabase.auth.getSession();
             if (isMounted && session) {
                 console.log('Initial session found');
                 setSessionReady(true);
             } else if (isMounted) {
-                // Sometimes the session is already there but took a moment or we are waiting for the hash
-                // If there's an error or no session immediately, we still wait for onAuthStateChange
                 console.log('No immediate session, waiting for auth state change or hash processing...');
             }
         };
 
-        checkSession();
+        checkSessionAndOtp();
 
-        // Listen for changes (this fires when the URL hash is processed by Supabase)
+        // Listen for changes (this fires when the URL hash is processed by Supabase in PKCE flow)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth Event:', event);
             if (isMounted && session) {
@@ -40,13 +67,9 @@ function ResetPasswordForm() {
             }
         });
 
-        // Fallback: If after 3 seconds we still don't have a session, maybe the user is already logged in 
-        // or the link was invalid. We'll enable the form anyway and let the submission fail with a clear error
-        // if they really don't have a session, rather than locking them out forever.
-        // Actually, for recovery, we MUST have a session.
         const timeoutId = setTimeout(() => {
-            if (isMounted) {
-                setSessionReady(true); // Allow them to try, better than indefinite hang
+            if (isMounted && !searchParams.get('token')) {
+                setSessionReady(true); // Allow them to try if standard flow hangs
             }
         }, 3000);
 
@@ -55,7 +78,7 @@ function ResetPasswordForm() {
             subscription.unsubscribe();
             clearTimeout(timeoutId);
         };
-    }, [supabase]);
+    }, [supabase, searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
