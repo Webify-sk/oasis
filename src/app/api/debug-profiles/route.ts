@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // As a normal signed-in trainer:
     await supabase.auth.signInWithPassword({ email: 'vikikozena@gmail.com', password: 'password' });
