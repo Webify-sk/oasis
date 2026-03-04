@@ -1,0 +1,83 @@
+﻿git : remote: error: GH013: R
+epository rule violations fou
+nd for refs/heads/main.      
+  
+At line:1 char:1
++ git push origin main 2> .gi
+t_error.log
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecifi    ed: (remot
+e: error    : ...s/main.     
+       :String) [], Rem    ot
+eException
+    + FullyQualifiedEr    ror
+Id : NativeComm    andError
+ 
+remote: 
+remote: - GITHUB PUSH PROTECT
+ION        
+remote:   ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö
+ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇö        
+remote:     Resolve the follo
+wing violations before pushin
+g again        
+remote: 
+remote:     - Push cannot con
+tain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to
+ resolve a blocked push      
+  
+remote:      https://docs.git
+hub.com/code-security/secret-
+scanning/working-with-secret-
+scanning-and-push-protection/
+working-with-push-protection-
+from-the-command-line#resolvi
+ng-a-blocked-push        
+remote:             
+remote:             
+remote:       ÔÇöÔÇö Supabase
+ Secret Key ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö
+ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö        
+remote:        locations:    
+    
+remote:          - commit: a8
+f780992f86df26f44a03da4593455
+94ef7014d        
+remote:            path: stat
+us.env:15        
+remote:          - commit: a8
+f780992f86df26f44a03da4593455
+94ef7014d        
+remote:            path: stat
+us.txt:28        
+remote:             
+remote:        (?) To push, r
+emove secret from commit(s) o
+r follow this URL to allow th
+e secret.        
+remote:        https://github
+.com/Webify-sk/oasis/security
+/secret-scanning/unblock-secr
+et/3ATyikPw7SttRBD0VtH1ob0E36
+c        
+remote:             
+remote: 
+remote: 
+To https://github.com/Webify-
+sk/oasis.git
+ ! [remote rejected] main -> 
+main (push declined due to re
+pository rule violations)
+error: failed to push some re
+fs to 'https://github.com/Web
+ify-sk/oasis.git'
