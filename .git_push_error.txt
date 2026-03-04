@@ -1,0 +1,87 @@
+﻿git : remote: error: GH013:
+ Repository rule violations
+ found for refs/heads/main.
+        
+At line:1 char:1
++ git push origin main 2>&1
+ | Out-File -Encoding utf8 
+.git_push_error.t ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (remot
+e:     error: ...s/main.   
+         :String) [], Remot
+eExc    eption
+    + FullyQualifiedErrorId
+     : NativeCommandError
+ 
+remote: 
+remote: - GITHUB PUSH PROTE
+CTION        
+remote:   ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö  
+      
+remote:     Resolve the fol
+lowing violations before pu
+shing again        
+remote: 
+remote:     - Push cannot c
+ontain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how 
+to resolve a blocked push  
+      
+remote:      https://docs.g
+ithub.com/code-security/sec
+ret-scanning/working-with-s
+ecret-scanning-and-push-pro
+tection/working-with-push-p
+rotection-from-the-command-
+line#resolving-a-blocked-pu
+sh        
+remote:             
+remote:             
+remote:       ÔÇöÔÇö Supaba
+se Secret Key ÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö 
+       
+remote:        locations:  
+      
+remote:          - commit: 
+a5ff40a136b35c6915086aacb05
+d568bd3c8a5bd        
+remote:            path: st
+atus.env:15        
+remote:          - commit: 
+a5ff40a136b35c6915086aacb05
+d568bd3c8a5bd        
+remote:            path: st
+atus.txt:28        
+remote:             
+remote:        (?) To push,
+ remove secret from commit(
+s) or follow this URL to al
+low the secret.        
+remote:        https://gith
+ub.com/Webify-sk/oasis/secu
+rity/secret-scanning/unbloc
+k-secret/3ATyikPw7SttRBD0Vt
+H1ob0E36c        
+remote:             
+remote: 
+remote: 
+To https://github.com/Webif
+y-sk/oasis.git
+ ! [remote rejected] main -
+> main (push declined due t
+o repository rule violation
+s)
+error: failed to push some 
+refs to 'https://github.com
+/Webify-sk/oasis.git'
