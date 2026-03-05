@@ -73,7 +73,8 @@ export async function buyVoucher(formData: FormData) {
         senderName,
         message,
         billingData, // NEW: Pass billing data
-        redirectUrls // NEW: Pass redirect URLs
+        redirectUrls, // NEW: Pass redirect URLs
+        product.category // NEW: Pass Category for VAT
     );
 
     if (sessionRes?.error) {

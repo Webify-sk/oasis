@@ -227,6 +227,8 @@ export async function generateInvoicePDF(data: {
     variableSymbol?: string;
     discountAmount?: number;
     serviceType?: string;
+    isCreditNote?: boolean;
+    relatedInvoiceNumber?: string;
 }) {
     const pdfDoc = await PDFDocument.create();
 
@@ -281,8 +283,16 @@ export async function generateInvoicePDF(data: {
     }
 
     // Invoice Title (Right)
-    drawText('FAKTURA', width - 50, height - 60, 24, true, BRAND_GREEN, 'right');
-    drawText(`Cislo: ${data.invoiceNumber}`, width - 50, height - 85, 12, false, DARK_GRAY, 'right');
+    if (data.isCreditNote) {
+        drawText('DOBROPIS', width - 50, height - 60, 24, true, rgb(0.8, 0.4, 0), 'right');
+        if (data.relatedInvoiceNumber) {
+            drawText(`k faktúre č.: ${data.relatedInvoiceNumber}`, width - 50, height - 75, 10, false, DARK_GRAY, 'right');
+        }
+        drawText(`Cislo: ${data.invoiceNumber}`, width - 50, height - 90, 12, false, DARK_GRAY, 'right');
+    } else {
+        drawText('FAKTURA', width - 50, height - 60, 24, true, BRAND_GREEN, 'right');
+        drawText(`Cislo: ${data.invoiceNumber}`, width - 50, height - 85, 12, false, DARK_GRAY, 'right');
+    }
 
     const topSectionY = height - 130;
 
@@ -361,14 +371,18 @@ export async function generateInvoicePDF(data: {
 
     // --- VAT Breakdown ---
     y -= 30;
-    const vatRate = 0.23;
+    const serviceStringLower = (data.serviceType || data.description || '').toLowerCase();
+    const isBeauty = serviceStringLower.includes('beauty') || serviceStringLower.includes('body') || serviceStringLower.includes('masáž');
+    const vatRate = isBeauty ? 0.23 : 0.05;
+    const vatLabel = isBeauty ? '23%' : '5%';
+
     const baseAmount = data.amount / (1 + vatRate);
     const vatAmount = data.amount - baseAmount;
 
     drawText('Základ dane:', width - 200, y, 10, false, DARK_GRAY, 'right');
     drawText(`${baseAmount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 10, false, DARK_GRAY, 'right');
     y -= 15;
-    drawText('DPH 23%:', width - 200, y, 10, false, DARK_GRAY, 'right');
+    drawText(`DPH ${vatLabel}:`, width - 200, y, 10, false, DARK_GRAY, 'right');
     drawText(`${vatAmount.toFixed(2)} ${data.currency.toUpperCase()}`, width - 50, y, 10, false, DARK_GRAY, 'right');
 
     // --- Total ---

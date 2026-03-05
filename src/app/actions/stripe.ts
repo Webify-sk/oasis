@@ -171,6 +171,7 @@ export async function createCheckoutSession(
                 packageName: creditPackage.title,
                 credits: creditPackage.credits, // Add this for webhook convenience
                 bonus: creditPackage.bonus_credits || 0,
+                service_type: 'Tréning', // Packages are currently all Pilates classes
                 ...(appliedCouponId && { appliedCouponId }) // Poslanie ID pre webhook
             }
         })
@@ -204,7 +205,8 @@ export async function createVoucherCheckoutSession(
     redirectUrls?: {
         success: string;
         cancel: string;
-    }
+    },
+    category?: string
 ) {
     const supabase = await createClient()
     try {
@@ -229,7 +231,8 @@ export async function createVoucherCheckoutSession(
             recipientEmail: recipientEmail,
             senderName: senderName,
             message: message,
-            isGuest: user ? 'false' : 'true'
+            isGuest: user ? 'false' : 'true',
+            service_type: category || 'Darčekový poukaz'
         };
 
         // Add billing fields to metadata if present

@@ -121,6 +121,7 @@ export async function POST(req: Request) {
                 currency: session.currency || 'eur',
                 stripe_payment_id: session.payment_intent as string,
                 status: 'paid',
+                service_type: session.metadata?.service_type || 'Darčekový poukaz',
                 // New Billing Columns
                 billing_name: billingData.billing_name,
                 billing_address: billingData.billing_address,
@@ -380,7 +381,8 @@ export async function POST(req: Request) {
                 amount: (session.amount_total || 0) / 100,
                 currency: session.currency || 'eur',
                 stripe_payment_id: session.payment_intent as string,
-                status: 'paid'
+                status: 'paid',
+                service_type: session.metadata?.service_type || 'Tréning'
             });
             if (invoiceError) console.error('Error creating invoice for credits:', invoiceError);
 

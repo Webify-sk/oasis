@@ -1,7 +1,7 @@
 'use client';
 
-import { AdminInvoice, updateInvoice } from '@/app/admin/invoices/actions';
-import { Download, Search, Trash2, ArchiveRestore, Edit2 } from 'lucide-react';
+import { AdminInvoice, updateInvoice, createCreditNote } from '@/app/admin/invoices/actions';
+import { Download, Search, Trash2, ArchiveRestore, Edit2, Undo2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -17,6 +17,10 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
     const [invoiceToDelete, setInvoiceToDelete] = useState<AdminInvoice | null>(null);
     const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
     const [isDownloading, setIsDownloading] = useState(false);
+
+    // Refund Modal State
+    const [refundModalOpen, setRefundModalOpen] = useState(false);
+    const [invoiceToRefund, setInvoiceToRefund] = useState<AdminInvoice | null>(null);
 
     // Edit Modal State
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -277,10 +281,35 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
                                         style={{ cursor: 'pointer' }}
                                     />
                                 </td>
-                                <td style={{ padding: '1rem', fontWeight: 600 }}>{invoice.invoice_number}</td>
+                                <td style={{ padding: '1rem', fontWeight: 600 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                                        {invoice.invoice_number}
+                                        {invoice.document_type === 'credit_note' && (
+                                            <span style={{
+                                                fontSize: '0.65rem',
+                                                backgroundColor: '#fef08a',
+                                                color: '#854d0e',
+                                                padding: '0.1rem 0.4rem',
+                                                borderRadius: '4px',
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                Dobropis
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                                 <td style={{ padding: '1rem' }}>
                                     <div style={{ fontWeight: 500 }}>{invoice.user?.full_name || 'Neznámy'}</div>
                                     <div style={{ fontSize: '0.8rem', color: '#666' }}>{invoice.user?.email}</div>
+                                    {invoice.document_type === 'credit_note' && invoice.related_invoice_id && (
+                                        <div style={{ fontSize: '0.75rem', color: '#854d0e', marginTop: '0.2rem' }}>
+                                            K faktúre: {
+                                                // We can't easily fetch the related invoice string without an extra query, 
+                                                // but we injected this into the description so we'll rely on that or a later join
+                                                invoice.description.includes('č.') ? invoice.description.split('č. ')[1] : 'Nešpecifikované'
+                                            }
+                                        </div>
+                                    )}
                                 </td>
                                 <td style={{ padding: '1rem', color: '#444' }}>
                                     {new Date(invoice.created_at).toLocaleDateString('sk-SK')}
@@ -334,6 +363,30 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
                                     >
                                         <Download size={18} />
                                     </button>
+
+                                    {invoice.document_type !== 'credit_note' && (
+                                        <button
+                                            onClick={() => {
+                                                setInvoiceToRefund(invoice);
+                                                setRefundModalOpen(true);
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: '#eab308',
+                                                padding: '0.4rem',
+                                                borderRadius: '4px',
+                                                marginLeft: '0.5rem'
+                                            }}
+                                            title="Vystaviť Dobropis / Stornovať"
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef08a'}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                            <Undo2 size={18} />
+                                        </button>
+                                    )}
+
                                     <button
                                         onClick={() => {
                                             setInvoiceToDelete(invoice);
@@ -648,6 +701,88 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
                                 }}
                             >
                                 Vymazať
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Refund / Credit Note Modal */}
+            {refundModalOpen && invoiceToRefund && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '2rem',
+                        borderRadius: '0.5rem',
+                        maxWidth: '450px',
+                        width: '90%',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem', color: '#1f2937' }}>
+                            Vystaviť Dobropis / Storno
+                        </h3>
+                        <p style={{ color: '#4b5563', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                            Skutočne chcete vystaviť dobropis (opravný doklad) k faktúre <strong>{invoiceToRefund.invoice_number}</strong>?<br /><br />
+                            Táto akcia vytvorí nový doklad so zápornou sumou (<strong>-{invoiceToRefund.amount} EUR</strong>), čím faktúru "stornuje". Pôvodná faktúra ostane v systéme.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button
+                                onClick={() => {
+                                    setRefundModalOpen(false);
+                                    setInvoiceToRefund(null);
+                                }}
+                                disabled={isUpdating}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.375rem',
+                                    backgroundColor: '#f3f4f6',
+                                    color: '#374151',
+                                    fontWeight: 500,
+                                    border: 'none',
+                                    cursor: isUpdating ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                Zrušiť
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setIsUpdating(true);
+                                    try {
+                                        await createCreditNote(invoiceToRefund.id);
+                                        setRefundModalOpen(false);
+                                        setInvoiceToRefund(null);
+                                        router.refresh();
+                                    } catch (e: any) {
+                                        alert(e.message || 'Chyba pri vytváraní dobropisu.');
+                                        console.error(e);
+                                    } finally {
+                                        setIsUpdating(false);
+                                    }
+                                }}
+                                disabled={isUpdating}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.375rem',
+                                    backgroundColor: '#ca8a04', // yellow-600
+                                    color: 'white',
+                                    fontWeight: 500,
+                                    border: 'none',
+                                    cursor: isUpdating ? 'not-allowed' : 'pointer',
+                                    opacity: isUpdating ? 0.7 : 1
+                                }}
+                            >
+                                {isUpdating ? 'Vytváram...' : 'Vystaviť Dobropis'}
                             </button>
                         </div>
                     </div>

@@ -70,6 +70,19 @@ export async function POST(request: NextRequest) {
 
             const buyerName = invoice.billing_name || profile?.billing_name || profile?.full_name || 'Zakaznik';
 
+            // Fetch Related Invoice Number if Credit Note
+            let relatedInvoiceNumber: string | undefined = undefined;
+            if (invoice.document_type === 'credit_note' && invoice.related_invoice_id) {
+                const { data: related } = await supabase
+                    .from('invoices')
+                    .select('invoice_number')
+                    .eq('id', invoice.related_invoice_id)
+                    .single();
+                if (related) {
+                    relatedInvoiceNumber = related.invoice_number;
+                }
+            }
+
             // Generate PDF
             const pdfBuffer = await generateInvoicePDF({
                 invoiceNumber: invoice.invoice_number || `INV-${invoiceId.slice(0, 8)}`,
@@ -86,7 +99,9 @@ export async function POST(request: NextRequest) {
                 supplierIcdph: 'IČ DPH: SK2122300895',
                 variableSymbol: invoice.variable_symbol,
                 serviceType: invoice.service_type,
-                discountAmount: invoice.discount_amount ? parseFloat(invoice.discount_amount) : undefined
+                discountAmount: invoice.discount_amount ? parseFloat(invoice.discount_amount) : undefined,
+                isCreditNote: invoice.document_type === 'credit_note',
+                relatedInvoiceNumber: relatedInvoiceNumber
             });
 
             // Add to ZIP
