@@ -22,6 +22,10 @@ interface ProfileFormProps {
         billing_city?: string;
         billing_zip?: string;
         billing_country?: string;
+        company_name?: string;
+        company_ico?: string;
+        company_dic?: string;
+        company_ic_dph?: string;
     }
 }
 
@@ -151,6 +155,25 @@ export function ProfileForm({ user }: ProfileFormProps) {
                                     <label className={styles.label}>Štát</label>
                                     <input name="billing_country" defaultValue={user.billing_country || 'Slovensko'} placeholder="Slovensko" className={styles.input} />
                                 </div>
+                                <h4 style={{ fontSize: '1.1rem', marginTop: '1.5rem', marginBottom: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>Firemné údaje (Voliteľné)</h4>
+                                <div className={styles.grid}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Názov spoločnosti</label>
+                                        <input name="company_name" defaultValue={user.company_name || ''} placeholder="Názov s.r.o." className={styles.input} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>IČO</label>
+                                        <input name="company_ico" defaultValue={user.company_ico || ''} placeholder="00000000" className={styles.input} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>DIČ</label>
+                                        <input name="company_dic" defaultValue={user.company_dic || ''} placeholder="2000000000" className={styles.input} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>IČ DPH</label>
+                                        <input name="company_ic_dph" defaultValue={user.company_ic_dph || ''} placeholder="SK2000000000" className={styles.input} />
+                                    </div>
+                                </div>
                             </div>
                         </>
                     )}
@@ -208,7 +231,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                         <h4 style={{ fontSize: '1.2rem', marginTop: '2rem', marginBottom: '1rem', color: '#4A403A' }}>Fakturačné údaje</h4>
                         <div className={styles.grid}>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Fakturačné meno / Firma</label>
+                                <label className={styles.label}>Fakturačné meno / Názov spoločnosti</label>
                                 <div className={styles.staticValue}>{user.billing_name || <span className={styles.placeholder}>Nezadané</span>}</div>
                             </div>
                             <div className={styles.formGroup}>
@@ -226,6 +249,30 @@ export function ProfileForm({ user }: ProfileFormProps) {
                                 <div className={styles.staticValue}>{user.billing_country || 'Slovensko'}</div>
                             </div>
                         </div>
+
+                        {user.company_name || user.company_ico ? (
+                            <>
+                                <h4 style={{ fontSize: '1.2rem', marginTop: '2rem', marginBottom: '1rem', color: '#4A403A' }}>Firemné údaje</h4>
+                                <div className={styles.grid}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Názov spoločnosti</label>
+                                        <div className={styles.staticValue}>{user.company_name || <span className={styles.placeholder}>Nezadané</span>}</div>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>IČO</label>
+                                        <div className={styles.staticValue}>{user.company_ico || <span className={styles.placeholder}>Nezadané</span>}</div>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>DIČ</label>
+                                        <div className={styles.staticValue}>{user.company_dic || <span className={styles.placeholder}>Nezadané</span>}</div>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>IČ DPH</label>
+                                        <div className={styles.staticValue}>{user.company_ic_dph || <span className={styles.placeholder}>Nezadané</span>}</div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : null}
                     </>
                 )}
 

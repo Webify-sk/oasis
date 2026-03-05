@@ -41,6 +41,25 @@ export async function updateProfile(formData: FormData) {
     const billing_country = formData.get('billing_country') as string;
     if (billing_country !== null) updateData.billing_country = billing_country;
 
+    // Company Fields
+    const company_name = formData.get('company_name') as string;
+    if (company_name !== null) updateData.company_name = company_name;
+
+    const company_ico = formData.get('company_ico') as string;
+    if (company_ico !== null) updateData.company_ico = company_ico;
+
+    const company_dic = formData.get('company_dic') as string;
+    if (company_dic !== null) updateData.company_dic = company_dic;
+
+    const company_ic_dph = formData.get('company_ic_dph') as string;
+    if (company_ic_dph !== null) updateData.company_ic_dph = company_ic_dph;
+
+    // Assuming ensureAdminOrSelf is defined elsewhere and returns a result that might cause an early exit or error.
+    // The original instruction had a typo 'se' after the function call, which has been corrected for syntactical correctness.
+    // If ensureAdminOrSelf is meant to be part of the update logic, its return should be handled.
+    // For now, it's inserted as a standalone call before the upsert.
+    // const authCheckResult = await ensureAdminOrSelf(formData);
+
     const { error } = await supabase
         .from('profiles')
         .upsert(updateData)

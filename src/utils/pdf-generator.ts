@@ -219,6 +219,10 @@ export async function generateInvoicePDF(data: {
     description: string;
     buyerName: string;
     buyerAddress?: string;
+    buyerCompanyName?: string;
+    buyerIco?: string;
+    buyerDic?: string;
+    buyerIcdph?: string;
     supplierName: string;
     supplierAddress: string;
     supplierIco?: string;
@@ -312,19 +316,39 @@ export async function generateInvoicePDF(data: {
     if (data.supplierIcdph) { drawText(data.supplierIcdph, 70, y, 9, false, DARK_GRAY); y -= 12; }
 
     // --- Buyer (Right) ---
+    const hasCompanyDetails = !!(data.buyerCompanyName || data.buyerIco);
     y = topSectionY;
-    page.drawRectangle({ x: 300, y: y - 100, width: 245, height: 115, borderColor: LIGHT_GRAY, borderWidth: 1 });
+    page.drawRectangle({
+        x: 300,
+        y: y - (hasCompanyDetails ? 140 : 100),
+        width: 245,
+        height: hasCompanyDetails ? 155 : 115,
+        borderColor: LIGHT_GRAY,
+        borderWidth: 1
+    });
 
     y -= 20;
     drawText('ODBERATEL', 320, y, 10, true, BRAND_GREEN); y -= 20;
-    drawText(data.buyerName, 320, y, 11, true); y -= 15;
+
+    if (data.buyerCompanyName) {
+        drawText(data.buyerCompanyName, 320, y, 11, true); y -= 15;
+        drawText(data.buyerName, 320, y, 10); y -= 12;
+    } else {
+        drawText(data.buyerName, 320, y, 11, true); y -= 15;
+    }
+
     if (data.buyerAddress) {
         data.buyerAddress.split('\n').forEach(line => {
             drawText(line, 320, y, 10); y -= 12;
         });
     } else {
-        drawText('Adresa nezadana', 320, y, 10, false, rgb(0.6, 0.6, 0.6));
+        drawText('Adresa nezadana', 320, y, 10, false, rgb(0.6, 0.6, 0.6)); y -= 12;
     }
+
+    y -= 5;
+    if (data.buyerIco) { drawText(`IČO: ${data.buyerIco}`, 320, y, 9, false, DARK_GRAY); y -= 12; }
+    if (data.buyerDic) { drawText(`DIČ: ${data.buyerDic}`, 320, y, 9, false, DARK_GRAY); y -= 12; }
+    if (data.buyerIcdph) { drawText(`IČ DPH: ${data.buyerIcdph}`, 320, y, 9, false, DARK_GRAY); y -= 12; }
 
     // --- Details Bar ---
     y = topSectionY - 180;

@@ -43,8 +43,14 @@ export function PublicVoucherPurchaseForm({ product, onBack }: PublicVoucherPurc
         billing_city: '',
         billing_zip: '',
         billing_country: 'Slovensko',
-        customer_email: '' // Crucial for guest checkout
+        customer_email: '', // Crucial for guest checkout
+        company_name: '',
+        company_ico: '',
+        company_dic: '',
+        company_ic_dph: ''
     });
+
+    const [isCompany, setIsCompany] = useState(false);
 
     const handleVoucherDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setVoucherData({ ...voucherData, [e.target.name]: e.target.value });
@@ -91,6 +97,13 @@ export function PublicVoucherPurchaseForm({ product, onBack }: PublicVoucherPurc
             formData.append('billing_city', billingData.billing_city);
             formData.append('billing_zip', billingData.billing_zip);
             formData.append('billing_country', billingData.billing_country);
+
+            if (isCompany) {
+                formData.append('company_name', billingData.company_name);
+                formData.append('company_ico', billingData.company_ico);
+                formData.append('company_dic', billingData.company_dic);
+                formData.append('company_ic_dph', billingData.company_ic_dph);
+            }
 
             const result = await buyVoucher(formData);
 
@@ -244,6 +257,43 @@ export function PublicVoucherPurchaseForm({ product, onBack }: PublicVoucherPurc
                         />
                     </div>
                 </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginTop: '0.5rem', marginBottom: '1.5rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                    <input
+                        type="checkbox"
+                        checked={isCompany}
+                        onChange={(e) => setIsCompany(e.target.checked)}
+                    />
+                    Nakupovať na firmu
+                </label>
+
+                {isCompany && (
+                    <div style={{ display: 'grid', gap: '0.8rem', padding: '1rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                        <h5 style={{ margin: 0, fontSize: '0.9rem', color: '#334155' }}>Firemné údaje</h5>
+                        <input
+                            name="company_name" placeholder="Názov spoločnosti (Povinné pre firmu)"
+                            value={billingData.company_name} onChange={handleBillingChange}
+                            style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: billingData.company_name ? 'white' : '#fff5f5' }}
+                        />
+                        <input
+                            name="company_ico" placeholder="IČO (Povinné pre firmu)"
+                            value={billingData.company_ico} onChange={handleBillingChange}
+                            style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: billingData.company_ico ? 'white' : '#fff5f5' }}
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                            <input
+                                name="company_dic" placeholder="DIČ"
+                                value={billingData.company_dic} onChange={handleBillingChange}
+                                style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                            />
+                            <input
+                                name="company_ic_dph" placeholder="IČ DPH"
+                                value={billingData.company_ic_dph} onChange={handleBillingChange}
+                                style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Terms */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>

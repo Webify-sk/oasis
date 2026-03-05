@@ -24,6 +24,10 @@ export interface AdminInvoice {
     billing_city: string | null;
     billing_zip: string | null;
     billing_country: string | null;
+    company_name: string | null;
+    company_ico: string | null;
+    company_dic: string | null;
+    company_ic_dph: string | null;
     discount_amount: number | null;
     service_type: string | null;
 
@@ -112,6 +116,10 @@ export async function updateInvoice(invoiceId: string, updates: Partial<AdminInv
         billing_city: updates.billing_city,
         billing_zip: updates.billing_zip,
         billing_country: updates.billing_country,
+        company_name: updates.company_name,
+        company_ico: updates.company_ico,
+        company_dic: updates.company_dic,
+        company_ic_dph: updates.company_ic_dph,
         discount_amount: updates.discount_amount,
         service_type: updates.service_type
     };

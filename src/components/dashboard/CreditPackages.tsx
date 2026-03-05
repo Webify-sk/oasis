@@ -59,6 +59,9 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
     }>({ isValid: null, message: '' });
     const [validatingCoupon, setValidatingCoupon] = useState(false);
 
+    // Company state
+    const [isCompany, setIsCompany] = useState(false);
+
     // Form state
     const [formData, setFormData] = useState({
         full_name: '',
@@ -67,7 +70,11 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
         billing_street: '',
         billing_city: '',
         billing_zip: '',
-        billing_country: 'Slovensko'
+        billing_country: 'Slovensko',
+        company_name: '',
+        company_ico: '',
+        company_dic: '',
+        company_ic_dph: ''
     });
 
     // Initial click handler - opens modal
@@ -80,8 +87,19 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
             billing_street: userProfile?.billing_street || '',
             billing_city: userProfile?.billing_city || '',
             billing_zip: userProfile?.billing_zip || '',
-            billing_country: userProfile?.billing_country || 'Slovensko'
+            billing_country: userProfile?.billing_country || 'Slovensko',
+            company_name: userProfile?.company_name || '',
+            company_ico: userProfile?.company_ico || '',
+            company_dic: userProfile?.company_dic || '',
+            company_ic_dph: userProfile?.company_ic_dph || ''
         });
+
+        // If user has company info in profile, pre-open the check section
+        if (userProfile?.company_name || userProfile?.company_ico) {
+            setIsCompany(true);
+        } else {
+            setIsCompany(false);
+        }
 
         setSelectedPackage(pkg);
         setTermsAccepted(false);
@@ -131,9 +149,25 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
             // 2. Create Checkout Session (passing coupon code if valid)
             const activeCoupon = couponState.isValid ? couponCode : undefined;
 
+            const checkoutPayload: any = {
+                packageId: selectedPackage.id,
+                couponCode: activeCoupon
+            };
+
+            if (isCompany) {
+                checkoutPayload.company_name = formData.company_name;
+                checkoutPayload.company_ico = formData.company_ico;
+                checkoutPayload.company_dic = formData.company_dic;
+                checkoutPayload.company_ic_dph = formData.company_ic_dph;
+            }
+
             const result = await createCheckoutSession(
-                selectedPackage.id,
-                activeCoupon
+                checkoutPayload.packageId,
+                checkoutPayload.couponCode,
+                checkoutPayload.company_name,
+                checkoutPayload.company_ico,
+                checkoutPayload.company_dic,
+                checkoutPayload.company_ic_dph
             ) as any;
 
             if (result && result.error) {
@@ -180,7 +214,7 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
     };
 
     return (
-        <div className={styles.container}>
+        <div className={styles.container} >
             <p className={styles.description}>
                 Zvoľte si balíček, ktorý najviac vyhovuje vašim potrebám. Po zakúpení sa vstupy automaticky pripočítajú na váš účet a môžete ich ihneď využiť na rezerváciu termínov.
             </p>
@@ -371,6 +405,43 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
                                     value={formData.billing_country} onChange={handleInputChange}
                                     style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: formData.billing_country ? 'white' : '#fff5f5' }}
                                 />
+
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginTop: '0.5rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isCompany}
+                                        onChange={(e) => setIsCompany(e.target.checked)}
+                                    />
+                                    Nakupovať na firmu
+                                </label>
+
+                                {isCompany && (
+                                    <div style={{ display: 'grid', gap: '0.8rem', padding: '1rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '0.5rem' }}>
+                                        <h5 style={{ margin: 0, fontSize: '0.9rem', color: '#334155' }}>Firemné údaje</h5>
+                                        <input
+                                            name="company_name" placeholder="Názov spoločnosti (Povinné pre firmu)"
+                                            value={formData.company_name} onChange={handleInputChange}
+                                            style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: formData.company_name ? 'white' : '#fff5f5' }}
+                                        />
+                                        <input
+                                            name="company_ico" placeholder="IČO (Povinné pre firmu)"
+                                            value={formData.company_ico} onChange={handleInputChange}
+                                            style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: formData.company_ico ? 'white' : '#fff5f5' }}
+                                        />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                                            <input
+                                                name="company_dic" placeholder="DIČ"
+                                                value={formData.company_dic} onChange={handleInputChange}
+                                                style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                                            />
+                                            <input
+                                                name="company_ic_dph" placeholder="IČ DPH"
+                                                value={formData.company_ic_dph} onChange={handleInputChange}
+                                                style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -440,7 +511,8 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

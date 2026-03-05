@@ -30,7 +30,11 @@ export default async function ProfilePage() {
         billing_street: profile?.billing_street,
         billing_city: profile?.billing_city,
         billing_zip: profile?.billing_zip,
-        billing_country: profile?.billing_country
+        billing_country: profile?.billing_country,
+        company_name: profile?.company_name,
+        company_ico: profile?.company_ico,
+        company_dic: profile?.company_dic,
+        company_ic_dph: profile?.company_ic_dph
     };
 
     return (

@@ -587,6 +587,52 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
                                         style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
                                     />
                                 </label>
+
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <h5 style={{ margin: 0, color: '#4b5563', fontSize: '0.875rem', fontWeight: 600 }}>Firemné údaje (Voliteľné)</h5>
+
+                                    <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
+                                        <span>Názov spoločnosti</span>
+                                        <input
+                                            type="text"
+                                            value={editingInvoice.company_name || ''}
+                                            onChange={(e) => setEditingInvoice({ ...editingInvoice, company_name: e.target.value })}
+                                            style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                                        />
+                                    </label>
+
+                                    <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
+                                        <span>IČO</span>
+                                        <input
+                                            type="text"
+                                            value={editingInvoice.company_ico || ''}
+                                            onChange={(e) => setEditingInvoice({ ...editingInvoice, company_ico: e.target.value })}
+                                            style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                                        />
+                                    </label>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
+                                            <span>DIČ</span>
+                                            <input
+                                                type="text"
+                                                value={editingInvoice.company_dic || ''}
+                                                onChange={(e) => setEditingInvoice({ ...editingInvoice, company_dic: e.target.value })}
+                                                style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                                            />
+                                        </label>
+
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
+                                            <span>IČ DPH</span>
+                                            <input
+                                                type="text"
+                                                value={editingInvoice.company_ic_dph || ''}
+                                                onChange={(e) => setEditingInvoice({ ...editingInvoice, company_ic_dph: e.target.value })}
+                                                style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

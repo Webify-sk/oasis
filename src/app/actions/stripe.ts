@@ -12,7 +12,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function createCheckoutSession(
     packageId: string, // Ensure this matches DB ID now
-    couponCode?: string // Optional discount code
+    couponCode?: string, // Optional discount code
+    companyName?: string,
+    companyIco?: string,
+    companyDic?: string,
+    companyIcDph?: string
 ) {
     const supabase = await createClient()
     try {
@@ -172,7 +176,11 @@ export async function createCheckoutSession(
                 credits: creditPackage.credits, // Add this for webhook convenience
                 bonus: creditPackage.bonus_credits || 0,
                 service_type: 'Tréning', // Packages are currently all Pilates classes
-                ...(appliedCouponId && { appliedCouponId }) // Poslanie ID pre webhook
+                ...(appliedCouponId && { appliedCouponId }), // Poslanie ID pre webhook
+                ...(companyName && { company_name: companyName }),
+                ...(companyIco && { company_ico: companyIco }),
+                ...(companyDic && { company_dic: companyDic }),
+                ...(companyIcDph && { company_ic_dph: companyIcDph })
             }
         })
 
@@ -201,6 +209,10 @@ export async function createVoucherCheckoutSession(
         billing_country?: string;
         customer_email?: string;
         full_name?: string;
+        company_name?: string;
+        company_ico?: string;
+        company_dic?: string;
+        company_ic_dph?: string;
     },
     redirectUrls?: {
         success: string;
@@ -244,6 +256,11 @@ export async function createVoucherCheckoutSession(
             metadata.billing_country = billingData.billing_country || '';
             // We don't necessarily need customer_email in metadata if it's already on customer object, but safer to have it
             if (billingData.customer_email) metadata.customer_email = billingData.customer_email;
+
+            if (billingData.company_name) metadata.company_name = billingData.company_name;
+            if (billingData.company_ico) metadata.company_ico = billingData.company_ico;
+            if (billingData.company_dic) metadata.company_dic = billingData.company_dic;
+            if (billingData.company_ic_dph) metadata.company_ic_dph = billingData.company_ic_dph;
         }
 
         const session = await stripe.checkout.sessions.create({

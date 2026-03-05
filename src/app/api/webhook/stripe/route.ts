@@ -110,7 +110,11 @@ export async function POST(req: Request) {
                 billing_city: session.metadata?.billing_city || session.customer_details?.address?.city,
                 billing_zip: session.metadata?.billing_zip || session.customer_details?.address?.postal_code,
                 billing_country: session.metadata?.billing_country || session.customer_details?.address?.country || 'Slovensko',
-                customer_email: session.customer_details?.email // Important for guest
+                customer_email: session.customer_details?.email, // Important for guest
+                company_name: session.metadata?.company_name,
+                company_ico: session.metadata?.company_ico,
+                company_dic: session.metadata?.company_dic,
+                company_ic_dph: session.metadata?.company_ic_dph
             };
 
             const { error: invoiceError } = await supabase.from('invoices').insert({
@@ -128,9 +132,24 @@ export async function POST(req: Request) {
                 billing_city: billingData.billing_city,
                 billing_zip: billingData.billing_zip,
                 billing_country: billingData.billing_country,
-                customer_email: billingData.customer_email
+                customer_email: billingData.customer_email,
+                company_name: billingData.company_name,
+                company_ico: billingData.company_ico,
+                company_dic: billingData.company_dic,
+                company_ic_dph: billingData.company_ic_dph
             });
             if (invoiceError) console.error('Error creating invoice for voucher:', invoiceError);
+
+            // Update user profile with company info if present and user is not guest
+            if (userId && userId !== 'guest' && (billingData.company_name || billingData.company_ico)) {
+                const { error: profileUpdateError } = await supabase.from('profiles').update({
+                    company_name: billingData.company_name,
+                    company_ico: billingData.company_ico,
+                    company_dic: billingData.company_dic,
+                    company_ic_dph: billingData.company_ic_dph
+                }).eq('id', userId);
+                if (profileUpdateError) console.error('Error updating profile company info:', profileUpdateError);
+            }
 
             // Send Email (Voucher)
             // Need to import template helper inside the function or file
@@ -232,6 +251,10 @@ export async function POST(req: Request) {
                         description: `Nákup: Darčekový poukaz (${creditAmount} vstupov)`,
                         buyerName: billingDetails.name,
                         buyerAddress: billingDetails.address,
+                        buyerIco: billingData.company_ico || undefined,
+                        buyerDic: billingData.company_dic || undefined,
+                        buyerIcdph: billingData.company_ic_dph || undefined,
+                        buyerCompanyName: billingData.company_name || undefined,
                         supplierName: COMPANY_DETAILS.name,
                         supplierAddress: COMPANY_DETAILS.address,
                         supplierIco: COMPANY_DETAILS.ico,
@@ -281,10 +304,10 @@ export async function POST(req: Request) {
 
         if (userId && creditsToAdd > 0) {
 
-            // 1. Get current credits
+            // 1. Get current credits and billing profile
             const { data: profile, error: fetchError } = await supabase
                 .from('profiles')
-                .select('credits')
+                .select('credits, billing_name, billing_street, billing_city, billing_zip, billing_country, company_name, company_ico, company_dic, company_ic_dph')
                 .eq('id', userId)
                 .single()
 
@@ -382,7 +405,16 @@ export async function POST(req: Request) {
                 currency: session.currency || 'eur',
                 stripe_payment_id: session.payment_intent as string,
                 status: 'paid',
-                service_type: session.metadata?.service_type || 'Tréning'
+                service_type: session.metadata?.service_type || 'Tréning',
+                billing_name: profile?.billing_name || session.customer_details?.name,
+                billing_address: profile?.billing_street || session.customer_details?.address?.line1,
+                billing_city: profile?.billing_city || session.customer_details?.address?.city,
+                billing_zip: profile?.billing_zip || session.customer_details?.address?.postal_code,
+                billing_country: profile?.billing_country || session.customer_details?.address?.country || 'Slovensko',
+                company_name: profile?.company_name || session.metadata?.company_name,
+                company_ico: profile?.company_ico || session.metadata?.company_ico,
+                company_dic: profile?.company_dic || session.metadata?.company_dic,
+                company_ic_dph: profile?.company_ic_dph || session.metadata?.company_ic_dph
             });
             if (invoiceError) console.error('Error creating invoice for credits:', invoiceError);
 
@@ -429,12 +461,17 @@ export async function POST(req: Request) {
                         amount: (session.amount_total || 0) / 100,
                         currency: session.currency || 'eur',
                         description: `Nákup: ${packageName || 'Kreditný balíček'}`,
-                        buyerName: session.customer_details?.name || 'Zákazník',
+                        buyerName: profile?.billing_name || session.customer_details?.name || 'Zákazník',
                         buyerAddress: [
-                            session.customer_details?.address?.line1,
-                            session.customer_details?.address?.city,
-                            session.customer_details?.address?.postal_code
+                            profile?.billing_street || session.customer_details?.address?.line1,
+                            profile?.billing_city || session.customer_details?.address?.city,
+                            profile?.billing_zip || session.customer_details?.address?.postal_code,
+                            profile?.billing_country || session.customer_details?.address?.country
                         ].filter(Boolean).join(', ') || '',
+                        buyerIco: profile?.company_ico || session.metadata?.company_ico,
+                        buyerDic: profile?.company_dic || session.metadata?.company_dic,
+                        buyerIcdph: profile?.company_ic_dph || session.metadata?.company_ic_dph,
+                        buyerCompanyName: profile?.company_name || session.metadata?.company_name,
                         supplierName: COMPANY_DETAILS.name,
                         supplierAddress: COMPANY_DETAILS.address,
                         supplierIco: COMPANY_DETAILS.ico,

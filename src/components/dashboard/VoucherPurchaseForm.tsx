@@ -41,8 +41,16 @@ export function VoucherPurchaseForm({ products, userProfile }: { products: Produ
         billing_street: userProfile?.billing_street || '',
         billing_city: userProfile?.billing_city || '',
         billing_zip: userProfile?.billing_zip || '',
-        billing_country: userProfile?.billing_country || 'Slovensko'
+        billing_country: userProfile?.billing_country || 'Slovensko',
+        company_name: userProfile?.company_name || '',
+        company_ico: userProfile?.company_ico || '',
+        company_dic: userProfile?.company_dic || '',
+        company_ic_dph: userProfile?.company_ic_dph || ''
     });
+
+    const [isCompany, setIsCompany] = useState(
+        !!(userProfile?.company_name || userProfile?.company_ico)
+    );
 
     const handleVoucherDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setVoucherData({ ...voucherData, [e.target.name]: e.target.value });
@@ -90,6 +98,13 @@ export function VoucherPurchaseForm({ products, userProfile }: { products: Produ
             formData.append('recipientEmail', voucherData.recipientEmail);
             formData.append('senderName', voucherData.senderName);
             formData.append('message', voucherData.message);
+
+            if (isCompany) {
+                formData.append('company_name', billingData.company_name);
+                formData.append('company_ico', billingData.company_ico);
+                formData.append('company_dic', billingData.company_dic);
+                formData.append('company_ic_dph', billingData.company_ic_dph);
+            }
 
             const result = await buyVoucher(formData);
 
@@ -342,6 +357,43 @@ export function VoucherPurchaseForm({ products, userProfile }: { products: Produ
                                     value={billingData.billing_country} onChange={handleBillingChange}
                                     style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
                                 />
+
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginTop: '0.5rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isCompany}
+                                        onChange={(e) => setIsCompany(e.target.checked)}
+                                    />
+                                    Nakupovať na firmu
+                                </label>
+
+                                {isCompany && (
+                                    <div style={{ display: 'grid', gap: '0.8rem', padding: '1rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '0.5rem' }}>
+                                        <h5 style={{ margin: 0, fontSize: '0.9rem', color: '#334155' }}>Firemné údaje</h5>
+                                        <input
+                                            name="company_name" placeholder="Názov spoločnosti (Povinné pre firmu)"
+                                            value={billingData.company_name} onChange={handleBillingChange}
+                                            style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: billingData.company_name ? 'white' : '#fff5f5' }}
+                                        />
+                                        <input
+                                            name="company_ico" placeholder="IČO (Povinné pre firmu)"
+                                            value={billingData.company_ico} onChange={handleBillingChange}
+                                            style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem', backgroundColor: billingData.company_ico ? 'white' : '#fff5f5' }}
+                                        />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                                            <input
+                                                name="company_dic" placeholder="DIČ"
+                                                value={billingData.company_dic} onChange={handleBillingChange}
+                                                style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                                            />
+                                            <input
+                                                name="company_ic_dph" placeholder="IČ DPH"
+                                                value={billingData.company_ic_dph} onChange={handleBillingChange}
+                                                style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '0.9rem' }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

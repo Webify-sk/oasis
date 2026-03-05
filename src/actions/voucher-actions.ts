@@ -39,7 +39,11 @@ export async function buyVoucher(formData: FormData) {
         billing_zip: formData.get('billing_zip') as string,
         billing_country: formData.get('billing_country') as string,
         customer_email: formData.get('customer_email') as string, // Crucial for guests
-        full_name: formData.get('full_name') as string
+        full_name: formData.get('full_name') as string,
+        company_name: formData.get('company_name') as string,
+        company_ico: formData.get('company_ico') as string,
+        company_dic: formData.get('company_dic') as string,
+        company_ic_dph: formData.get('company_ic_dph') as string
     };
 
     // 1. Fetch Product
