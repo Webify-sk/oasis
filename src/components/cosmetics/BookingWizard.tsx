@@ -35,6 +35,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [isMorningOpen, setIsMorningOpen] = useState(false);
     const [isAfternoonOpen, setIsAfternoonOpen] = useState(false);
+    const [notes, setNotes] = useState('');
 
     // Initial Fetch
     useEffect(() => {
@@ -158,7 +159,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
             employee_id: selectedEmployee.id,
             service_id: selectedService.id,
             start_time: start.toISOString(),
-            end_time: end.toISOString()
+            end_time: end.toISOString(),
+            notes: notes.trim() || undefined
         });
 
         if (res.success) {
@@ -474,6 +476,26 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                                 </p>
                             )}
                         </div>
+                    </div>
+
+                    <div style={{ marginBottom: '2rem', width: '100%' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                            Poznámka k rezervácii (voliteľné)
+                        </label>
+                        <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Máte špecifickú požiadavku alebo preferenciu? Napíšte nám..."
+                            style={{
+                                width: '100%',
+                                padding: '1rem',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                minHeight: '100px',
+                                fontFamily: 'inherit',
+                                resize: 'vertical'
+                            }}
+                        />
                     </div>
 
                     <button

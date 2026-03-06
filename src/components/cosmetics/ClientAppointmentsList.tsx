@@ -13,6 +13,7 @@ interface Appointment {
     start_time: string;
     end_time: string;
     status: string;
+    notes?: string | null;
     cosmetic_services: {
         title: string;
         price: number;
@@ -297,6 +298,12 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                 </div>
 
                 {isCancelled && <span style={{ display: 'inline-block', marginTop: '0.5rem', fontSize: '0.8rem', color: '#ef5350', fontWeight: 'bold' }}>ZRUŠENÉ</span>}
+
+                {appointment.notes && (
+                    <div style={{ marginTop: '0.8rem', padding: '0.8rem', backgroundColor: '#FEFCE8', borderRadius: '6px', borderLeft: '3px solid #EAB308', fontSize: '0.85rem', color: '#854D0E' }}>
+                        <strong>Poznámka od klienta:</strong> {appointment.notes}
+                    </div>
+                )}
             </div>
 
             {/* Price & Action */}

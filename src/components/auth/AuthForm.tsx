@@ -294,6 +294,21 @@ export function AuthForm() {
                 </div>
             )}
 
+            {mode === 'login' && (
+                <div style={{ display: 'flex', alignItems: 'center', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                        type="checkbox"
+                        id="rememberMe"
+                        name="rememberMe"
+                        defaultChecked={true}
+                        style={{ marginRight: '0.5rem', cursor: 'pointer', accentColor: '#4A403A' }}
+                    />
+                    <label htmlFor="rememberMe" style={{ fontSize: '0.85rem', color: '#4A403A', cursor: 'pointer', userSelect: 'none' }}>
+                        Zostať prihlásený
+                    </label>
+                </div>
+            )}
+
             {mode === 'register' && (
                 <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Zopakujte heslo *</label>
