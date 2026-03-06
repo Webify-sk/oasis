@@ -195,7 +195,7 @@ export function PublicVoucherList({ vouchers, success, canceled }: PublicVoucher
                         🎉 Platba úspešná!
                     </h3>
                     <p style={{ margin: 0 }}>
-                        Ďakujeme za váš nákup. Voucher bol vygenerovaný a odoslaný na email obdarovaného.
+                        Ďakujeme za váš nákup. Darčekový poukaz bol vygenerovaný a odoslaný na email obdarovaného.
                     </p>
                 </div>
             )}

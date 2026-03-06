@@ -37,7 +37,7 @@ export function VoucherRedemption() {
 
     return (
         <div className={styles.redemptionCard}>
-            <h3 className={styles.redemptionTitle}>Uplatniť Voucher</h3>
+            <h3 className={styles.redemptionTitle}>Uplatniť darčekový poukaz</h3>
             <div className={styles.redemptionRow}>
                 <input
                     type="text"

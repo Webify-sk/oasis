@@ -22,7 +22,7 @@ export default async function AdminVouchersPage() {
                 marginBottom: '2rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Vouchery</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Darčekové poukazy</h1>
             </div>
 
             <VoucherProductManager />

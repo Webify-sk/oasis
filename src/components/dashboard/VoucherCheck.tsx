@@ -90,7 +90,7 @@ export function VoucherCheck() {
                 // Update local state to reflect redemption
                 setVoucher(prev => prev ? { ...prev, is_redeemed: true, redeemed_at: new Date().toISOString() } : null);
                 setStatus('success');
-                setMessage('Voucher bol úspešne uplatnený.');
+                setMessage('Darčekový poukaz bol úspešne uplatnený.');
             } else {
                 setStatus('error');
                 setMessage(res.message || 'Chyba pri uplatňovaní.');
@@ -110,14 +110,14 @@ export function VoucherCheck() {
             boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
         }}>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Overenie Vouchera
+                Overenie darčekového poukazu
             </h3>
 
             <form onSubmit={handleCheck} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', width: '100%' }}>
                 <input
                     value={code}
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    placeholder="Kód vouchera (napr. ABC12345)"
+                    placeholder="Kód darčekového poukazu (napr. ABC12345)"
                     style={{
                         flex: 1,
                         padding: '0.8rem',
@@ -181,7 +181,7 @@ export function VoucherCheck() {
                             </h4>
                             <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
                                 {voucher.type === 'voucher'
-                                    ? (voucher.product?.category === 'Beauty' ? '💄 Beauty Voucher' : '🏋️ Tréningový Voucher')
+                                    ? (voucher.product?.category === 'Beauty' ? '💄 Beauty poukaz' : '🏋️ Tréningový poukaz')
                                     : '🎟️ Zľava na nákup'}
                             </p>
                         </div>
@@ -248,7 +248,7 @@ export function VoucherCheck() {
                             ) : (
                                 <>
                                     <CheckCircle size={18} />
-                                    Uplatniť voucher
+                                    Uplatniť darčekový poukaz
                                 </>
                             )}
                         </button>

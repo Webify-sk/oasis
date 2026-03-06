@@ -237,8 +237,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                             onMouseLeave={(e) => { if (isVerified) { e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.backgroundColor = 'white'; } }}
                         >
                             <Sparkles size={48} color="#5E715D" />
-                            <h3 style={{ margin: 0 }}>Beauty</h3>
-                            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Kozmetika, mihalnice a ďalšie skrášľovacie procedúry</p>
+                            <h3 style={{ margin: 0 }}>Face</h3>
                         </div>
                         <div
                             onClick={() => handleCategorySelect('body')}
@@ -261,7 +260,6 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                         >
                             <User size={48} color="#5E715D" />
                             <h3 style={{ margin: 0 }}>Body</h3>
-                            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Masáže, telové ošetrenia a relax</p>
                         </div>
                     </div>
                 </div>

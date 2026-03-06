@@ -70,7 +70,7 @@ export function VoucherProductManager() {
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             <option value="Training">Tréningy</option>
-                            <option value="Beauty">Beauty</option>
+                            <option value="Beauty">Beauty a Body</option>
                         </select>
                     </div>
 

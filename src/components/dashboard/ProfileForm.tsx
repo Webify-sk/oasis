@@ -76,7 +76,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
         setVoucherLoading(false);
         if (res.success) {
-            setVoucherMessage({ type: 'success', text: res.message || 'Voucher uplatnený!' });
+            setVoucherMessage({ type: 'success', text: res.message || 'Darčekový poukaz uplatnený!' });
             setVoucherCode(''); // Clear input
         } else {
             setVoucherMessage({ type: 'error', text: res.message || 'Chyba.' });
@@ -324,7 +324,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
             {/* Voucher Card */}
             {user.role !== 'employee' && (
                 <div className={styles.card}>
-                    <h3 className={styles.title}>Uplatniť darčekový voucher</h3>
+                    <h3 className={styles.title}>Uplatniť darčekový poukaz</h3>
                     <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
                         Máte darčekový kód? Zadajte ho nižšie a vstupy sa Vám automaticky pripočítajú.
                     </p>

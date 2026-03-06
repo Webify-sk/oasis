@@ -5,7 +5,7 @@ import { upsertCreditPackage, CreditPackage } from '@/app/admin/credits/actions'
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
-import { ChevronLeft, Euro, CreditCard, Star, Calendar } from 'lucide-react';
+import { ChevronLeft, Euro, CreditCard, Calendar } from 'lucide-react';
 import { useState } from 'react';
 
 const initialState = {
@@ -83,15 +83,6 @@ export function CreditPackageForm({ initialData }: CreditPackageFormProps) {
                             />
                         </div>
 
-                        <div>
-                            <Input
-                                label="Bonusové kredity"
-                                name="bonus_credits"
-                                type="number"
-                                defaultValue={state?.inputs?.bonus_credits?.toString() ?? initialData?.bonus_credits?.toString() ?? '0'}
-                                icon={Star}
-                            />
-                        </div>
 
                         <div>
                             <Input

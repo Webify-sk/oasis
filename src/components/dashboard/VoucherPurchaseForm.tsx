@@ -192,7 +192,7 @@ export function VoucherPurchaseForm({ products, userProfile }: { products: Produ
                         transition: 'all 0.2s'
                     }}
                 >
-                    Beauty
+                    Face
                 </button>
             </div>
 
@@ -200,11 +200,11 @@ export function VoucherPurchaseForm({ products, userProfile }: { products: Produ
                 {/* Product Selection */}
                 <div className={styles.formGroup}>
                     <div className={styles.label}>
-                        {activeCategory === 'Training' ? 'Vyberte balík vstupov' : 'Vyberte beauty voucher'}
+                        {activeCategory === 'Training' ? 'Vyberte balík vstupov' : 'Vyberte beauty poukaz'}
                     </div>
                     {filteredProducts.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '2rem', color: '#888', fontStyle: 'italic', border: '1px dashed #ddd', borderRadius: '8px' }}>
-                            V tejto kategórii zatiaľ nie sú žiadne vouchery.
+                            V tejto kategórii zatiaľ nie sú žiadne darčekové poukazy.
                         </div>
                     ) : (
                         <div className={styles.productGrid}>
