@@ -352,7 +352,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                 }}>
                                     <p style={{ margin: 0, fontWeight: 600, color: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#991b1b' : '#166534' }}>
                                         {(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)
-                                            ? 'PLNE OBSADENÉ'
+                                            ? 'Obsadené'
                                             : 'Voľné'
                                         }
                                     </p>
