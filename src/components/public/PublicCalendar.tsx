@@ -218,7 +218,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                     <div
                                         key={i}
                                         className={`${styles.event} ${booked >= capacity ? styles.full : ''}`}
-                                        title={`${evt.time} - ${evt.title} (${booked}/${capacity})`}
+                                        title={`${evt.time} - ${evt.title} (${booked >= capacity ? 'Obsadené' : 'Voľné'})`}
                                         onClick={() => setSelectedEvent(evt)}
                                         style={{
                                             cursor: 'pointer',
@@ -258,7 +258,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                                             border: booked >= capacity ? '1px solid #FECACA' : '1px solid #E5E7EB'
                                                         }}
                                                     >
-                                                        Obsadenosť: {booked}/{capacity}
+                                                        {booked >= capacity ? 'Obsadené' : 'Voľné'}
                                                     </span>
                                                 </div>
                                                 <div className={styles.trainerRow}>
@@ -353,7 +353,7 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                     <p style={{ margin: 0, fontWeight: 600, color: (selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10) ? '#991b1b' : '#166534' }}>
                                         {(selectedEvent.bookedCount || 0) >= (selectedEvent.totalCapacity || 10)
                                             ? 'PLNE OBSADENÉ'
-                                            : `Voľné miesta: ${(selectedEvent.totalCapacity || 10) - (selectedEvent.bookedCount || 0)} z ${(selectedEvent.totalCapacity || 10)}`
+                                            : 'Voľné'
                                         }
                                     </p>
                                 </div>
