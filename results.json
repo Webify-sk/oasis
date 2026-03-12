@@ -1,0 +1,33 @@
+Total found: 4
+- 2026-03-13T08:40:00+00:00 to 2026-03-13T10:10:00+00:00
+  Service: Ošetrenia Babor - 90 min
+  Employee: Soňa
+  Client Name: Renata Leskovjanska 
+  Client Email: undefined
+  Status: confirmed
+  ID: 4004a02d-203b-4692-9afa-788111fb56c9
+---
+- 2026-03-13T08:00:00+00:00 to 2026-03-13T08:40:00+00:00
+  Service: Venus Legacy - Stehná, zadok, brucho chrbát
+  Employee: Soňa
+  Client Name: undefined
+  Client Email: undefined
+  Status: cancelled
+  ID: 3ec29d07-b850-4bef-b977-e0ec66b78b7a
+---
+- 2026-03-13T10:00:00+00:00 to 2026-03-13T11:00:00+00:00
+  Service: Hydrafacial Platinum (vákuová masáž +booster+LED)
+  Employee: Soňa
+  Client Name: undefined
+  Client Email: undefined
+  Status: confirmed
+  ID: d6a6bb51-fa91-46a8-bf42-30410a6db25f
+---
+- 2026-03-13T07:30:00+00:00 to 2026-03-13T08:30:00+00:00
+  Service: Ošetrenia Babor - 60 min
+  Employee: Soňa
+  Client Name: undefined
+  Client Email: undefined
+  Status: confirmed
+  ID: 4b8a73c9-6d1c-49bf-9964-c57c46061b35
+---

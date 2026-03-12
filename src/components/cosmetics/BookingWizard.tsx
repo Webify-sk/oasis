@@ -8,7 +8,7 @@ import { useVerification } from '@/components/auth/VerificationContext';
 import { Calendar } from '@/components/ui/Calendar';
 import { getRealUtcDate } from '@/utils/booking-logic';
 
-interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; }
+interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; display_order?: number; }
 interface Employee { id: string; name: string; color: string; }
 
 interface BookingWizardProps {
@@ -42,6 +42,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     useEffect(() => {
         getCosmeticServices().then(data => {
             const fetchedServices = data as Service[];
+            // Ensure they are sorted by display_order here as well just in case
+            fetchedServices.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
             setServices(fetchedServices);
 
             // Auto-select if ID provided

@@ -16,6 +16,7 @@ interface Service {
     is_active: boolean;
     category?: string;
     machine_id?: string;
+    display_order?: number;
 }
 
 const initialState = {
@@ -107,6 +108,22 @@ export function ServiceForm({ initialData }: { initialData?: Service }) {
                         <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
                             Ak túto službu vykonáva špecifický prístroj (využívaný aj inými službami), napíšte sem jeho identifikátor. Zamedzí sa tak súbežným rezerváciám rôznych služieb na tom istom stroji.
                         </p>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <label className={styles.label}>Poradie vo výpise</label>
+                            <input
+                                type="number"
+                                name="display_order"
+                                defaultValue={initialData?.display_order || 0}
+                                required
+                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                            />
+                            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
+                                Menšie číslo sa zobrazí vyššie.
+                            </p>
+                        </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>

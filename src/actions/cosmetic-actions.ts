@@ -21,6 +21,8 @@ export async function getCosmeticServices() {
         .eq('is_active', true) // Clients usually only see active? Or maybe all for listing?
         // Original didn't filter active, but usually for booking we want active.
         // Let's keep it consistent with original for now but add a comment.
+        .order('category')
+        .order('display_order', { ascending: true })
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -39,7 +41,10 @@ export async function getManagedServices() {
 
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
-    let query = supabase.from('cosmetic_services').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('cosmetic_services').select('*')
+        .order('category')
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false });
 
     if (profile?.role === 'employee') {
         const { data: emp } = await supabase.from('employees').select('id').eq('profile_id', user.id).single();
@@ -48,6 +53,8 @@ export async function getManagedServices() {
             query = supabase.from('cosmetic_services')
                 .select('*, employee_services!inner(employee_id)')
                 .eq('employee_services.employee_id', emp.id)
+                .order('category')
+                .order('display_order', { ascending: true })
                 .order('created_at', { ascending: false });
         } else {
             // Employee profile but no employee record?
@@ -84,6 +91,8 @@ export async function createCosmeticService(prevState: any, formData: FormData) 
     const price = parseFloat(formData.get('price') as string)
     const category = formData.get('category') as string || 'beauty'
     const machine_id = (formData.get('machine_id') as string)?.trim() || null
+    let display_order = parseInt(formData.get('display_order') as string)
+    if (isNaN(display_order)) display_order = 0;
 
     const { error } = await supabase
         .from('cosmetic_services')
@@ -94,6 +103,7 @@ export async function createCosmeticService(prevState: any, formData: FormData) 
             price,
             category,
             machine_id,
+            display_order,
             is_active: true,
             owner_id // Link to employee
         })
@@ -120,6 +130,8 @@ export async function updateCosmeticService(id: string, prevState: any, formData
     const is_active = formData.get('is_active') === 'on'
     const category = formData.get('category') as string || 'beauty'
     const machine_id = (formData.get('machine_id') as string)?.trim() || null
+    let display_order = parseInt(formData.get('display_order') as string)
+    if (isNaN(display_order)) display_order = 0;
 
     const { error } = await supabase
         .from('cosmetic_services')
@@ -130,6 +142,7 @@ export async function updateCosmeticService(id: string, prevState: any, formData
             price,
             category,
             machine_id,
+            display_order,
             is_active
         })
         .eq('id', id)
@@ -143,6 +156,30 @@ export async function updateCosmeticService(id: string, prevState: any, formData
     revalidatePath('/dashboard/cosmetics/services');
     revalidatePath('/dashboard/cosmetics');
     redirect('/admin/cosmetics/services');
+}
+
+export async function reorderCosmeticServices(updates: { id: string; display_order: number }[]) {
+    await requireAdmin();
+    const supabase = await createClient()
+
+    // Supabase JS doesn't have a direct mass update, so we do it in a loop
+    // For small number of services, this is fine
+    for (const update of updates) {
+        const { error } = await supabase
+            .from('cosmetic_services')
+            .update({ display_order: update.display_order })
+            .eq('id', update.id);
+
+        if (error) {
+            console.error('Error reordering service', update.id, ':', error);
+            return { error: 'Failed to reorder services' };
+        }
+    }
+
+    revalidatePath('/admin/cosmetics/services');
+    revalidatePath('/dashboard/cosmetics/services');
+    revalidatePath('/dashboard/cosmetics');
+    return { success: true };
 }
 
 export async function deleteCosmeticService(id: string) {
