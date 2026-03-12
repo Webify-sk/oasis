@@ -1,0 +1,20 @@
+
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-12: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-14: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-14: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-12: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-14: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-14: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [{"start_time":"2026-03-19T10:30:00+00:00","end_time":"2026-03-19T11:10:00+00:00"}] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-12: [{"start_time":"2026-03-12T14:20:00+00:00","end_time":"2026-03-12T15:00:00+00:00"}] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [{"start_time":"2026-03-19T10:30:00+00:00","end_time":"2026-03-19T11:10:00+00:00"}] Error: null
+[DEBUG getAvailableSlots] fetched appointments for 1a1b7d3c-6383-4420-bcd5-4bf85c2ae6fd on 2026-03-19: [{"start_time":"2026-03-19T10:30:00+00:00","end_time":"2026-03-19T11:10:00+00:00"}] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-19: [] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-14: [{"start_time":"2026-03-13T08:40:00+00:00","end_time":"2026-03-13T10:10:00+00:00"},{"start_time":"2026-03-13T10:00:00+00:00","end_time":"2026-03-13T11:00:00+00:00"},{"start_time":"2026-03-14T10:00:00+00:00","end_time":"2026-03-14T11:00:00+00:00"}] Error: null
+[DEBUG getAvailableSlots] fetched appointments for cfd0c0fa-358d-481c-b6ba-6e8975fed73b on 2026-03-14: [{"start_time":"2026-03-13T08:40:00+00:00","end_time":"2026-03-13T10:10:00+00:00"},{"start_time":"2026-03-13T10:00:00+00:00","end_time":"2026-03-13T11:00:00+00:00"},{"start_time":"2026-03-14T10:00:00+00:00","end_time":"2026-03-14T11:00:00+00:00"}] Error: null

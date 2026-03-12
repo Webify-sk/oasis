@@ -1,28 +1,21 @@
 
+import { toZonedTime, toDate, formatInTimeZone } from 'date-fns-tz';
+
 export function getRealUtcDate(faceValueDateInput: Date | string): Date {
-    const faceValueDate = typeof faceValueDateInput === 'string' ? new Date(faceValueDateInput) : faceValueDateInput;
+    // Takes something like "2026-03-13T09:00" and ensures we treat it as Europe/Bratislava time.
+    // If a Date object is passed, we format it back to local string to strip browser/server offsets
+    const dateStr = typeof faceValueDateInput === 'string'
+        ? faceValueDateInput
+        : faceValueDateInput.getFullYear() + '-' +
+        String(faceValueDateInput.getMonth() + 1).padStart(2, '0') + '-' +
+        String(faceValueDateInput.getDate()).padStart(2, '0') + 'T' +
+        String(faceValueDateInput.getHours()).padStart(2, '0') + ':' +
+        String(faceValueDateInput.getMinutes()).padStart(2, '0');
 
-    const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Europe/Bratislava',
-        year: 'numeric', month: 'numeric', day: 'numeric',
-        hour: 'numeric', minute: 'numeric', second: 'numeric',
-        hour12: false
-    }).formatToParts(faceValueDate);
-
-    const partMap: Record<string, string> = {};
-    parts.forEach(p => partMap[p.type] = p.value);
-
-    const localInUtc = Date.UTC(
-        parseInt(partMap.year),
-        parseInt(partMap.month) - 1,
-        parseInt(partMap.day),
-        parseInt(partMap.hour === '24' ? '0' : partMap.hour),
-        parseInt(partMap.minute),
-        parseInt(partMap.second)
-    );
-
-    const offsetMs = localInUtc - faceValueDate.getTime();
-    return new Date(faceValueDate.getTime() - offsetMs);
+    // toDate from date-fns-tz parses a string considering the provided default time zone
+    const timeZone = 'Europe/Bratislava';
+    const utcDate = toDate(dateStr, { timeZone });
+    return utcDate;
 }
 
 export function isBookingLocked(startTimeISO: string | Date): { isLocked: boolean; deadlineMsg: string } {

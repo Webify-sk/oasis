@@ -131,6 +131,11 @@ export default function AdminReservationsManager({
                                                 <Clock size={14} />
                                                 {format(startDate, 'HH:mm')} - {format(endDate, 'HH:mm')}
                                             </div>
+                                            {app.status === 'cancelled' && (
+                                                <div style={{ marginTop: '0.5rem', display: 'inline-block', backgroundColor: '#fee2e2', color: '#991b1b', padding: '0.1rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                    ZRUŠENÉ
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

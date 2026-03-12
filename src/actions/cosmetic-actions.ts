@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation'
 import { requireAdmin, requireEmployeeOrAdmin } from '@/utils/check-role'
 import { sendEmail } from '@/utils/email'
@@ -82,6 +83,7 @@ export async function createCosmeticService(prevState: any, formData: FormData) 
     const duration = parseInt(formData.get('duration_minutes') as string)
     const price = parseFloat(formData.get('price') as string)
     const category = formData.get('category') as string || 'beauty'
+    const machine_id = (formData.get('machine_id') as string)?.trim() || null
 
     const { error } = await supabase
         .from('cosmetic_services')
@@ -91,6 +93,7 @@ export async function createCosmeticService(prevState: any, formData: FormData) 
             duration_minutes: duration,
             price,
             category,
+            machine_id,
             is_active: true,
             owner_id // Link to employee
         })
@@ -116,6 +119,7 @@ export async function updateCosmeticService(id: string, prevState: any, formData
     const price = parseFloat(formData.get('price') as string)
     const is_active = formData.get('is_active') === 'on'
     const category = formData.get('category') as string || 'beauty'
+    const machine_id = (formData.get('machine_id') as string)?.trim() || null
 
     const { error } = await supabase
         .from('cosmetic_services')
@@ -125,6 +129,7 @@ export async function updateCosmeticService(id: string, prevState: any, formData
             duration_minutes: duration,
             price,
             category,
+            machine_id,
             is_active
         })
         .eq('id', id)
@@ -721,14 +726,40 @@ export async function createAppointment(data: {
         return { error: `Na tento termín sa už nedá objednať. (Deadline: ${deadlineMsg} vopred)` };
     }
 
+    // Fetch details including machine_id for race condition check
+    const { data: service } = await supabase
+        .from('cosmetic_services')
+        .select('machine_id, title, price, duration_minutes')
+        .eq('id', data.service_id)
+        .single();
+
+    if (!service) return { error: 'Služba nebola nájdená.' };
+    const machineId = service.machine_id;
+
     // Verify availability again before inserting (Race condition check)
-    const { data: overlappingAppointments, error: conflictError } = await supabase
+    let sharedServiceIds: string[] = [];
+    if (machineId) {
+        const { data: sharedServices } = await supabase
+            .from('cosmetic_services')
+            .select('id')
+            .eq('machine_id', machineId);
+        if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
+    }
+
+    let appsQuery = supabase
         .from('cosmetic_appointments')
         .select('id')
-        .eq('employee_id', data.employee_id)
         .lt('start_time', data.end_time)
         .gt('end_time', data.start_time)
         .neq('status', 'cancelled');
+
+    if (sharedServiceIds.length > 0) {
+        appsQuery = appsQuery.or(`employee_id.eq.${data.employee_id},service_id.in.(${sharedServiceIds.join(',')})`);
+    } else {
+        appsQuery = appsQuery.eq('employee_id', data.employee_id);
+    }
+
+    const { data: overlappingAppointments, error: conflictError } = await appsQuery;
 
     if (conflictError) {
         console.error('Error checking for conflicting appointments:', conflictError);
@@ -736,7 +767,7 @@ export async function createAppointment(data: {
     }
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
-        return { error: 'Tento termín už bol bohužiaľ obsadený iným zákazníkom. Prosím, vyberte si iný termín.' };
+        return { error: 'Tento termín už bol bohužiaľ obsadený iným zákazníkom (alebo prístroj už bol zarezervovaný pre inú službu). Prosím, vyberte si iný termín.' };
     }
 
     const { error } = await supabase
@@ -750,13 +781,6 @@ export async function createAppointment(data: {
             notes: data.notes,
             status: 'confirmed' // Default status now confirmed
         })
-
-    // Fetch details for email
-    const { data: service } = await supabase
-        .from('cosmetic_services')
-        .select('title, price, duration_minutes')
-        .eq('id', data.service_id)
-        .single();
 
     // Send Confirmation Email
     if (user.email && service) {
@@ -1108,15 +1132,16 @@ export async function deleteEmployee(id: string) {
 export async function getAvailableDaysInMonth(employeeId: string, serviceId: string, year: number, month: number) {
     const supabase = await createClient();
 
-    // 1. Get Service Duration
+    // 1. Get Service Info
     const { data: service } = await supabase
         .from('cosmetic_services')
-        .select('duration_minutes')
+        .select('duration_minutes, machine_id')
         .eq('id', serviceId)
         .single();
 
     if (!service) return [];
     const duration = service.duration_minutes;
+    const machineId = service.machine_id;
 
     const startDateObj = new Date(year, month - 1, 1);
     const endDateObj = new Date(year, month, 0);
@@ -1141,13 +1166,29 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
     const searchStart = new Date(startDateObj.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const searchEnd = new Date(endDateObj.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
-    const { data: appointments } = await supabase
+    let sharedServiceIds: string[] = [];
+    if (machineId) {
+        const { data: sharedServices } = await supabase
+            .from('cosmetic_services')
+            .select('id')
+            .eq('machine_id', machineId);
+        if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
+    }
+
+    let appsQuery = supabase
         .from('cosmetic_appointments')
         .select('start_time, end_time')
-        .eq('employee_id', employeeId)
         .gte('start_time', searchStart)
         .lte('start_time', searchEnd)
         .filter('status', 'neq', 'cancelled');
+
+    if (sharedServiceIds.length > 0) {
+        appsQuery = appsQuery.or(`employee_id.eq.${employeeId},service_id.in.(${sharedServiceIds.join(',')})`);
+    } else {
+        appsQuery = appsQuery.eq('employee_id', employeeId);
+    }
+
+    const { data: appointments } = await appsQuery;
 
     const { getRealUtcDate } = await import('@/utils/booking-logic');
 
@@ -1247,22 +1288,30 @@ export async function getAvailableDaysInMonthAnyEmployee(employeeId: string, ser
 }
 
 export async function getAvailableSlots(employeeId: string, serviceId: string, date: string) {
+    noStore(); // ENSURE LIVE DATA IS ALWAYS FETCHED, BYPASS NEXT.JS CACHE
     // date format: 'YYYY-MM-DD'
-    const supabase = await createClient()
 
-    // 1. Get Service Duration
-    const { data: service } = await supabase
+    // We MUST use the service role key to bypass RLS, because unauthenticated users
+    // who are booking an appointment don't have a session, and thus can't read appointments to check for overlaps
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    // 1. Get Service Info
+    const { data: service } = await supabaseAdmin
         .from('cosmetic_services')
-        .select('duration_minutes')
+        .select('duration_minutes, machine_id')
         .eq('id', serviceId)
         .single()
 
     if (!service) return []
     const duration = service.duration_minutes
+    const machineId = service.machine_id
 
     // 2. Get Employee Availability
     // First check for specific date exceptions (fetch ALL for the date)
-    const { data: exceptions } = await supabase
+    const { data: exceptions } = await supabaseAdmin
         .from('employee_availability_exceptions')
         .select('*')
         .eq('employee_id', employeeId)
@@ -1288,7 +1337,7 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
     } else {
         // Fallback to weekly recurring
         const dayOfWeek = new Date(date).getDay();
-        const { data: regularSlots } = await supabase
+        const { data: regularSlots } = await supabaseAdmin
             .from('employee_availability')
             .select('*')
             .eq('employee_id', employeeId)
@@ -1313,18 +1362,36 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
     const searchStart = new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000).toISOString();
     const searchEnd = new Date(new Date(date).getTime() + 48 * 60 * 60 * 1000).toISOString();
 
-    const { data: appointments } = await supabase
+    let sharedServiceIds: string[] = [];
+    if (machineId) {
+        const { data: sharedServices } = await supabaseAdmin
+            .from('cosmetic_services')
+            .select('id')
+            .eq('machine_id', machineId);
+        if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
+    }
+
+    let appsQuery = supabaseAdmin
         .from('cosmetic_appointments')
         .select('start_time, end_time')
-        .eq('employee_id', employeeId)
         .gte('start_time', searchStart)
         .lte('start_time', searchEnd)
-        .filter('status', 'neq', 'cancelled')
+        .filter('status', 'neq', 'cancelled');
+
+    if (sharedServiceIds.length > 0) {
+        appsQuery = appsQuery.or(`employee_id.eq.${employeeId},service_id.in.(${sharedServiceIds.join(',')})`);
+    } else {
+        appsQuery = appsQuery.eq('employee_id', employeeId);
+    }
+
+    const { data: appointments, error: appsError } = await appsQuery;
+
+    require('fs').appendFileSync('tmp_backend_log.txt', `\n[DEBUG getAvailableSlots] fetched appointments for ${employeeId} on ${date}: ` + JSON.stringify(appointments) + ' Error: ' + appsError);
 
     // 4. Generate Slots from ALL active ranges
     const slots: string[] = []
 
-    const { getRealUtcDate } = await import('@/utils/booking-logic');
+    const { getRealUtcDate, isBookingLocked } = await import('@/utils/booking-logic');
 
     for (const range of activeSlots) {
         if (!range.start_time || !range.end_time) continue;
@@ -1340,22 +1407,25 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
             const mStr = (currentMinutes % 60).toString().padStart(2, '0');
             const slotLocalTimeStr = `${hStr}:${mStr}`;
 
-            // True UTC Date representing this slot
+            // We MUST evaluate the local time strictly converted to UTC using the exact same logic as BookingWizard
+            // to ensure accurate collisions against the UTC times in the database.
+            // When user clicks 11:00, they mean 10:00 UTC (in winter).
             const slotStartUTC = getRealUtcDate(`${date}T${slotLocalTimeStr}:00`);
             const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60000);
 
             // Check collision with genuine DB UTC appointments
             const isCollision = appointments?.some(app => {
-                const appStart = new Date(app.start_time)
-                const appEnd = new Date(app.end_time)
+                const appStart = new Date(app.start_time);
+                const appEnd = new Date(app.end_time);
+
                 return (slotStartUTC < appEnd && slotEndUTC > appStart)
             })
 
             if (!isCollision) {
-                // Check Deadline using real UTC date (since isBookingAllowed applies European time locally)
-                const { allowed } = isBookingAllowed(slotStartUTC);
+                // Check Deadline using real UTC date
+                const { isLocked } = isBookingLocked(slotStartUTC);
 
-                if (allowed) {
+                if (!isLocked) {
                     if (!slots.includes(slotLocalTimeStr)) {
                         slots.push(slotLocalTimeStr)
                     }
@@ -1371,10 +1441,14 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
 }
 
 export async function getAvailableSlotsAnyEmployee(employeeId: string, serviceId: string, date: string) {
-    const supabase = await createClient()
+    noStore();
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // 1. Get all active employees who can perform this service
-    const { data: employees } = await supabase
+    const { data: employees } = await supabaseAdmin
         .from('employee_services')
         .select('employee_id, employees!inner(is_active)')
         .eq('service_id', serviceId)
@@ -1773,6 +1847,24 @@ export async function createAdminCosmeticAppointment(data: {
     await requireAdmin();
     const supabase = await createClient();
 
+    // Verify availability again before inserting (Race condition check)
+    const { data: overlappingAppointments, error: conflictError } = await supabase
+        .from('cosmetic_appointments')
+        .select('id')
+        .eq('employee_id', data.employee_id)
+        .lt('start_time', data.end_time)
+        .gt('end_time', data.start_time)
+        .neq('status', 'cancelled');
+
+    if (conflictError) {
+        console.error('Error checking for conflicting appointments:', conflictError);
+        return { error: 'Nastala chyba pri overovaní dostupnosti termínu.' };
+    }
+
+    if (overlappingAppointments && overlappingAppointments.length > 0) {
+        return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    }
+
     const { error } = await supabase
         .from('cosmetic_appointments')
         .insert({
@@ -1810,6 +1902,25 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
 }) {
     await requireAdmin();
     const supabase = await createClient();
+
+    // Verify availability before updating
+    const { data: overlappingAppointments, error: conflictError } = await supabase
+        .from('cosmetic_appointments')
+        .select('id')
+        .eq('employee_id', data.employee_id)
+        .lt('start_time', data.end_time)
+        .gt('end_time', data.start_time)
+        .neq('status', 'cancelled')
+        .neq('id', id); // Ignore the current appointment we are updating
+
+    if (conflictError) {
+        console.error('Error checking for conflicting appointments:', conflictError);
+        return { error: 'Nastala chyba pri overovaní dostupnosti termínu.' };
+    }
+
+    if (overlappingAppointments && overlappingAppointments.length > 0) {
+        return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    }
 
     const { error } = await supabase
         .from('cosmetic_appointments')

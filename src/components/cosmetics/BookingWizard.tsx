@@ -6,6 +6,7 @@ import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft
 import { useRouter } from 'next/navigation';
 import { useVerification } from '@/components/auth/VerificationContext';
 import { Calendar } from '@/components/ui/Calendar';
+import { getRealUtcDate } from '@/utils/booking-logic';
 
 interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; }
 interface Employee { id: string; name: string; color: string; }
@@ -150,7 +151,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
 
         setLoading(true);
         const startTime = `${selectedDate}T${selectedTime}:00`;
-        const start = new Date(startTime);
+        const start = getRealUtcDate(startTime);
         const end = new Date(start.getTime() + selectedService.duration_minutes * 60000);
 
         const action = selectedEmployee.id === 'any' ? (await import('@/actions/cosmetic-actions')).createAppointmentAnyEmployee : createAppointment;

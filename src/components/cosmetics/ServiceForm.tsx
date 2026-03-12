@@ -15,6 +15,7 @@ interface Service {
     price: number;
     is_active: boolean;
     category?: string;
+    machine_id?: string;
 }
 
 const initialState = {
@@ -92,6 +93,20 @@ export function ServiceForm({ initialData }: { initialData?: Service }) {
                             placeholder="Krátky popis procedúry..."
                             style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'inherit' }}
                         />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}>Prístroj / Skupina (voliteľné)</label>
+                        <input
+                            name="machine_id"
+                            defaultValue={initialData?.machine_id || ''}
+                            className={styles.input}
+                            placeholder="napr. Endosphere"
+                            style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                        />
+                        <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
+                            Ak túto službu vykonáva špecifický prístroj (využívaný aj inými službami), napíšte sem jeho identifikátor. Zamedzí sa tak súbežným rezerváciám rôznych služieb na tom istom stroji.
+                        </p>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
