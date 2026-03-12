@@ -159,6 +159,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                         bookedCount: effectiveBookedCount,
                         isRegistered: false, // Public view never shows registration
                         isIndividual, // Pass flag
+                        duration: tt.duration_minutes || 60, // Pass duration
                         // Deadline Logic
                         ...((() => {
                             // We need an ISO string for isBookingLocked.
