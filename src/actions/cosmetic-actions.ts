@@ -1386,8 +1386,6 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
 
     const { data: appointments, error: appsError } = await appsQuery;
 
-    require('fs').appendFileSync('tmp_backend_log.txt', `\n[DEBUG getAvailableSlots] fetched appointments for ${employeeId} on ${date}: ` + JSON.stringify(appointments) + ' Error: ' + appsError);
-
     // 4. Generate Slots from ALL active ranges
     const slots: string[] = []
 
