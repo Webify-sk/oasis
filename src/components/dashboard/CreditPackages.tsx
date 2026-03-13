@@ -221,7 +221,7 @@ export function CreditPackages({ userProfile, packages = [] }: CreditPackagesPro
             <div className={styles.grid}>
                 {packages.map((pkg) => (
                     <div key={pkg.id} className={clsx(styles.card, { [styles.highlightCard]: pkg.is_popular })}>
-                        {pkg.is_popular && <div className={styles.badge}>Doporučujeme</div>}
+                        {pkg.is_popular && <div className={styles.badge}>Odporúčame</div>}
 
                         <div>
                             <div className={styles.cardHeader}>

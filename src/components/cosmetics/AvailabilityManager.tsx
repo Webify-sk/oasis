@@ -18,6 +18,7 @@ interface AvailabilitySlot {
 interface Exception {
     id: string;
     exception_date: string;
+    end_date?: string | null;
     is_available: boolean;
     start_time: string | null;
     end_time: string | null;
@@ -60,6 +61,7 @@ export function AvailabilityManager({
     // Exceptions State
     const [exceptions, setExceptions] = useState<Exception[]>([]);
     const [newExceptionDate, setNewExceptionDate] = useState('');
+    const [exceptionEndDate, setExceptionEndDate] = useState('');
     const [isExceptionAvailable, setIsExceptionAvailable] = useState(false);
     const [exceptionStart, setExceptionStart] = useState('09:00');
     const [exceptionEnd, setExceptionEnd] = useState('17:00');
@@ -170,7 +172,8 @@ export function AvailabilityManager({
                 // So if unavailable/vacation, it's a FULL DAY off (or at least valid availability is removed).
                 // My checkConflictingAppointments logic handles undefined start/end as full day check.
                 // So this logic holds.
-                undefined
+                undefined,
+                exceptionEndDate ? exceptionEndDate : undefined
             );
 
             if (conflicts && conflicts.count > 0) {
@@ -186,12 +189,15 @@ export function AvailabilityManager({
             newExceptionDate,
             isExceptionAvailable,
             isExceptionAvailable ? exceptionStart : undefined,
-            isExceptionAvailable ? exceptionEnd : undefined
+            isExceptionAvailable ? exceptionEnd : undefined,
+            undefined,
+            exceptionEndDate ? exceptionEndDate : undefined
         );
 
         if (res.success) {
             await loadExceptions();
             setNewExceptionDate('');
+            setExceptionEndDate('');
             // Reset to defaults
             setIsExceptionAvailable(false);
             setMessage('Výnimka pridaná ✅');
@@ -459,11 +465,25 @@ export function AvailabilityManager({
                         paddingBottom: '2rem', borderBottom: '1px solid #f0f0f0'
                     }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Dátum</label>
+                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Dátum od</label>
                             <input
                                 type="date"
                                 value={newExceptionDate}
                                 onChange={(e) => setNewExceptionDate(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
+                                    borderRadius: '8px', fontSize: '0.95rem'
+                                }}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Dátum do (nepovinné)</label>
+                            <input
+                                type="date"
+                                value={exceptionEndDate}
+                                onChange={(e) => setExceptionEndDate(e.target.value)}
+                                min={newExceptionDate}
                                 style={{
                                     width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
                                     borderRadius: '8px', fontSize: '0.95rem'
@@ -566,7 +586,8 @@ export function AvailabilityManager({
                                     <div style={{ paddingLeft: '0.8rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: '#2c3e50', marginBottom: '0.3rem' }}>
                                             <Calendar size={16} color="#718096" />
-                                            {format(new Date(exc.exception_date), 'd. MMMM yyyy', { locale: sk })}
+                                            {format(new Date(exc.exception_date), 'd. M. yyyy', { locale: sk })}
+                                            {exc.end_date && ` - ${format(new Date(exc.end_date), 'd. M. yyyy', { locale: sk })}`}
                                         </div>
                                         <div style={{
                                             fontSize: '0.85rem',

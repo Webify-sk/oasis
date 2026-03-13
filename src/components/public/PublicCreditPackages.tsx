@@ -62,6 +62,25 @@ export function PublicCreditPackages({ packages }: PublicCreditPackagesProps) {
                         pointerEvents: 'none',
                         zIndex: 0
                     }}></div>
+                    {pkg.is_popular && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '1.5rem',
+                            right: '1.5rem',
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            color: '#FFFFFF',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            padding: '0.4rem 0.8rem',
+                            borderRadius: '4px',
+                            letterSpacing: '0.05em',
+                            backdropFilter: 'blur(4px)',
+                            zIndex: 2
+                        }}>
+                            Odporúčame
+                        </div>
+                    )}
 
                     <div style={{ zIndex: 1, position: 'relative' }}>
                         <h3 style={{
@@ -70,7 +89,8 @@ export function PublicCreditPackages({ packages }: PublicCreditPackagesProps) {
                             fontWeight: 'normal',
                             marginBottom: '0.5rem',
                             lineHeight: 1.2,
-                            color: 'white'
+                            color: 'white',
+                            paddingRight: pkg.is_popular ? '8.5rem' : '0'
                         }}>
                             {pkg.title}
                         </h3>

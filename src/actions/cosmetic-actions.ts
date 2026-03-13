@@ -479,7 +479,7 @@ export async function updateEmployeeServices(employeeId: string, serviceIds: str
 }
 
 // Check for conflicting appointments
-export async function checkConflictingAppointments(employeeId: string, date: string, startTime?: string, endTime?: string) {
+export async function checkConflictingAppointments(employeeId: string, date: string, startTime?: string, endTime?: string, endDate?: string) {
     const supabase = await createClient();
 
     let query = supabase
@@ -498,9 +498,9 @@ export async function checkConflictingAppointments(employeeId: string, date: str
             .lt('start_time', exceptionEnd)
             .gt('end_time', exceptionStart);
     } else {
-        // Full day exception - check any appointment on that day
+        // Full day exception - check any appointment on that day (or range)
         const dayStart = `${date}T00:00:00`;
-        const dayEnd = `${date}T23:59:59`;
+        const dayEnd = endDate ? `${endDate}T23:59:59` : `${date}T23:59:59`;
 
         query = query
             .gte('start_time', dayStart)
@@ -517,7 +517,7 @@ export async function checkConflictingAppointments(employeeId: string, date: str
     return { count: count || 0, appointments: data };
 }
 
-export async function addAvailabilityException(employeeId: string, date: string, isAvailable: boolean, startTime?: string, endTime?: string, reason?: string) {
+export async function addAvailabilityException(employeeId: string, date: string, isAvailable: boolean, startTime?: string, endTime?: string, reason?: string, endDate?: string) {
     await requireEmployeeOrAdmin();
     const supabase = await createClient();
 
@@ -536,6 +536,7 @@ export async function addAvailabilityException(employeeId: string, date: string,
     const { error } = await supabase.from('employee_availability_exceptions').insert({
         employee_id: employeeId,
         exception_date: date,
+        end_date: endDate || null,
         is_available: isAvailable,
         start_time: startTime || null,
         end_time: endTime || null,
@@ -573,7 +574,7 @@ export async function getAvailabilityExceptions(employeeId: string) {
         .from('employee_availability_exceptions')
         .select('*')
         .eq('employee_id', employeeId)
-        .gte('exception_date', new Date().toISOString().split('T')[0]) // Future only
+        .or(`end_date.gte.${new Date().toISOString().split('T')[0]},exception_date.gte.${new Date().toISOString().split('T')[0]}`) // Future only (including ongoing vacations)
         .order('exception_date', { ascending: true });
 
     if (error) return [];
@@ -1190,8 +1191,8 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
         .from('employee_availability_exceptions')
         .select('*')
         .eq('employee_id', employeeId)
-        .gte('exception_date', startStr)
-        .lte('exception_date', endStr);
+        .lte('exception_date', endStr)
+        .or(`end_date.gte.${startStr},exception_date.gte.${startStr}`);
 
     const { data: regularAvailability } = await supabase
         .from('employee_availability')
@@ -1242,7 +1243,12 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
         }
 
         const activeSlots = [];
-        const dayExceptions = exceptions?.filter(e => e.exception_date === dateStr) || [];
+        const dayExceptions = exceptions?.filter(e => {
+            if (e.end_date) {
+                return dateStr >= e.exception_date && dateStr <= e.end_date;
+            }
+            return e.exception_date === dateStr;
+        }) || [];
 
         if (dayExceptions.length > 0) {
             const available = dayExceptions.filter(e => e.is_available);
@@ -1352,7 +1358,8 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
         .from('employee_availability_exceptions')
         .select('*')
         .eq('employee_id', employeeId)
-        .eq('exception_date', date);
+        .lte('exception_date', date)
+        .or(`end_date.gte.${date},exception_date.gte.${date}`);
 
     const activeSlots = [];
 

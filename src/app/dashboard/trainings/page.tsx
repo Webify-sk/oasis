@@ -171,6 +171,10 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
 
                     const isPast = sessionStartTimestamp < nowFaceValue;
 
+                    if (isPast) {
+                        return; // Omit past training sessions entirely from the user dashboard
+                    }
+
                     // 4. Client-side ISO string (still needs to be what the calendar expects)
                     // We can stick to the UTC string.
                     const sessionStartISO = new Date(sessionStartTimestamp).toISOString();
@@ -244,8 +248,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
             sessions: sessionsForDay,
             originalDate: wd.dateObj // For checking if it's in the past if needed
         };
-    });
-
+    }).filter(day => day.sessions.length > 0);
 
 
     // 4. Fetch User Credits (for instant client-side validation)
