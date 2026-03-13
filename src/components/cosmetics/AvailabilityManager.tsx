@@ -63,6 +63,7 @@ export function AvailabilityManager({
     const [newExceptionDate, setNewExceptionDate] = useState('');
     const [exceptionEndDate, setExceptionEndDate] = useState('');
     const [isExceptionAvailable, setIsExceptionAvailable] = useState(false);
+    const [isFullDay, setIsFullDay] = useState(true);
     const [exceptionStart, setExceptionStart] = useState('09:00');
     const [exceptionEnd, setExceptionEnd] = useState('17:00');
     const [isAddingException, setIsAddingException] = useState(false);
@@ -184,12 +185,14 @@ export function AvailabilityManager({
 
         setIsAddingException(true);
 
+        const hasTimes = isExceptionAvailable || (!isExceptionAvailable && !isFullDay);
+
         const res = await addAvailabilityException(
             employeeId,
             newExceptionDate,
             isExceptionAvailable,
-            isExceptionAvailable ? exceptionStart : undefined,
-            isExceptionAvailable ? exceptionEnd : undefined,
+            hasTimes ? exceptionStart : undefined,
+            hasTimes ? exceptionEnd : undefined,
             undefined,
             exceptionEndDate ? exceptionEndDate : undefined
         );
@@ -200,6 +203,7 @@ export function AvailabilityManager({
             setExceptionEndDate('');
             // Reset to defaults
             setIsExceptionAvailable(false);
+            setIsFullDay(true);
             setMessage('Výnimka pridaná ✅');
             setTimeout(() => setMessage(''), 3000);
         } else {
@@ -495,7 +499,11 @@ export function AvailabilityManager({
                             <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Dostupnosť</label>
                             <select
                                 value={isExceptionAvailable ? 'available' : 'unavailable'}
-                                onChange={(e) => setIsExceptionAvailable(e.target.value === 'available')}
+                                onChange={(e) => {
+                                    const available = e.target.value === 'available';
+                                    setIsExceptionAvailable(available);
+                                    if (available) setIsFullDay(false); // If available, always requires time
+                                }}
                                 style={{
                                     width: '100%', padding: '0.7rem', border: '1px solid #e2e8f0',
                                     borderRadius: '8px', fontSize: '0.95rem', backgroundColor: 'white'
@@ -506,7 +514,20 @@ export function AvailabilityManager({
                             </select>
                         </div>
 
-                        {isExceptionAvailable && (
+                        {!isExceptionAvailable && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%', paddingBottom: '0.7rem' }}>
+                                <input
+                                    type="checkbox"
+                                    id="isFullDay"
+                                    checked={isFullDay}
+                                    onChange={(e) => setIsFullDay(e.target.checked)}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                />
+                                <label htmlFor="isFullDay" style={{ fontSize: '0.9rem', cursor: 'pointer', color: '#4a5568' }}>Celý deň</label>
+                            </div>
+                        )}
+
+                        {(isExceptionAvailable || (!isExceptionAvailable && !isFullDay)) && (
                             <>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#4a5568' }}>Od</label>
@@ -596,8 +617,10 @@ export function AvailabilityManager({
                                         }}>
                                             {exc.is_available ? (
                                                 <><Clock size={12} /> {exc.start_time?.slice(0, 5)} - {exc.end_time?.slice(0, 5)}</>
+                                            ) : exc.start_time && exc.end_time ? (
+                                                <><Clock size={12} /> Voľno ({exc.start_time.slice(0, 5)} - {exc.end_time.slice(0, 5)})</>
                                             ) : (
-                                                '🏖️ Voľno'
+                                                '🏖️ Voľno (Celý deň)'
                                             )}
                                         </div>
                                     </div>

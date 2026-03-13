@@ -50,7 +50,7 @@ export function CreditPackageList({ packages }: { packages: CreditPackage[] }) {
                                 )}
                                 {pkg.is_popular && (
                                     <span style={{ fontSize: '0.7rem', backgroundColor: '#dbeafe', padding: '2px 6px', borderRadius: '4px', color: '#1e40af' }}>
-                                        Populárny
+                                        Odporúčame
                                     </span>
                                 )}
                             </div>

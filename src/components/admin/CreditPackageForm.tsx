@@ -124,7 +124,7 @@ export function CreditPackageForm({ initialData }: CreditPackageFormProps) {
                                 name="is_popular"
                                 defaultChecked={state?.inputs?.is_popular ?? initialData?.is_popular ?? false}
                             />
-                            <span style={{ fontSize: '0.9rem' }}>Populárny (zvýraznený)</span>
+                            <span style={{ fontSize: '0.9rem' }}>Odporúčame (zvýraznený)</span>
                         </label>
                     </div>
 

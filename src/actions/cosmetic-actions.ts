@@ -1250,11 +1250,15 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
             return e.exception_date === dateStr;
         }) || [];
 
-        if (dayExceptions.length > 0) {
-            const available = dayExceptions.filter(e => e.is_available);
-            if (available.length > 0) {
-                activeSlots.push(...available.map(e => ({ start_time: e.start_time, end_time: e.end_time })));
-            }
+        const availableExceptions = dayExceptions.filter(e => e.is_available);
+        const unavailableExceptions = dayExceptions.filter(e => !e.is_available);
+
+        if (unavailableExceptions.some(e => !e.start_time || !e.end_time)) {
+            continue; // Full day off
+        }
+
+        if (availableExceptions.length > 0) {
+            activeSlots.push(...availableExceptions.map(e => ({ start_time: e.start_time, end_time: e.end_time })));
         } else {
             const dayOfWeek = currentDateObj.getDay();
             const regularSlots = regularAvailability?.filter(r => r.day_of_week === dayOfWeek) || [];
@@ -1290,7 +1294,16 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
                     return (slotStartUTC < appEnd && slotEndUTC > appStart);
                 });
 
-                if (!isCollision) {
+                const isExceptionCollision = unavailableExceptions.some(exc => {
+                    if (!exc.start_time || !exc.end_time) return false;
+                    const [excStartH, excStartM] = exc.start_time.split(':').map(Number);
+                    const [excEndH, excEndM] = exc.end_time.split(':').map(Number);
+                    const excStartMins = excStartH * 60 + excStartM;
+                    const excEndMins = excEndH * 60 + excEndM;
+                    return (currentMinutes < excEndMins && (currentMinutes + duration) > excStartMins);
+                });
+
+                if (!isCollision && !isExceptionCollision) {
                     const { allowed } = isBookingAllowed(slotStartUTC);
                     if (allowed) {
                         hasAvailableSlot = true;
@@ -1361,23 +1374,27 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
         .lte('exception_date', date)
         .or(`end_date.gte.${date},exception_date.gte.${date}`);
 
+    const dayExceptions = exceptions?.filter(e => {
+        if (e.end_date) {
+            return date >= e.exception_date && date <= e.end_date;
+        }
+        return e.exception_date === date;
+    }) || [];
+
+    const availableExceptions = dayExceptions.filter(e => e.is_available);
+    const unavailableExceptions = dayExceptions.filter(e => !e.is_available);
+
+    if (unavailableExceptions.some(e => !e.start_time || !e.end_time)) {
+        return [];
+    }
+
     const activeSlots = [];
 
-    if (exceptions && exceptions.length > 0) {
-        // We have exceptions for this date
-        // Filter for active ones (is_available = true)
-        const available = exceptions.filter(e => e.is_available);
-
-        if (available.length === 0) {
-            return []; // Explicitly all unavailable
-        }
-
-        // Use these slots
-        activeSlots.push(...available.map(e => ({
+    if (availableExceptions.length > 0) {
+        activeSlots.push(...availableExceptions.map(e => ({
             start_time: e.start_time,
             end_time: e.end_time
         })));
-
     } else {
         // Fallback to weekly recurring
         const dayOfWeek = new Date(date).getDay();
@@ -1463,7 +1480,16 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
                 return (slotStartUTC < appEnd && slotEndUTC > appStart)
             })
 
-            if (!isCollision) {
+            const isExceptionCollision = unavailableExceptions.some(exc => {
+                if (!exc.start_time || !exc.end_time) return false;
+                const [excStartH, excStartM] = exc.start_time.split(':').map(Number);
+                const [excEndH, excEndM] = exc.end_time.split(':').map(Number);
+                const excStartMins = excStartH * 60 + excStartM;
+                const excEndMins = excEndH * 60 + excEndM;
+                return (currentMinutes < excEndMins && (currentMinutes + duration) > excStartMins);
+            });
+
+            if (!isCollision && !isExceptionCollision) {
                 // Check Deadline using real UTC date
                 const { isLocked } = isBookingLocked(slotStartUTC);
 
