@@ -490,13 +490,18 @@ export async function checkConflictingAppointments(employeeId: string, date: str
 
     if (startTime && endTime) {
         // Check overlap for partial day
-        // Appointment Start < Exception End AND Appointment End > Exception Start
-        const exceptionStart = `${date}T${startTime}`;
-        const exceptionEnd = `${date}T${endTime}`;
+        // We convert to real UTC date to apply the 15-minute gap correctly
+        const { getRealUtcDate } = await import('@/utils/booking-logic');
+        const exceptionStartUTC = getRealUtcDate(`${date}T${startTime}:00`);
+        const exceptionEndUTC = getRealUtcDate(`${date}T${endTime}:00`);
+
+        // Apply 15-minute gap
+        const bufferedStart = new Date(exceptionStartUTC.getTime() - 15 * 60000).toISOString();
+        const bufferedEnd = new Date(exceptionEndUTC.getTime() + 15 * 60000).toISOString();
 
         query = query
-            .lt('start_time', exceptionEnd)
-            .gt('end_time', exceptionStart);
+            .lt('start_time', bufferedEnd)
+            .gt('end_time', bufferedStart);
     } else {
         // Full day exception - check any appointment on that day (or range)
         const dayStart = `${date}T00:00:00`;
@@ -784,11 +789,16 @@ export async function createAppointment(data: {
         if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
     }
 
+    const bufferedBaseStartObj = new Date(data.start_time);
+    const endObj = new Date(data.end_time);
+    const bufferedStartTime = new Date(bufferedBaseStartObj.getTime() - 15 * 60000).toISOString();
+    const bufferedEndTime = new Date(endObj.getTime() + 15 * 60000).toISOString();
+
     let appsQuery = supabase
         .from('cosmetic_appointments')
         .select('id')
-        .lt('start_time', data.end_time)
-        .gt('end_time', data.start_time)
+        .lt('start_time', bufferedEndTime)
+        .gt('end_time', bufferedStartTime)
         .neq('status', 'cancelled');
 
     if (sharedServiceIds.length > 0) {
@@ -1288,10 +1298,13 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
                 const slotStartUTC = getRealUtcDate(`${dateStr}T${slotLocalTimeStr}:00`);
                 const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60000);
 
+                const slotStartBuffered = new Date(slotStartUTC.getTime() - 15 * 60000);
+                const slotEndBuffered = new Date(slotEndUTC.getTime() + 15 * 60000);
+
                 const isCollision = appointments?.some(app => {
                     const appStart = new Date(app.start_time);
                     const appEnd = new Date(app.end_time);
-                    return (slotStartUTC < appEnd && slotEndUTC > appStart);
+                    return (slotStartBuffered < appEnd && slotEndBuffered > appStart);
                 });
 
                 const isExceptionCollision = unavailableExceptions.some(exc => {
@@ -1472,12 +1485,15 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
             const slotStartUTC = getRealUtcDate(`${date}T${slotLocalTimeStr}:00`);
             const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60000);
 
+            const slotStartBuffered = new Date(slotStartUTC.getTime() - 15 * 60000);
+            const slotEndBuffered = new Date(slotEndUTC.getTime() + 15 * 60000);
+
             // Check collision with genuine DB UTC appointments
             const isCollision = appointments?.some(app => {
                 const appStart = new Date(app.start_time);
                 const appEnd = new Date(app.end_time);
 
-                return (slotStartUTC < appEnd && slotEndUTC > appStart)
+                return (slotStartBuffered < appEnd && slotEndBuffered > appStart)
             })
 
             const isExceptionCollision = unavailableExceptions.some(exc => {
@@ -1951,6 +1967,60 @@ export async function createAdminCosmeticAppointment(data: {
     if (error) {
         console.error('Error creating admin appointment:', error);
         return { error: 'Nepodarilo sa vytvoriť rezerváciu.' };
+    }
+
+    // --- Send Email to Employee ---
+    try {
+        const { data: service } = await supabase.from('cosmetic_services').select('title').eq('id', data.service_id).single();
+
+        const { data: employeeData } = await supabase
+            .from('employees')
+            .select('email, name')
+            .eq('id', data.employee_id)
+            .single();
+
+        if (employeeData && employeeData.email) {
+            const formattedDateEmp = new Date(data.start_time).toLocaleString('sk-SK', {
+                timeZone: 'Europe/Bratislava',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Use provided client info
+            const cName = data.client_name || 'Klient';
+            const cPhone = data.client_phone || 'N/A';
+            const cEmail = data.client_email || 'N/A';
+
+            const empSubject = `Nová rezervácia (Admin): ${service?.title || 'Služba'} - ${cName}`;
+            const empBody = `
+                <p>Ahoj ${employeeData.name},</p>
+                <p>admin ti pridelil novú rezerváciu na službu <strong>${service?.title || 'Služba'}</strong>.</p>
+                
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDateEmp}</p>
+                    <p style="margin: 5px 0;"><strong>Klient:</strong> ${cName}</p>
+                    <p style="margin: 5px 0;"><strong>Email:</strong> ${cEmail}</p>
+                    <p style="margin: 5px 0;"><strong>Telefón:</strong> ${cPhone}</p>
+                    ${data.notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${data.notes}</p>` : ''}
+                </div>
+
+                <p>Viac detailov nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
+            `;
+
+            const empHtml = getEmailTemplate(empSubject, empBody);
+
+            await sendEmail({
+                to: employeeData.email,
+                subject: empSubject,
+                html: empHtml
+            });
+            console.log('Employee notification sent to:', employeeData.email);
+        }
+    } catch (empError) {
+        console.error('Failed to send employee notification (admin):', empError);
     }
 
     revalidatePath('/admin/cosmetics/reservations');

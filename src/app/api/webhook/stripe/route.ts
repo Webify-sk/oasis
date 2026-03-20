@@ -117,11 +117,15 @@ export async function POST(req: Request) {
                 company_ic_dph: session.metadata?.company_ic_dph
             };
 
+            const discountInCents = session.total_details?.amount_discount || 0;
+            const discountAmount = discountInCents > 0 ? discountInCents / 100 : null;
+
             const { error: invoiceError } = await supabase.from('invoices').insert({
                 user_id: userId === 'guest' ? null : userId,
                 invoice_number: invNum,
                 description: `Nákup: Darčekový poukaz (${creditAmount} vstupov)`,
                 amount: (session.amount_total || 0) / 100,
+                discount_amount: discountAmount,
                 currency: session.currency || 'eur',
                 stripe_payment_id: session.payment_intent as string,
                 status: 'paid',
@@ -247,6 +251,7 @@ export async function POST(req: Request) {
                         invoiceNumber: invNum,
                         date: new Date().toLocaleDateString('sk-SK'),
                         amount: (session.amount_total || 0) / 100,
+                        discountAmount: discountAmount !== null ? discountAmount : undefined,
                         currency: session.currency || 'eur',
                         description: `Nákup: Darčekový poukaz (${creditAmount} vstupov)`,
                         buyerName: billingDetails.name,
@@ -396,12 +401,16 @@ export async function POST(req: Request) {
             }
 
             // CREATE INVOICE FOR CREDITS
+            const discountInCents = session.total_details?.amount_discount || 0;
+            const discountAmount = discountInCents > 0 ? discountInCents / 100 : null;
+
             const invNum = await generateNextInvoiceNumber(supabase);
             const { error: invoiceError } = await supabase.from('invoices').insert({
                 user_id: userId,
                 invoice_number: invNum,
                 description: `Nákup: ${packageName || 'Kreditný balíček'}`,
                 amount: (session.amount_total || 0) / 100,
+                discount_amount: discountAmount,
                 currency: session.currency || 'eur',
                 stripe_payment_id: session.payment_intent as string,
                 status: 'paid',
@@ -459,6 +468,7 @@ export async function POST(req: Request) {
                         invoiceNumber: invNum,
                         date: new Date().toLocaleDateString('sk-SK'),
                         amount: (session.amount_total || 0) / 100,
+                        discountAmount: discountAmount !== null ? discountAmount : undefined,
                         currency: session.currency || 'eur',
                         description: `Nákup: ${packageName || 'Kreditný balíček'}`,
                         buyerName: profile?.billing_name || session.customer_details?.name || 'Zákazník',

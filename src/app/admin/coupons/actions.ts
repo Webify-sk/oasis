@@ -10,6 +10,8 @@ interface GenerateCouponsParams {
     discountType: 'percentage' | 'fixed';
     discountValue: number;
     targetUserIds: string[];
+    emailSubject: string;
+    emailText: string;
 }
 
 // Helper to generate a unique code like ZLAVA20-A1B2
@@ -18,7 +20,7 @@ function generateUniqueCode(prefix: string): string {
     return `${prefix}-${randomHex}`;
 }
 
-export async function generateCouponsAction({ discountType, discountValue, targetUserIds }: GenerateCouponsParams) {
+export async function generateCouponsAction({ discountType, discountValue, targetUserIds, emailSubject, emailText }: GenerateCouponsParams) {
     const supabase = await createClient();
 
     try {
@@ -89,29 +91,20 @@ export async function generateCouponsAction({ discountType, discountValue, targe
                 ? `${discountValue}%`
                 : `${discountValue} €`;
 
+            const formattedText = emailText.split('\n').map(line => {
+                const trimmed = line.trim();
+                return trimmed ? `<p>${trimmed}</p>` : '<br/>';
+            }).join('\n');
+
             const emailHtml = getEmailTemplate(
-                'Prekvapenie z Oasis Open Day ✨',
+                emailSubject,
                 `
-                    <p>Ahoj,</p>
-                    <p>ďakujeme, že si bola súčasťou nášho Open Day ✨<br/>
-                    Tvoja prítomnosť pre nás znamenala viac, než si myslíš.</p>
-
-                    <p>A preto máme pre teba niečo špeciálne &ndash;<br/>
-                    <strong>20 % zľavu</strong> na všetky kozmetické a telové ošetrenia.</p>
-
-                    <p>Je čas dopriať si starostlivosť, ktorú si si možno odkladala.<br/>
-                    Je čas cítiť sa ešte krajšie, oddýchnutejšie a sebavedomejšie.</p>
+                    ${formattedText}
                     
                     <div style="background-color: #f9f9f9; border-left: 4px solid #93745F; padding: 20px; margin: 30px 0; text-align: center;">
                         <span style="font-size: 14px; color: #6b7280; text-transform: uppercase;">Tvoj unikátny kód</span><br/>
                         <span style="font-size: 28px; font-weight: bold; font-family: monospace; color: #111827; letter-spacing: 2px;">${userCoupon.code}</span>
                     </div>
-
-                    <p>Zľava je určená exkluzívne pre účastníčky Open Day, preto si svoj termín rezervuj čo najskôr.</p>
-
-                    <p>Tešíme sa na tvoju ďalšiu návštevu a na chvíle, ktoré budú patriť len tebe 💫</p>
-
-                    <p>S láskou,<br/>Laura &amp; Leona</p>
 
                     <p style="margin-top: 30px;">
                         <a href="https://www.oasislounge.sk/" class="button" style="display: inline-block; background-color: #93745F; color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">
@@ -123,7 +116,7 @@ export async function generateCouponsAction({ discountType, discountValue, targe
 
             return sendEmail({
                 to: u.email,
-                subject: '✨ Tvoj darček z Oasis Open Day',
+                subject: emailSubject,
                 html: emailHtml
             });
         });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { updateProfile } from '@/app/dashboard/profile/actions';
 import { resetPassword } from '@/app/auth/actions';
@@ -34,6 +34,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [showResetModal, setShowResetModal] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('edit') === 'true') {
+                setIsEditing(true);
+            }
+        }
+    }, []);
 
     // Voucher State
     const [voucherCode, setVoucherCode] = useState('');

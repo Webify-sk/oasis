@@ -162,7 +162,7 @@ export async function createCreditNote(invoiceId: string) {
     // 1. Fetch original invoice
     const { data: original, error: fetchError } = await supabase
         .from('invoices')
-        .select('*')
+        .select('*, user:profiles(email)')
         .eq('id', invoiceId)
         .single();
 
@@ -248,6 +248,69 @@ export async function createCreditNote(invoiceId: string) {
         .from('invoices')
         .update({ status: 'refunded' })
         .eq('id', original.id);
+
+    // 7. Send Email with Credit Note (Dobropis) PDF
+    try {
+        const userEmail = original.customer_email || original.user?.email;
+        if (userEmail) {
+            const { sendEmail } = await import('@/utils/email');
+            const { getEmailTemplate } = await import('@/utils/email-template');
+            const { generateInvoicePDF } = await import('@/utils/pdf-generator');
+            const { COMPANY_DETAILS } = await import('@/lib/constants/company');
+
+            const pdfBuffer = await generateInvoicePDF({
+                invoiceNumber: creditNoteNumber,
+                date: new Date().toLocaleDateString('sk-SK'),
+                amount: creditAmount,
+                currency: original.currency || 'eur',
+                description: `Dobropis k faktúre č. ${original.invoice_number}`,
+                buyerName: original.billing_name || 'Zákazník',
+                buyerAddress: [
+                    original.billing_street,
+                    original.billing_city,
+                    original.billing_zip,
+                    original.billing_country
+                ].filter(Boolean).join(', '),
+                buyerIco: original.company_ico || undefined,
+                buyerDic: original.company_dic || undefined,
+                buyerIcdph: original.company_ic_dph || undefined,
+                buyerCompanyName: original.company_name || undefined,
+                supplierName: COMPANY_DETAILS.name,
+                supplierAddress: COMPANY_DETAILS.address,
+                supplierIco: COMPANY_DETAILS.ico,
+                supplierDic: COMPANY_DETAILS.dic,
+                supplierIcdph: COMPANY_DETAILS.icdph,
+                variableSymbol: creditNoteNumber.replace(/\D/g, ''),
+                discountAmount: creditDiscount !== null ? creditDiscount : undefined,
+                serviceType: original.service_type || undefined,
+                isCreditNote: true,
+                relatedInvoiceNumber: original.invoice_number
+            });
+
+            const html = getEmailTemplate(
+                'Dobropis (Opravný doklad)',
+                `
+                <h1 style="color: #5E715D;">Dobropis k faktúre č. ${original.invoice_number}</h1>
+                <p>Dobrý deň,</p>
+                <p>v prílohe tohto emailu Vám zasielame dobropis (opravný doklad) k Vašej objednávke.</p>
+                <p>V prípade otázok nás neváhajte kontaktovať.</p>
+                `
+            );
+
+            await sendEmail({
+                to: userEmail,
+                subject: `Dobropis k faktúre č. ${original.invoice_number}`,
+                html: html,
+                attachments: [{
+                    filename: `dobropis-${creditNoteNumber}.pdf`,
+                    content: pdfBuffer
+                }]
+            });
+        }
+    } catch (emailError) {
+        console.error('Error sending credit note email:', emailError);
+        // Do not throw so that the credit note is still returned as successful
+    }
 
     revalidatePath('/admin/invoices');
     return { success: true };

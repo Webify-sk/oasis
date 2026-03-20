@@ -36,7 +36,7 @@ export function PhonePromptModal({ isPhoneMissing, userId }: PhonePromptModalPro
 
     const handleAddPhone = () => {
         setIsOpen(false);
-        router.push('/dashboard/profile');
+        router.push('/dashboard/profile?edit=true');
     };
 
     return (

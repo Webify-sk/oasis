@@ -1,0 +1,2 @@
+﻿src/actions/cosmetic-actions.ts(766,11): error TS2451: Cannot redeclare block-scoped variable 'startObj'.
+src/actions/cosmetic-actions.ts(792,11): error TS2451: Cannot redeclare block-scoped variable 'startObj'.

@@ -39,6 +39,20 @@ export function CouponForm({ users, trainings, bookings }: { users: User[], trai
     const [validFrom, setValidFrom] = useState('');
     const [validUntil, setValidUntil] = useState('');
 
+    const [emailSubject, setEmailSubject] = useState('✨ Prekvapenie z Oasis Lounge');
+    const [emailText, setEmailText] = useState(`Ahoj,
+
+máme pre teba niečo špeciálne – zľavu na všetky kozmetické a telové ošetrenia.
+
+Je čas dopriať si starostlivosť, ktorú si si možno odkladala.
+Je čas cítiť sa ešte krajšie, oddýchnutejšie a sebavedomejšie.
+
+Tešíme sa na tvoju návštevu a na chvíle, ktoré budú patriť len tebe 💫
+
+S láskou,
+Laura & Leona`);
+
+
     const filteredUsers = users.filter(user => {
         const matchesSearch = searchTerm === '' || (
             user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -118,7 +132,9 @@ export function CouponForm({ users, trainings, bookings }: { users: User[], trai
                 result = await generateCouponsAction({
                     discountType,
                     discountValue: Number(discountValue),
-                    targetUserIds: Array.from(selectedUsers)
+                    targetUserIds: Array.from(selectedUsers),
+                    emailSubject,
+                    emailText
                 });
             } else {
                 result = await createUniversalCouponAction({
@@ -482,7 +498,68 @@ export function CouponForm({ users, trainings, bookings }: { users: User[], trai
                 </div>
             )}
 
-            {/* Krok 4: Potvrdenie */}
+            {couponMode === 'personal' && (
+                <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', backgroundColor: '#f3f4f6', borderRadius: '50%', fontSize: '0.9rem', fontWeight: 'bold' }}>4</span>
+                        Nastavenie emailu
+                    </h2>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.95rem' }}>
+                                Predmet emailu
+                            </label>
+                            <input
+                                type="text"
+                                value={emailSubject}
+                                onChange={(e) => setEmailSubject(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.8rem 1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid #d1d5db',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#93745F'}
+                                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.95rem' }}>
+                                Text emailu
+                            </label>
+                            <textarea
+                                value={emailText}
+                                onChange={(e) => setEmailText(e.target.value)}
+                                rows={10}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.8rem 1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid #d1d5db',
+                                    fontSize: '0.95rem',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s',
+                                    resize: 'vertical'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#93745F'}
+                                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                                required
+                            />
+                            <p style={{ marginTop: '0.4rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                                Pod tento text bude automaticky vložený vygenerovaný zľavový kód a tlačidlo pre rezerváciu.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Krok 5: Potvrdenie */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                     type="submit"
