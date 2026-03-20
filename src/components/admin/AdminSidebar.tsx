@@ -18,6 +18,7 @@ const navItems = [
     { name: 'Kreditné balíky', href: '/admin/credits', icon: CreditCard },
     { name: 'Darčekové poukazy', href: '/admin/vouchers', icon: Gift },
     { name: 'Faktúry', href: '/admin/invoices', icon: FileText },
+    { name: 'Štatistiky', href: '/admin/statistics', icon: LayoutDashboard },
     { name: 'Kozmetika - Služby', href: '/admin/cosmetics/services', icon: List },
     { name: 'Kozmetika - Staff', href: '/admin/cosmetics/staff', icon: Users },
     { name: 'Kozmetika - Rezervácie', href: '/admin/cosmetics/reservations', icon: Calendar },

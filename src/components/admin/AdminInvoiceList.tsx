@@ -62,6 +62,65 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
         return matchesSearch && matchesMonth;
     });
 
+    // Calculate dynamic stats based on filtered invoices
+    const stats = useMemo(() => {
+        let totalCount = 0;
+        let totalAmount = 0;
+        let paidCount = 0;
+        let paidAmount = 0;
+        let creditNotesCount = 0;
+        let creditNotesAmount = 0;
+
+        filteredInvoices.forEach(inv => {
+            if (inv.document_type === 'credit_note') {
+                creditNotesCount++;
+                creditNotesAmount += inv.amount;
+            } else {
+                totalCount++;
+                totalAmount += inv.amount;
+                if (inv.status === 'paid') {
+                    paidCount++;
+                    paidAmount += inv.amount;
+                }
+            }
+        });
+
+        const averageAmount = totalCount > 0 ? totalAmount / totalCount : 0;
+
+        let momGrowth: number | null = null;
+        let prevMonthAmount = 0;
+
+        if (selectedMonth !== 'all') {
+            const [yearStr, monthStr] = selectedMonth.split('-');
+            const currentMonthDate = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+            const prevMonthDate = new Date(currentMonthDate.setMonth(currentMonthDate.getMonth() - 1));
+            const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+            invoices.forEach(inv => {
+                const date = new Date(inv.created_at);
+                const invMonthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+                if (invMonthStr === prevMonthStr && inv.document_type !== 'credit_note') {
+                    const matchesSearch = inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        inv.user?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (inv.user?.full_name && inv.user.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+                    if (matchesSearch) {
+                        prevMonthAmount += inv.amount;
+                    }
+                }
+            });
+
+            if (prevMonthAmount > 0) {
+                momGrowth = ((totalAmount - prevMonthAmount) / prevMonthAmount) * 100;
+            } else if (totalAmount > 0) {
+                momGrowth = 100;
+            }
+        }
+
+        return { totalCount, totalAmount, paidCount, paidAmount, creditNotesCount, creditNotesAmount, averageAmount, momGrowth };
+    }, [filteredInvoices, invoices, selectedMonth, searchTerm]);
+
     const toggleSelectAll = () => {
         if (selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0) {
             setSelectedInvoices(new Set());
@@ -184,8 +243,41 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
     }
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Invoice Statistics Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', animation: 'fadeIn 0.3s ease-in-out' }}>
+                <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>Celkom Faktúr <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#9ca3af' }}>(Počet: {stats.totalCount})</span></div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#111827', fontFamily: 'var(--font-heading)' }}>
+                        {new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR' }).format(stats.totalAmount)}
+                    </div>
+                </div>
+
+                <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderLeft: '4px solid #8b5cf6' }}>
+                    <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>Priemerná Hodnota Faktúry</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#8b5cf6', fontFamily: 'var(--font-heading)' }}>
+                        {new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR' }).format(stats.averageAmount)}
+                    </div>
+                </div>
+
+                {selectedMonth !== 'all' ? (
+                    <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderLeft: stats.momGrowth !== null && stats.momGrowth < 0 ? '4px solid #ef4444' : '4px solid #10b981' }}>
+                        <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>Medzimesačný Rast <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#9ca3af' }}>(vs min. mesiac)</span></div>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: stats.momGrowth !== null && stats.momGrowth < 0 ? '#ef4444' : '#10b981', fontFamily: 'var(--font-heading)' }}>
+                            {stats.momGrowth !== null ? `${stats.momGrowth > 0 ? '+' : ''}${stats.momGrowth.toFixed(1)} %` : 'N/A'}
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderLeft: '4px solid #d1d5db', opacity: 0.6 }}>
+                        <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>Medzimesačný Rast</div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#6b7280', marginTop: '0.5rem' }}>
+                            Vyberte konkrétny mesiac vo filtri pre porovnanie.
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '-0.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', gap: '1rem', flex: '1 1 auto', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', maxWidth: '400px', flex: '1 1 300px' }}>
                         <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />

@@ -13,16 +13,14 @@ export function Header() {
             <div className={styles.container}>
                 {/* Logo */}
                 <div className={styles.logo}>
-                    <Link href="/dashboard" className={styles.logoLink}>
-                        <Image
-                            src="/Logo_Brown.png"
-                            alt="Oasis Lounge"
-                            width={180}
-                            height={50}
-                            style={{ objectFit: 'contain' }}
-                            priority
-                        />
-                    </Link>
+                    <Image
+                        src="/Logo_Brown.png"
+                        alt="Oasis Lounge"
+                        width={180}
+                        height={50}
+                        style={{ objectFit: 'contain' }}
+                        priority
+                    />
                 </div>
 
                 {/* Right Side Actions */}
