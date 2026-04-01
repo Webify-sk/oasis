@@ -416,7 +416,7 @@ export async function POST(req: Request) {
                 status: 'paid',
                 service_type: session.metadata?.service_type || 'Tréning',
                 billing_name: profile?.billing_name || session.customer_details?.name,
-                billing_address: profile?.billing_street || session.customer_details?.address?.line1,
+                billing_street: profile?.billing_street || session.customer_details?.address?.line1,
                 billing_city: profile?.billing_city || session.customer_details?.address?.city,
                 billing_zip: profile?.billing_zip || session.customer_details?.address?.postal_code,
                 billing_country: profile?.billing_country || session.customer_details?.address?.country || 'Slovensko',

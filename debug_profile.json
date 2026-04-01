@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "updateData": {
+    "id": "4fe0b201-bb4d-4f63-861f-312b8594dcbc",
+    "full_name": "Boris Konecny",
+    "phone": "",
+    "updated_at": "2026-03-31T09:16:01.881Z",
+    "billing_name": "Oasis",
+    "billing_street": "Bajkalská 123",
+    "billing_city": "Bratislava",
+    "billing_zip": "90501",
+    "billing_country": "Slovensko",
+    "company_name": "Labka",
+    "company_ico": "1234567",
+    "company_dic": "2000000",
+    "company_ic_dph": "SK12"
+  }
+}

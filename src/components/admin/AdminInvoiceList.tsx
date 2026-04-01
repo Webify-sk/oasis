@@ -205,6 +205,10 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
             billing_city: invoice.billing_city || '',
             billing_zip: invoice.billing_zip || '',
             billing_country: invoice.billing_country || 'Slovensko',
+            company_name: invoice.company_name || '',
+            company_ico: invoice.company_ico || '',
+            company_dic: invoice.company_dic || '',
+            company_ic_dph: invoice.company_ic_dph || '',
             discount_amount: invoice.discount_amount || 0,
             service_type: invoice.service_type || 'Služba'
         });
