@@ -4,13 +4,20 @@ import { toZonedTime, toDate, formatInTimeZone } from 'date-fns-tz';
 export function getRealUtcDate(faceValueDateInput: Date | string): Date {
     // Takes something like "2026-03-13T09:00" and ensures we treat it as Europe/Bratislava time.
     // If a Date object is passed, we format it back to local string to strip browser/server offsets
-    const dateStr = typeof faceValueDateInput === 'string'
+    let dateStr = typeof faceValueDateInput === 'string'
         ? faceValueDateInput
         : faceValueDateInput.getFullYear() + '-' +
         String(faceValueDateInput.getMonth() + 1).padStart(2, '0') + '-' +
         String(faceValueDateInput.getDate()).padStart(2, '0') + 'T' +
         String(faceValueDateInput.getHours()).padStart(2, '0') + ':' +
         String(faceValueDateInput.getMinutes()).padStart(2, '0');
+
+    if (typeof dateStr === 'string') {
+        const match = dateStr.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?)/);
+        if (match) {
+            dateStr = match[1];
+        }
+    }
 
     // toDate from date-fns-tz parses a string considering the provided default time zone
     const timeZone = 'Europe/Bratislava';

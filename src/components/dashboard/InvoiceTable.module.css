@@ -8,7 +8,8 @@
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(0, 0, 0, 0.04);
-    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 0;
     /* Table fills the card */
 }
@@ -29,6 +30,7 @@
 
 .table {
     width: 100%;
+    min-width: 600px;
     border-collapse: collapse;
 }
 
@@ -114,4 +116,10 @@
     font-size: 0.85rem;
     color: #9CA3AF;
     text-align: right;
+}
+
+@media (max-width: 768px) {
+    .table th, .table td {
+        padding: 1rem;
+    }
 }

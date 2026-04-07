@@ -84,7 +84,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
     // Check user credits and unlimited status
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('credits, unlimited_expires_at')
+        .select('credits, credits_expire_at, unlimited_expires_at')
         .eq('id', user.id)
         .single();
 
@@ -93,6 +93,10 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
     }
 
     const isUnlimited = profile.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
+
+    // Evaluate if normal credits are still valid
+    const hasUnexpiredCredits = !profile.credits_expire_at || new Date(profile.credits_expire_at) >= new Date();
+    const effectiveCredits = hasUnexpiredCredits ? (profile.credits || 0) : 0;
 
     // Only check credits if price > 0 AND not unlimited (Unlimited covers only the user, +1 needs credits? Or unlimited covers both? Assuming +1 always needs credits or simple multiplier)
     // Actually, usually Unlimited is for the user only. +1 implies paying for stored credits? 
@@ -112,7 +116,10 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
     const additionalCost = (participantsCount - 1) * priceCredits;
     const totalCost = selfCost + additionalCost;
 
-    if ((profile.credits || 0) < totalCost) {
+    if (totalCost > 0 && effectiveCredits < totalCost) {
+        if (!hasUnexpiredCredits && (profile.credits || 0) >= totalCost) {
+            return { success: false, message: 'Vaše vstupy vypršali. Prosím, zakúpte si nový balíček.' };
+        }
         return { success: false, message: `Nemáte dostatok vstupov. Potrebujete ${totalCost} kreditov.` };
     }
 

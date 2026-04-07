@@ -346,8 +346,8 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
                 )}
             </div>
 
-            <div style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #E5E0DD', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #E5E0DD', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #E5E0DD' }}>
                         <tr>
                             <th style={{ padding: '1rem', width: '40px' }}>

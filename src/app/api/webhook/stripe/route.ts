@@ -312,7 +312,7 @@ export async function POST(req: Request) {
             // 1. Get current credits and billing profile
             const { data: profile, error: fetchError } = await supabase
                 .from('profiles')
-                .select('credits, billing_name, billing_street, billing_city, billing_zip, billing_country, company_name, company_ico, company_dic, company_ic_dph')
+                .select('credits, credits_expire_at, billing_name, billing_street, billing_city, billing_zip, billing_country, company_name, company_ico, company_dic, company_ic_dph')
                 .eq('id', userId)
                 .single()
 
@@ -348,10 +348,32 @@ export async function POST(req: Request) {
                 // NORMAL CREDIT UPDATE
                 const currentCredits = profile?.credits || 0
                 newCredits = currentCredits + creditsToAdd
+                
+                // Get validity months for the package
+                const packageId = session.metadata?.packageId;
+                let validityMonths = 0;
+                if (packageId) {
+                    const { data: pkgData } = await supabase.from('credit_packages')
+                        .select('validity_months').eq('id', packageId).single();
+                    if (pkgData?.validity_months) {
+                        validityMonths = pkgData.validity_months;
+                    }
+                }
+
+                const updateData: any = { credits: newCredits };
+
+                if (validityMonths > 0) {
+                    const now = new Date();
+                    const currentExpireAt = profile?.credits_expire_at ? new Date(profile.credits_expire_at) : null;
+                    const baseDate = (currentExpireAt && currentExpireAt > now) ? currentExpireAt : now;
+                    const newExpireAt = new Date(baseDate);
+                    newExpireAt.setMonth(newExpireAt.getMonth() + validityMonths);
+                    updateData.credits_expire_at = newExpireAt.toISOString();
+                }
 
                 const { error: updateError } = await supabase
                     .from('profiles')
-                    .update({ credits: newCredits })
+                    .update(updateData)
                     .eq('id', userId)
 
                 if (updateError) {

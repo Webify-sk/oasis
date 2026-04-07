@@ -8,6 +8,9 @@ export async function createClient(keepSessionAlive: boolean = true) {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
+            cookieOptions: {
+                maxAge: 30 * 24 * 60 * 60, // 30 days
+            },
             cookies: {
                 getAll() {
                     return cookieStore.getAll()

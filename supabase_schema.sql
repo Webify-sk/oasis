@@ -1,10 +1,10 @@
--- Create profiles table that extends auth.users
 create table public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   email text,
   full_name text,
   phone text,
   credits integer default 0,
+  credits_expire_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

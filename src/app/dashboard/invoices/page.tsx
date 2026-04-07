@@ -11,15 +11,17 @@ export default async function InvoicesPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem',
                 marginBottom: '2rem',
-                padding: '2rem 2rem 0 2rem'
+                padding: '2rem 1rem 0 1rem'
             }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", color: '#93745F' }}>Faktúry</h1>
 
                 <CreditCounter />
             </div>
 
-            <div style={{ padding: '0 2rem' }}>
+            <div style={{ padding: '0 1rem' }}>
                 <InvoiceTable invoices={invoices} />
             </div>
         </div>
