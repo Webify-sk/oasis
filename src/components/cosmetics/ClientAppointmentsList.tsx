@@ -29,6 +29,8 @@ interface Appointment {
         email: string | null;
     };
     client_name?: string | null;
+    client_phone?: string | null;
+    client_email?: string | null;
 }
 
 export function ClientAppointmentsList({ initialAppointments, isEmployeeView = false }: { initialAppointments: Appointment[], isEmployeeView?: boolean }) {
@@ -288,12 +290,20 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                         <Clock size={16} />
                         {start.toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })} ({appointment.cosmetic_services?.duration_minutes} min)
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <User size={16} />
-                        {isEmployeeView
-                            ? (appointment.profiles?.full_name || appointment.client_name || 'Neznámy klient')
-                            : (appointment.employees?.name || 'Neznámy')
-                        }
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <User size={16} />
+                            {isEmployeeView
+                                ? (appointment.profiles?.full_name || appointment.client_name || 'Neznámy klient')
+                                : (appointment.employees?.name || 'Neznámy')
+                            }
+                        </div>
+                        {isEmployeeView && (appointment.profiles?.phone || appointment.client_phone || appointment.profiles?.email || appointment.client_email) && (
+                            <div style={{ fontSize: '0.8rem', color: '#888', display: 'flex', gap: '0.8rem', marginLeft: '1.4rem' }}>
+                                {(appointment.profiles?.phone || appointment.client_phone) && <span>{appointment.profiles?.phone || appointment.client_phone}</span>}
+                                {(appointment.profiles?.email || appointment.client_email) && <span>{appointment.profiles?.email || appointment.client_email}</span>}
+                            </div>
+                        )}
                     </div>
                 </div>
 

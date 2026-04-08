@@ -17,30 +17,6 @@ const initialState: { message: string | null, inputs: any } = {
     inputs: null,
 };
 
-const sortTerms = (schedule: any[]) => {
-    const dayOrder: Record<string, number> = {
-        'Pondelok': 1, 'Utorok': 2, 'Streda': 3, 'Štvrtok': 4, 'Piatok': 5, 'Sobota': 6, 'Nedeľa': 7
-    };
-    return [...schedule].sort((a, b) => {
-        const isRecA = a.isRecurring !== false;
-        const isRecB = b.isRecurring !== false;
-        if (isRecA && !isRecB) return -1;
-        if (!isRecA && isRecB) return 1;
-
-        if (isRecA && isRecB) {
-            const dayA = dayOrder[a.day] || 8;
-            const dayB = dayOrder[b.day] || 8;
-            if (dayA !== dayB) return dayA - dayB;
-            return (a.time || '').localeCompare(b.time || '');
-        } else {
-            const dateA = new Date(a.date || 0).getTime();
-            const dateB = new Date(b.date || 0).getTime();
-            if (dateA !== dateB) return dateA - dateB;
-            return (a.time || '').localeCompare(b.time || '');
-        }
-    });
-};
-
 export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], initialData?: any }) {
     // Initialize with one empty term if no data
     const defaultTerm = {
@@ -54,7 +30,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
     };
 
     const [terms, setTerms] = useState<any[]>(
-        initialData?.schedule?.length > 0 ? sortTerms(initialData.schedule) : [defaultTerm]
+        initialData?.schedule?.length > 0 ? initialData.schedule : [defaultTerm]
     );
 
     // State for new/editing term
@@ -63,7 +39,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
     const [state, formAction] = useActionState(upsertTrainingType, initialState as any);
 
     const addTerm = () => {
-        setTerms([...terms, {
+        setTerms([{
             id: Date.now(),
             day: 'Pondelok',
             time: '18:00',
@@ -71,7 +47,7 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
             active: true,
             isRecurring: true,
             date: ''
-        }]);
+        }, ...terms]);
     };
 
     const removeTerm = (id: number) => {
@@ -166,9 +142,14 @@ export function TrainingForm({ trainers, initialData }: { trainers: Trainer[], i
             <div style={{ marginTop: '1.5rem', borderTop: '1px solid #E5E0DD', paddingTop: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h3 style={{ fontSize: '1.25rem', fontFamily: 'serif', color: '#4A403A', margin: 0 }}>Termíny</h3>
-                    <Button type="button" onClick={addTerm} style={{ backgroundColor: '#5E715D', fontSize: '0.8rem', padding: '0.5rem 1rem' }}>
-                        + PRIDAŤ TERMÍN
-                    </Button>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <Button type="button" onClick={addTerm} style={{ backgroundColor: '#5E715D', fontSize: '0.8rem', padding: '0.5rem 1rem' }}>
+                            + PRIDAŤ TERMÍN
+                        </Button>
+                        <Button type="submit" style={{ backgroundColor: '#8C4848', color: '#fff', fontSize: '0.8rem', padding: '0.5rem 1rem' }}>
+                            ULOŽIŤ ZMENY
+                        </Button>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
