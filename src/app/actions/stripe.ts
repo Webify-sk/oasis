@@ -105,7 +105,7 @@ export async function createCheckoutSession(
             throw new Error('Invalid price calculated from package.')
         }
 
-        const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+        const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'
 
         // Ak je cena po zľave 0 (100% zľava), nevyžadujeme Stripe Checkout.
         // Priamo pripíšeme kredity a označíme kupón ako použitý
@@ -226,7 +226,7 @@ export async function createVoucherCheckoutSession(
 
         // Allow guest checkout (user can be null)
 
-        const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+        const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'
 
         // Determine customer email: Logged in user's email OR billing email provided in form (need to pass this!)
         // Prioritize explicit customer_email from form for guests

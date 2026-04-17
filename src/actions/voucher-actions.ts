@@ -58,7 +58,7 @@ export async function buyVoucher(formData: FormData) {
     }
 
     // 2. Create Stripe Checkout Session
-    const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const origin = (await headers()).get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 
     // Determine Redirect URLs
     let redirectUrls;

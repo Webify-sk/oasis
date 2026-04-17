@@ -1,6 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { TrainingForm } from '@/components/admin/TrainingForm';
-import { SessionManager } from '@/components/admin/SessionManager';
+import { EditTrainingClientWrapper } from '@/components/admin/EditTrainingClientWrapper';
 import { getTrainingExceptions } from '../schedule-actions';
 import { notFound } from 'next/navigation';
 
@@ -37,12 +36,8 @@ export default async function EditTrainingPage({ params }: { params: Promise<{ i
                 marginBottom: '2rem',
                 padding: '2rem 2rem 0 2rem'
             }}>
-                <TrainingForm
+                <EditTrainingClientWrapper
                     trainers={trainers || []}
-                    initialData={training}
-                />
-
-                <SessionManager
                     training={training}
                     exceptions={exceptions}
                 />
