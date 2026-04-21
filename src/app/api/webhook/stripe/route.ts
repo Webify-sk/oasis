@@ -117,7 +117,8 @@ export async function POST(req: Request) {
                 company_ic_dph: session.metadata?.company_ic_dph
             };
 
-            const discountInCents = session.total_details?.amount_discount || 0;
+            const mdDiscountVoucher = session.metadata?.discountAmount ? parseFloat(session.metadata.discountAmount) : 0;
+            const discountInCents = session.total_details?.amount_discount || (mdDiscountVoucher * 100) || 0;
             const discountAmount = discountInCents > 0 ? discountInCents / 100 : null;
 
             const { error: invoiceError } = await supabase.from('invoices').insert({
@@ -423,7 +424,8 @@ export async function POST(req: Request) {
             }
 
             // CREATE INVOICE FOR CREDITS
-            const discountInCents = session.total_details?.amount_discount || 0;
+            const mdDiscount = session.metadata?.discountAmount ? parseFloat(session.metadata.discountAmount) : 0;
+            const discountInCents = session.total_details?.amount_discount || (mdDiscount * 100) || 0;
             const discountAmount = discountInCents > 0 ? discountInCents / 100 : null;
 
             const invNum = await generateNextInvoiceNumber(supabase);

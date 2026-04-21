@@ -52,6 +52,7 @@ export async function createCheckoutSession(
         let finalPrice = creditPackage.price;
         let appliedCouponId = null;
         let isUniversalCoupon = false;
+        let discountAmount = 0;
 
         // Validating and applying coupon
         if (couponCode) {
@@ -84,12 +85,17 @@ export async function createCheckoutSession(
 
             if (isValid && coupon) {
                 if (coupon.discount_type === 'percentage') {
-                    finalPrice = finalPrice - (finalPrice * (coupon.discount_value / 100));
+                    discountAmount = finalPrice * (coupon.discount_value / 100);
+                    finalPrice = finalPrice - discountAmount;
                 } else if (coupon.discount_type === 'fixed') {
-                    finalPrice = finalPrice - coupon.discount_value;
+                    discountAmount = coupon.discount_value;
+                    finalPrice = finalPrice - discountAmount;
                 }
 
-                if (finalPrice < 0) finalPrice = 0;
+                if (finalPrice < 0) {
+                    discountAmount = creditPackage.price;
+                    finalPrice = 0;
+                }
                 appliedCouponId = coupon.id;
                 isUniversalCoupon = coupon.target_user_id === null;
             } else {
@@ -177,6 +183,7 @@ export async function createCheckoutSession(
                 bonus: creditPackage.bonus_credits || 0,
                 service_type: 'Tréning', // Packages are currently all Pilates classes
                 ...(appliedCouponId && { appliedCouponId }), // Poslanie ID pre webhook
+                ...(discountAmount > 0 && { discountAmount: discountAmount.toString() }), // Poslanie výšky zľavy pre faktúru
                 ...(companyName && { company_name: companyName }),
                 ...(companyIco && { company_ico: companyIco }),
                 ...(companyDic && { company_dic: companyDic }),
