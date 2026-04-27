@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Calendar, CreditCard, History, User, ArrowRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import styles from './dashboard.module.css';
+import { ExpiredCreditsPopup } from '@/components/dashboard/ExpiredCreditsPopup';
 
 export default async function DashboardPage() {
     const supabase = await createClient();
@@ -15,12 +16,19 @@ export default async function DashboardPage() {
     }
 
     // Parallel data fetching for performance
-    const [profileRes, bookingsRes, appointmentsRes, pastTrainingsRes, pastAppointmentsRes] = await Promise.all([
+    const [profileRes, batchesRes, bookingsRes, appointmentsRes, pastTrainingsRes, pastAppointmentsRes] = await Promise.all([
         supabase
             .from('profiles')
-            .select('full_name, credits, role, email_verified, phone')
+            .select('full_name, credits, role, email_verified, phone, credits_expire_at, unlimited_expires_at')
             .eq('id', user.id)
             .single(),
+        supabase
+             .from('credit_batches')
+             .select('amount, remaining_amount, expires_at')
+             .eq('user_id', user.id)
+             .gt('remaining_amount', 0)
+             .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
+             .order('expires_at', { ascending: true, nullsFirst: false }),
         supabase
             .from('bookings')
             .select(`
@@ -66,6 +74,7 @@ export default async function DashboardPage() {
     ]);
 
     const profile = profileRes.data;
+    const activeBatches = batchesRes.data || [];
     const nextBooking = bookingsRes.data;
     const nextAppointment = appointmentsRes.data;
     const totalTrainings = pastTrainingsRes.count || 0;
@@ -94,6 +103,8 @@ export default async function DashboardPage() {
         const timeZoneToUse = isTraining ? 'UTC' : 'Europe/Bratislava';
 
         let dateResult = d.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: timeZoneToUse });
+        dateResult = dateResult.charAt(0).toUpperCase() + dateResult.slice(1);
+
         if (isTraining) {
             // For trainings in Face Value UTC, we shouldn't let local parsing shift the day
             // But toLocaleDateString with timeZone='UTC' handles this nicely.
@@ -101,8 +112,7 @@ export default async function DashboardPage() {
 
         return {
             time: d.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: timeZoneToUse }),
-            date: dateResult,
-            relative: getRelativeTime(d, isTraining)
+            date: dateResult
         };
     };
 
@@ -124,8 +134,19 @@ export default async function DashboardPage() {
     const nextSession = nextBooking ? formatBookingDate(nextBooking.start_time, true) : null;
     const nextProcedure = nextAppointment ? formatBookingDate(nextAppointment.start_time, false) : null;
 
+    // Check expiration logic
+    const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
+    
+    // Namiesto spoliehania sa na profilový agregát používame získané aktívne dávky (Phase 2)
+    const effectiveCredits = activeBatches.reduce((acc, b) => acc + Number(b.remaining_amount), 0);
+    const hasActiveBatches = activeBatches.length > 0;
+    
+    // Overíme či mu predtým okrem aktívnych aj niečo vypršalo
+    const hasExpired = !!profile?.credits_expire_at && new Date(profile.credits_expire_at) < new Date() && !hasActiveBatches;
+
     return (
         <div className={`${styles.container} animate-fadeInUp`}>
+            <ExpiredCreditsPopup userId={user.id} hasExpired={hasExpired} />
             {/* Header Section (Welcome + Credits) */}
             <div className={styles.headerContainer}>
                 <div className={styles.welcomeSection}>
@@ -139,9 +160,21 @@ export default async function DashboardPage() {
 
                 {/* Compact Credits Widget */}
                 <div className={styles.headerCreditWidget}>
-                    <div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <div className={styles.headerCreditLabel}>Zostatok vstupov</div>
-                        <div className={styles.headerCreditValue}>{profile?.credits || 0}</div>
+                        <div className={styles.headerCreditValue}>{isUnlimited ? '∞' : effectiveCredits}</div>
+                        
+                        {!isUnlimited && activeBatches.map((batch, i) => (
+                            <span key={i} style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: i === 0 ? '4px' : '2px', display: 'block' }}>
+                                {batch.remaining_amount}x do: {batch.expires_at ? new Date(batch.expires_at).toLocaleDateString('sk-SK') : 'Neobmedzene'}
+                            </span>
+                        ))}
+
+                        {hasExpired && !isUnlimited && (
+                            <span style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '2px' }}>
+                                Vypršaná platnosť
+                            </span>
+                        )}
                     </div>
                     <Link href={isVerified ? "/dashboard/credit" : "#"} aria-disabled={!isVerified}>
                         <Button
@@ -171,7 +204,7 @@ export default async function DashboardPage() {
                             <div className={styles.sessionInfo}>
                                 <span className={styles.sessionTime}>{nextSession?.time}</span>
                                 <span className={styles.sessionDate}>
-                                    {nextSession?.relative} • {nextSession?.date}
+                                    {nextSession?.date}
                                 </span>
                                 <div className={styles.sessionDetails}>
                                     <span>{nextBooking.training_types?.title}</span>
@@ -223,7 +256,7 @@ export default async function DashboardPage() {
                             <div className={styles.sessionInfo}>
                                 <span className={styles.sessionTime}>{nextProcedure?.time}</span>
                                 <span className={styles.sessionDate}>
-                                    {nextProcedure?.relative} • {nextProcedure?.date}
+                                    {nextProcedure?.date}
                                 </span>
                                 <div className={styles.sessionDetails}>
                                     <span>{nextAppointment.cosmetic_services?.title}</span>

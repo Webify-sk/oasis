@@ -12,17 +12,43 @@ export async function upsertUser(prevState: any, formData: FormData) {
     const phone = formData.get('phone') as string;
     const credits = parseInt(formData.get('credits') as string) || 0;
     const role = formData.get('role') as string;
-
-    // Note: Email is usually handled by Auth, updating it here in 'profiles' doesn't update Auth email.
-    // For now, we only update profile fields.
+    // FÁZA 2: Nové polia pre Credit Batches
+    const newBatchAmountRaw = formData.get('new_batch_amount') as string;
+    const newBatchAmount = newBatchAmountRaw ? parseInt(newBatchAmountRaw) : 0;
+    const newBatchExpireRaw = formData.get('new_batch_expire_at') as string;
+    const newBatchExpireAt = newBatchExpireRaw ? new Date(newBatchExpireRaw).toISOString() : null;
 
     try {
+        // FÁZA 2: Ak admin pridáva novú dávku
+        let updatedCredits = credits; // from hidden field
+        let updatedExpire = credits_expire_at;
+
+        if (newBatchAmount > 0) {
+            updatedCredits += newBatchAmount;
+            
+            if (newBatchExpireAt && (!updatedExpire || new Date(newBatchExpireAt) > new Date(updatedExpire))) {
+                updatedExpire = newBatchExpireAt;
+            }
+
+            const { error: batchError } = await supabase
+                .from('credit_batches')
+                .insert({
+                    user_id: id,
+                    amount: newBatchAmount,
+                    remaining_amount: newBatchAmount,
+                    expires_at: newBatchExpireAt
+                });
+                
+            if (batchError) console.error('Error inserting new batch from admin:', batchError);
+        }
+
         const { error } = await supabase
             .from('profiles')
             .update({
                 full_name,
                 phone,
-                credits,
+                credits: updatedCredits,
+                credits_expire_at: updatedExpire,
                 role,
                 updated_at: new Date().toISOString(),
             })
@@ -74,7 +100,14 @@ export async function createUser(fromState: any, formData: FormData) {
     const phone = formData.get('phone') as string;
     const credits = parseInt(formData.get('credits') as string) || 0;
     const role = formData.get('role') as string;
-    const inputs = { email, full_name, phone, credits, role };
+    
+    // FÁZA 2: Ziskané z políčok novej dávky, keďže credits statické sa už nezadáva
+    const newBatchAmountRaw = formData.get('new_batch_amount') as string;
+    const newBatchAmount = newBatchAmountRaw ? parseInt(newBatchAmountRaw) : 0;
+    const newBatchExpireRaw = formData.get('new_batch_expire_at') as string;
+    const newBatchExpireAt = newBatchExpireRaw ? new Date(newBatchExpireRaw).toISOString() : null;
+    
+    const inputs = { email, full_name, phone, role };
 
     try {
         // 1. Create Auth User
@@ -94,14 +127,13 @@ export async function createUser(fromState: any, formData: FormData) {
             return { message: 'Nepodarilo sa vytvoriť užívateľa.', inputs };
         }
 
-        const supabase = await createClient();
-
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
             .update({
                 full_name,
                 phone,
-                credits,
+                credits: newBatchAmount,
+                credits_expire_at: newBatchExpireAt,
                 role,
                 updated_at: new Date().toISOString(),
             })

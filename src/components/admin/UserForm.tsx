@@ -20,7 +20,14 @@ interface UserFormProps {
         email: string | null;
         phone: string | null;
         credits: number | null;
+        credits_expire_at?: string | null;
         role: string | null;
+        batches?: {
+            id: string;
+            amount: number;
+            remaining_amount: number;
+            expires_at: string | null;
+        }[];
     } | null;
 }
 
@@ -92,16 +99,67 @@ export function UserForm({ initialData }: UserFormProps) {
                     defaultValue={state?.inputs?.phone ?? initialData?.phone ?? ''}
                     icon={Phone}
                 />
+                {/* Existujúce aktívne vstupy (Batches) zobrazené administrátorovi v zozname */}
+                {initialData?.id && (
+                    <div style={{ backgroundColor: '#F9F9F9', border: '1px solid #E5E0DD', borderRadius: '4px', padding: '1rem' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#4A403A' }}>
+                            Aktívne dávky vstupov ({initialData.batches?.reduce((sum, b) => sum + Number(b.remaining_amount), 0) || 0} celkom)
+                        </h4>
+                        
+                        {(!initialData.batches || initialData.batches.length === 0) ? (
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#888' }}>Žiadne platné vstupy.</p>
+                        ) : (
+                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem', color: '#666' }}>
+                                {initialData.batches.map(b => (
+                                    <li key={b.id} style={{ marginBottom: '4px' }}>
+                                        <strong>{b.remaining_amount}x</strong> 
+                                        {b.expires_at ? ` (Platí do: ${new Date(b.expires_at).toLocaleDateString('sk-SK')})` : ' (Neobmedzene)'}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', backgroundColor: '#F0FDF4', padding: '1rem', borderRadius: '4px', border: '1px solid #A7F3D0' }}>
+                    <div style={{ gridColumn: 'span 3' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#065F46' }}>➕ Pridať novú dávku vstupov (Voliteľné)</h4>
+                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: '#047857' }}>Vyplňte tieto polia iba ak chcete tomuto klientovi manuálne navýšiť vstupy.</p>
+                    </div>
+
                     <Input
-                        label="Kredity"
-                        name="credits"
+                        label="Počet vstupov"
+                        name="new_batch_amount"
                         type="number"
-                        defaultValue={state?.inputs?.credits?.toString() ?? initialData?.credits?.toString() ?? '0'}
+                        defaultValue=""
                         icon={CreditCard}
                     />
 
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#065F46', fontWeight: 500 }}>
+                            Expirácia novej dávky
+                        </label>
+                        <input
+                            type="date"
+                            name="new_batch_expire_at"
+                            defaultValue=""
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem 1rem',
+                                border: '1px solid #A7F3D0',
+                                borderRadius: '4px',
+                                fontSize: '1rem',
+                                color: '#065F46',
+                                outline: 'none',
+                                backgroundColor: '#fff'
+                            }}
+                        />
+                    </div>
+                    
+                    {/* Skrytý pôvodný credits pre bezpečnosť DB integrity */}
+                    <input type="hidden" name="credits" value={initialData?.credits?.toString() || '0'} />
+                    <input type="hidden" name="credits_expire_at" value={initialData?.credits_expire_at || ''} />
+                    
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#4A403A', fontWeight: 500 }}>
                             Rola

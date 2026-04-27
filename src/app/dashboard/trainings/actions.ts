@@ -116,39 +116,80 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
     const additionalCost = (participantsCount - 1) * priceCredits;
     const totalCost = selfCost + additionalCost;
 
-    if (totalCost > 0 && effectiveCredits < totalCost) {
-        if (!hasUnexpiredCredits && (profile.credits || 0) >= totalCost) {
-            return { success: false, message: 'Vaše vstupy vypršali. Prosím, zakúpte si nový balíček.' };
+    // FÁZA 2: Získanie aktívnych dávok kreditov (FIFO logika)
+    let activeBatches: any[] = [];
+    if (totalCost > 0) {
+        const { data: batches, error: batchesError } = await supabase
+            .from('credit_batches')
+            .select('*')
+            .eq('user_id', user.id)
+            .gt('remaining_amount', 0)
+            .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
+            .order('expires_at', { ascending: true, nullsFirst: false });
+
+        if (batchesError) {
+            return { success: false, message: 'Chyba pri načítaní kreditných dávok.' };
         }
-        return { success: false, message: `Nemáte dostatok vstupov. Potrebujete ${totalCost} kreditov.` };
+        
+        activeBatches = batches || [];
+        const totalAvailable = activeBatches.reduce((sum, b) => sum + Number(b.remaining_amount), 0);
+
+        if (totalAvailable < totalCost) {
+            return { success: false, message: `Nemáte dostatok platných vstupov. Celkovo dostupných: ${totalAvailable}, potrebných: ${totalCost}.` };
+        }
     }
 
     // Insert booking
-    const { error: bookingError } = await supabase
+    const { data: newBookingParams, error: bookingError } = await supabase
         .from('bookings')
         .insert({
             user_id: user.id,
             training_type_id: trainingTypeId,
             start_time: startTimeISO,
             participants_count: participantsCount
-        });
+        })
+        .select('id')
+        .single();
 
-    if (bookingError) {
-        return { success: false, message: 'Chyba pri vytváraní rezervácie: ' + bookingError.message };
+    if (bookingError || !newBookingParams) {
+        return { success: false, message: 'Chyba pri vytváraní rezervácie: ' + (bookingError?.message || 'unknown') };
     }
 
-    // Deduct credit
+    const newBookingId = newBookingParams.id;
+
+    // FÁZA 2: FIFO Odpočet kreditov
     if (totalCost > 0) {
-        const { error: creditError } = await supabase
+        let costToDeduct = totalCost;
+        
+        for (const batch of activeBatches) {
+            if (costToDeduct <= 0) break;
+            
+            const availableInBatch = Number(batch.remaining_amount);
+            const deductionAmount = Math.min(availableInBatch, costToDeduct);
+            
+            // Znížime zostávajúci amount v batchi
+            await supabase
+                .from('credit_batches')
+                .update({ remaining_amount: availableInBatch - deductionAmount })
+                .eq('id', batch.id);
+                
+            // Zaznamenáme deduction kvôli referencii na vrátenie
+            await supabase
+                .from('booking_deductions')
+                .insert({
+                    booking_id: newBookingId,
+                    batch_id: batch.id,
+                    amount: deductionAmount
+                });
+                
+            costToDeduct -= deductionAmount;
+        }
+
+        // Aggregate cache update pre staré UI zobrazenia
+        await supabase
             .from('profiles')
             .update({ credits: (profile.credits || 0) - totalCost })
             .eq('id', user.id);
-
-        if (creditError) {
-            // Fallback: If credit update fails, ideally we should rollback booking.
-            // For now logging error. A transaction via RPC would be safer.
-            console.error('Failed to deduct credit', creditError);
-        }
     }
 
 
@@ -221,6 +262,12 @@ export async function cancelBooking(bookingId: string) {
     const hoursValues = diffMs / (1000 * 60 * 60);
     const shouldRefund = hoursValues >= 12;
 
+    // FÁZA 2: Získame detail o použitých kreditoch (deductions) PRED zmazaním rezervácie
+    const { data: deductions } = await supabase
+        .from('booking_deductions')
+        .select('*')
+        .eq('booking_id', bookingId);
+
     // 3. Delete booking
     const { error: deleteError } = await supabase
         .from('bookings')
@@ -235,23 +282,76 @@ export async function cancelBooking(bookingId: string) {
     // 4. Refund credit if eligible and price > 0
     let totalRefund = 0;
     if (shouldRefund) {
+        if (deductions && deductions.length > 0) {
+            // FÁZA 2: Vrátime presné čiastky do jednotlivých batchov
+        for (const deduction of deductions) {
+            const { data: batchData } = await supabase.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
+            if (batchData) {
+                await supabase
+                    .from('credit_batches')
+                    .update({ remaining_amount: Number(batchData.remaining_amount) + Number(deduction.amount) })
+                    .eq('id', deduction.batch_id);
+                totalRefund += Number(deduction.amount);
+            }
+        }
+        
+        // Update the cached total in profiles
+        const { data: prof } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
+        if (prof) {
+            await supabase
+                .from('profiles')
+                .update({ credits: (prof.credits || 0) + totalRefund })
+                .eq('id', user.id);
+        }
+        
+    } else if (shouldRefund) {
+        // FALLBACK pre staré (historické) rezervácie pred spustením Fázy 2
+        // Tie nemajú 'deductions', takže im musíme vrátiť kredit naslepo podľa počtu
+        
         const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
-
         const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
-
-        // Calculate refund amount
-        // If user was Unlimited, they paid 0 for themselves, so refund is only for +1 (if any)
-        // If user was NOT Unlimited, refund is for random participantsCount * priceCredits
 
         const selfRefund = isUnlimited ? 0 : priceCredits;
         const additionalRefund = (participantsCount - 1) * priceCredits;
         totalRefund = selfRefund + additionalRefund;
 
-        if (profile && totalRefund > 0) {
-            await supabase
-                .from('profiles')
-                .update({ credits: (profile.credits || 0) + totalRefund })
-                .eq('id', user.id);
+        if (totalRefund > 0) {
+            // Nájdeme batch, ktorý končí najneskôr, a tam to prihodíme
+            const { data: latestBatch } = await supabase
+                .from('credit_batches')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('expires_at', { ascending: false, nullsFirst: true })
+                .limit(1)
+                .single();
+
+            if (latestBatch) {
+                await supabase
+                    .from('credit_batches')
+                    .update({ remaining_amount: Number(latestBatch.remaining_amount) + totalRefund })
+                    .eq('id', latestBatch.id);
+            } else {
+                // Nemá aktívne batche, vytvoríme nový základný na 1 mesiac
+                let endD = new Date();
+                endD.setMonth(endD.getMonth() + 1);
+                await supabase
+                    .from('credit_batches')
+                    .insert({
+                        user_id: user.id,
+                        amount: totalRefund,
+                        remaining_amount: totalRefund,
+                        expires_at: endD.toISOString()
+                    });
+            }
+
+            // Update prof.credits (cache)
+            if (profile) {
+                await supabase
+                    .from('profiles')
+                    .update({ credits: (profile.credits || 0) + totalRefund })
+                    .eq('id', user.id);
+            }
+            }
         }
     }
 

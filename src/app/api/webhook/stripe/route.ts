@@ -363,13 +363,36 @@ export async function POST(req: Request) {
 
                 const updateData: any = { credits: newCredits };
 
+                let expiresAtIso = null;
+
                 if (validityMonths > 0) {
                     const now = new Date();
-                    const currentExpireAt = profile?.credits_expire_at ? new Date(profile.credits_expire_at) : null;
-                    const baseDate = (currentExpireAt && currentExpireAt > now) ? currentExpireAt : now;
-                    const newExpireAt = new Date(baseDate);
+                    // Each batch has its own expiration from the date of purchase (now)
+                    const newExpireAt = new Date(now);
                     newExpireAt.setMonth(newExpireAt.getMonth() + validityMonths);
-                    updateData.credits_expire_at = newExpireAt.toISOString();
+                    expiresAtIso = newExpireAt.toISOString();
+
+                    // For the cached profile.credits_expire_at, we can just bump it to the furthest known date.
+                    const currentExpireAt = profile?.credits_expire_at ? new Date(profile.credits_expire_at) : null;
+                    if (currentExpireAt && currentExpireAt > newExpireAt) {
+                        updateData.credits_expire_at = currentExpireAt.toISOString();
+                    } else {
+                        updateData.credits_expire_at = expiresAtIso;
+                    }
+                }
+
+                // Phase 2: Create a new credit batch
+                const { error: batchError } = await supabase
+                    .from('credit_batches')
+                    .insert({
+                        user_id: userId,
+                        amount: creditsToAdd,
+                        remaining_amount: creditsToAdd,
+                        expires_at: expiresAtIso
+                    });
+
+                if (batchError) {
+                    console.error('Error inserting credit_batch:', batchError);
                 }
 
                 const { error: updateError } = await supabase

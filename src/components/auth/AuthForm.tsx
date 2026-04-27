@@ -63,6 +63,26 @@ export function AuthForm() {
         }
     }, []);
 
+    const dobParts = formData.date_of_birth ? formData.date_of_birth.split('-') : ['', '', ''];
+    const dobYear = dobParts[0] || '';
+    const dobMonth = dobParts[1] || '';
+    const dobDay = dobParts[2] || '';
+
+    const handleDobChange = (field: 'year' | 'month' | 'day', value: string) => {
+        let newYear = dobYear;
+        let newMonth = dobMonth;
+        let newDay = dobDay;
+        
+        if (field === 'year') newYear = value;
+        if (field === 'month') newMonth = value;
+        if (field === 'day') newDay = value;
+
+        const newDob = (newYear && newMonth && newDay) ? `${newYear}-${newMonth}-${newDay}` : '';
+        const updatedData = { ...formData, date_of_birth: newDob };
+        setFormData(updatedData);
+        localStorage.setItem('registration_draft', JSON.stringify(updatedData));
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         // Only persist non-sensitive data
@@ -224,15 +244,45 @@ export function AuthForm() {
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Dátum narodenia *</label>
-                        <Input
-                            name="date_of_birth"
-                            type="date"
-                            placeholder="Dátum narodenia"
-                            required
-                            style={{ fontFamily: 'inherit' }}
-                            value={formData.date_of_birth}
-                            onChange={handleChange}
-                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <select 
+                                    className="input-focus-bloom"
+                                    style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: '#fff', cursor: 'pointer', outline: 'none' }}
+                                    value={dobDay}
+                                    onChange={(e) => handleDobChange('day', e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled hidden>Deň</option>
+                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={String(d).padStart(2, '0')}>{d}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <select 
+                                    className="input-focus-bloom"
+                                    style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: '#fff', cursor: 'pointer', outline: 'none' }}
+                                    value={dobMonth}
+                                    onChange={(e) => handleDobChange('month', e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled hidden>Mesiac</option>
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={String(m).padStart(2, '0')}>{m}</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <select 
+                                    className="input-focus-bloom"
+                                    style={{ width: '100%', padding: '0.8rem', border: '1px solid #E5E0DD', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: '#fff', cursor: 'pointer', outline: 'none' }}
+                                    value={dobYear}
+                                    onChange={(e) => handleDobChange('year', e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled hidden>Rok</option>
+                                    {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - 15 - i).map(y => <option key={y} value={String(y)}>{y}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <input type="hidden" name="date_of_birth" value={(dobYear && dobMonth && dobDay) ? `${dobYear}-${dobMonth}-${dobDay}` : ''} />
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', color: '#4A403A', marginBottom: '0.4rem', fontWeight: 500, textAlign: 'left' }}>Telefónne číslo *</label>
