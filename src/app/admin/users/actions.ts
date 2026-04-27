@@ -12,6 +12,8 @@ export async function upsertUser(prevState: any, formData: FormData) {
     const phone = formData.get('phone') as string;
     const credits = parseInt(formData.get('credits') as string) || 0;
     const role = formData.get('role') as string;
+    const credits_expire_at_raw = formData.get('credits_expire_at') as string;
+    const credits_expire_at = credits_expire_at_raw ? new Date(credits_expire_at_raw).toISOString() : null;
     // FÁZA 2: Nové polia pre Credit Batches
     const newBatchAmountRaw = formData.get('new_batch_amount') as string;
     const newBatchAmount = newBatchAmountRaw ? parseInt(newBatchAmountRaw) : 0;
