@@ -76,13 +76,13 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
 
         const { data: profilesData } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, email, role')
             .in('id', Array.from(allUserIds));
 
         // 4. Fetch all Trainers for Trainings
         const { data: trainersData } = await supabase
             .from('trainers')
-            .select('id, full_name');
+            .select('id, full_name, profile_id');
 
         // Maps for quick lookup
         const usersMap = new Map(profilesData?.map(p => [p.id, p]) || []);
@@ -90,6 +90,8 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
         const cosmeticServicesMap = new Map(cosmeticServicesData?.map(s => [s.id, s]) || []);
         const employeesMap = new Map(employeesData?.map(e => [e.id, e]) || []);
         const trainersMap = new Map(trainersData?.map(t => [t.id, t]) || []);
+
+        const trainerProfileIds = new Set(trainersData?.map(t => t.profile_id).filter(Boolean) as string[]);
 
         // Process Trainings
         const trainingSessionsMap = new Map<string, StatItem>();
@@ -131,11 +133,23 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
             const existingSession = trainingSessionsMap.get(sessionKey);
             const currentCustomer = user?.full_name || user?.email || 'Neznámy klient';
 
+            // Identify admins and trainers to exclude them from calculations (fictitious bookings)
+            const STAFF_EMAILS = ['leskovjanskal@gmail.com', 'leonahochel@gmail.com'];
+            const isAdminOrTrainer = user?.role === 'admin' || user?.role === 'employee' || 
+                (b.user_id && trainerProfileIds.has(b.user_id)) || 
+                (user?.email && STAFF_EMAILS.includes(user.email.toLowerCase()));
+                
+            const realParticipantsCount = isAdminOrTrainer ? 0 : (b.participants_count || 1);
+
             if (existingSession) {
-                existingSession.participantsCount += (b.participants_count || 1);
-                // Append customer name to the list
-                if (!existingSession.customerName.includes(currentCustomer)) {
-                    existingSession.customerName += `, ${currentCustomer}`;
+                existingSession.participantsCount += realParticipantsCount;
+                // Append customer name to the list ONLY if it's a real customer
+                if (!isAdminOrTrainer && currentCustomer !== 'Neznámy klient') {
+                    if (!existingSession.customerName || existingSession.customerName === 'Neznámy klient') {
+                        existingSession.customerName = currentCustomer;
+                    } else if (!existingSession.customerName.includes(currentCustomer)) {
+                        existingSession.customerName += `, ${currentCustomer}`;
+                    }
                 }
             } else {
                 trainingSessionsMap.set(sessionKey, {
@@ -145,16 +159,21 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
                     title: trainingType?.title || 'Neznámy tréning',
                     personName: trainerName,
                     personId: trainerId,
-                    customerName: currentCustomer,
+                    customerName: isAdminOrTrainer ? '' : currentCustomer,
                     customerId: b.user_id || 'unknown', // Just the first one
                     priceOrCredits: trainingType?.price_credits || 0,
-                    participantsCount: b.participants_count || 1,
+                    participantsCount: realParticipantsCount,
                 });
             }
         });
 
-        // Add all grouped training sessions to items array
-        trainingSessionsMap.forEach(session => items.push(session));
+        // Add all grouped training sessions to items array, but ONLY those that are NOT purely fictitious
+        trainingSessionsMap.forEach(session => {
+            if (session.participantsCount > 0) {
+                if (!session.customerName) session.customerName = 'Neznámy klient';
+                items.push(session);
+            }
+        });
 
         // Process Procedures
         appointmentsData?.forEach(a => {

@@ -84,17 +84,16 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
         let totalPrice = 0;
         let trainingsCount = 0;
         let proceduresCount = 0;
-        let totalParticipants = 0;
+        let trainingParticipants = 0;
 
         filteredItems.forEach(item => {
             if (item.type === 'training') {
                 trainingsCount++;
                 totalCredits += item.priceOrCredits * item.participantsCount;
-                totalParticipants += item.participantsCount;
+                trainingParticipants += item.participantsCount;
             } else {
                 proceduresCount++;
                 totalPrice += item.priceOrCredits;
-                totalParticipants += 1;
             }
         });
 
@@ -104,22 +103,23 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
             totalPrice,
             trainingsCount,
             proceduresCount,
-            totalParticipants
+            trainingParticipants
         };
     }, [filteredItems]);
 
     // Group items by Person for charts
     const groupedTrainers = useMemo(() => {
-        const groups: Record<string, { name: string, count: number, value: number }> = {};
+        const groups: Record<string, { name: string, count: number, value: number, participants: number }> = {};
 
         filteredItems.forEach(item => {
             if (item.type === 'training') {
                 const val = item.priceOrCredits * item.participantsCount;
                 if (!groups[item.personName]) {
-                    groups[item.personName] = { name: item.personName, count: 0, value: 0 };
+                    groups[item.personName] = { name: item.personName, count: 0, value: 0, participants: 0 };
                 }
                 groups[item.personName].count += 1;
                 groups[item.personName].value += val;
+                groups[item.personName].participants += item.participantsCount;
             }
         });
 
@@ -242,7 +242,7 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
                         <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderLeft: '4px solid #3b82f6' }}>
                             <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>Celkom Kredity <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#3b82f6' }}>(Tréningy)</span></div>
                             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6', fontFamily: 'var(--font-heading)' }}>{stats.totalCredits}</div>
-                            <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '0.2rem' }}>Zo {stats.trainingsCount} tréningov</div>
+                            <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '0.2rem' }}>Zo {stats.trainingsCount} tréningov ({stats.trainingParticipants} osôb)</div>
                         </div>
                         <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderLeft: '4px solid #10b981' }}>
                             <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>Celkom Tržba <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#10b981' }}>(Procedúry)</span></div>
@@ -267,7 +267,7 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
                                     return (
                                         <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: 500 }}>
-                                                <span>{person.name} <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 'normal' }}>({person.count} tréningov)</span></span>
+                                                <span>{person.name} <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 'normal' }}>({person.count} tréningov, {person.participants} osôb)</span></span>
                                                 <span style={{ color: '#3b82f6' }}>{person.value} Kr.</span>
                                             </div>
                                             <div style={{ width: '100%', height: '12px', backgroundColor: '#eff6ff', borderRadius: '999px', overflow: 'hidden' }}>

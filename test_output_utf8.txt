@@ -1,0 +1,192 @@
+﻿[dotenv@17.3.1] injecting env (13) from .env.local -- tip: ­čŤí´ŞĆ auth for agents: https://vestauth.com
+Fetching users with credits > 0 and no expiration date...
+Found 45 profiles with credits but no expiration.
+
+User ID: 4fe0b201-bb4d-4f63-861f-312b8594dcbc - Credits: 2
+  Latest invoice: 2026-03-05T08:57:38.124389+00:00 - Dobropis k fakt├║re ─Ź. TEST-1770298668020 (-100ÔéČ)
+  -> Estimated expiration: 2026-06-05T07:57:38.124Z (Expired: false)
+
+User ID: 8756a865-07fc-4fe6-b438-13c7536414f8 - Credits: 19
+  Latest invoice: 2026-02-22T13:31:38.16635+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-11-22T13:31:38.166Z (Expired: false)
+
+User ID: 017ee2ed-2b96-48fa-ab28-04d03b7ec836 - Credits: 1
+  Latest invoice: 2026-02-19T20:15:01.864329+00:00 - N├íkup: Oasis Core Pass (230ÔéČ)
+  -> Estimated expiration: 2026-06-19T19:15:01.864Z (Expired: false)
+
+User ID: 6e2ae95e-ba3b-4734-a2a2-6ed1c98b6b5d - Credits: 74
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-02-12T04:28:03.991767+00:00
+  -> Estimated expiration: 2026-05-12T03:28:03.991Z (Expired: false)
+
+User ID: 813a7bcd-4658-48c9-957d-17f9fc45eac5 - Credits: 1
+  Latest invoice: 2026-02-19T15:50:17.314619+00:00 - N├íkup: Oasis Flow Pass (125ÔéČ)
+  -> Estimated expiration: 2026-04-19T14:50:17.314Z (Expired: true)
+
+User ID: 93bf628e-ede8-4159-aa9a-acc58e5274d4 - Credits: 56
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-02-11T20:05:43.754409+00:00
+  -> Estimated expiration: 2026-05-11T19:05:43.754Z (Expired: false)
+
+User ID: 33c42011-b5e6-4d93-9ace-3b2bfef0fcde - Credits: 8
+  Latest invoice: 2026-02-15T16:39:16.822993+00:00 - N├íkup: Oasis Core Pass (230ÔéČ)
+  -> Estimated expiration: 2026-06-15T15:39:16.822Z (Expired: false)
+
+User ID: a4fab49c-95e5-47cd-b1bb-b4fd99488519 - Credits: 1
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-01-29T14:15:50.22569+00:00
+  -> Estimated expiration: 2026-04-29T13:15:50.225Z (Expired: false)
+
+User ID: b3795b8d-a8a8-4e29-9a82-81314f1b5d61 - Credits: 10
+  Latest invoice: 2026-02-23T22:26:27.835355+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-11-23T22:26:27.835Z (Expired: false)
+
+User ID: 86b4208f-7bef-4fec-93fa-7631f8ef77d7 - Credits: 4
+  Latest invoice: 2026-03-12T14:02:38.475676+00:00 - N├íkup: Oasis Core Pass (230ÔéČ)
+  -> Estimated expiration: 2026-07-12T13:02:38.475Z (Expired: false)
+
+User ID: b4322dd7-e9bf-434e-80bf-1d0b9997b949 - Credits: 1
+  Latest invoice: 2026-03-01T18:53:09.157241+00:00 - N├íkup: Oasis Intro Pass (27ÔéČ)
+  -> Estimated expiration: 2026-04-01T17:53:09.157Z (Expired: true)
+
+User ID: da81e5a0-8ffe-4e46-a340-b9e5c1b97cf8 - Credits: 1
+  Latest invoice: 2026-02-13T22:36:17.258275+00:00 - N├íkup: Oasis Flow Pass (125ÔéČ)
+  -> Estimated expiration: 2026-04-13T21:36:17.258Z (Expired: true)
+
+User ID: 8df002ca-d5bc-40b1-a870-c532e184ac77 - Credits: 6
+  Latest invoice: 2026-03-15T22:57:44.47755+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-15T21:57:44.477Z (Expired: false)
+
+User ID: c852ccb1-cadf-44ba-b307-a330ed8a0a30 - Credits: 2
+  Latest invoice: 2026-02-18T12:17:01.428573+00:00 - N├íkup: Oasis Flow Pass (125ÔéČ)
+  -> Estimated expiration: 2026-04-18T11:17:01.428Z (Expired: true)
+
+User ID: 255f3d6a-0b1b-496d-9439-e46cf3facac5 - Credits: 1
+  Latest invoice: 2026-02-27T08:35:24.722336+00:00 - N├íkup: Oasis Welcome Pass (60ÔéČ)
+  -> Estimated expiration: 2026-05-27T07:35:24.722Z (Expired: false)
+
+User ID: 7c8251c8-5ba2-4fbe-8a85-e3b5f4e79bd9 - Credits: 4
+  Latest invoice: 2026-03-04T17:04:53.340186+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-04T17:04:53.340Z (Expired: false)
+
+User ID: 1bfdb790-8dc7-491f-8105-f7df8d62100f - Credits: 4
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-02-17T13:12:52.985294+00:00
+  -> Estimated expiration: 2026-05-17T12:12:52.985Z (Expired: false)
+
+User ID: d1142ac3-6024-404b-9ad0-9ff83df26bbd - Credits: 18
+  Latest invoice: 2026-03-22T09:57:40.551421+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-22T09:57:40.551Z (Expired: false)
+
+User ID: 238caf88-1696-4ab4-b54c-71bb8f821128 - Credits: 13
+  Latest invoice: 2026-03-26T14:53:00+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-26T14:53:00.000Z (Expired: false)
+
+User ID: f5443b08-3a12-43e2-855d-27755821da18 - Credits: 6
+  Latest invoice: 2026-04-02T17:10:07.66927+00:00 - N├íkup: Oasis Core Pass (230ÔéČ)
+  -> Estimated expiration: 2026-08-02T17:10:07.669Z (Expired: false)
+
+User ID: c76442a3-2b75-4cd8-a161-4e57c7d3d12b - Credits: 5
+  Latest invoice: 2026-02-23T20:33:11.297184+00:00 - N├íkup: Oasis Flow Pass (125ÔéČ)
+  -> Estimated expiration: 2026-04-23T19:33:11.297Z (Expired: true)
+
+User ID: 911d0b9a-c128-410f-96cb-625c4c2fac67 - Credits: 2
+  Latest invoice: 2026-03-12T11:27:28.234387+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-12T10:27:28.234Z (Expired: false)
+
+User ID: f0dca22e-0a5b-4807-8f32-97f7e58cf964 - Credits: 1
+  Latest invoice: 2026-02-27T10:02:59.432449+00:00 - N├íkup: Oasis Welcome Pass (60ÔéČ)
+  -> Estimated expiration: 2026-05-27T09:02:59.432Z (Expired: false)
+
+User ID: 19774f50-3a8b-4784-933c-8beba9725a71 - Credits: 2
+  Latest invoice: 2026-03-08T23:54:04.490891+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-08T22:54:04.490Z (Expired: false)
+
+User ID: bf00a0af-0eef-4c28-8ba9-480aba6d2aeb - Credits: 18
+  Latest invoice: 2026-03-06T18:06:06.31039+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-06T18:06:06.310Z (Expired: false)
+
+User ID: 56e3025f-eaee-4257-b686-178bdc8c1e9f - Credits: 1
+  Latest invoice: 2026-02-14T07:49:58.246236+00:00 - N├íkup: Oasis Intro Pass (27ÔéČ)
+  -> Estimated expiration: 2026-03-14T07:49:58.246Z (Expired: true)
+
+User ID: 074229dc-84bb-486d-9b7e-e91291a58e5d - Credits: 1
+  Latest invoice: 2026-03-06T11:50:02.654968+00:00 - Dobropis k fakt├║re ─Ź. W20260080 (-27ÔéČ)
+  -> Estimated expiration: 2026-06-06T10:50:02.654Z (Expired: false)
+
+User ID: 807e6ad8-4f79-4f0e-944e-74fcb256ee90 - Credits: 1
+  Latest invoice: 2026-03-09T05:52:41.218536+00:00 - N├íkup: Oasis Intro Pass (27ÔéČ)
+  -> Estimated expiration: 2026-04-09T04:52:41.218Z (Expired: true)
+
+User ID: 1af726c9-ddc9-4785-ab3d-8b40053d9431 - Credits: 1
+  Latest invoice: 2026-03-11T09:26:30.85493+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-11T08:26:30.854Z (Expired: false)
+
+User ID: 8a16cd1e-9937-4ded-b80c-39ea7c6204ef - Credits: 1
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-03-02T15:39:54.735527+00:00
+  -> Estimated expiration: 2026-06-02T14:39:54.735Z (Expired: false)
+
+User ID: 28622555-aaeb-4de8-ac2b-5e37ad8705a8 - Credits: 1
+  Latest invoice: 2026-03-21T07:57:41.425219+00:00 - N├íkup: Oasis Flow Pass (125ÔéČ)
+  -> Estimated expiration: 2026-05-21T06:57:41.425Z (Expired: false)
+
+User ID: 66092b67-3417-4d5f-b1a8-cc1167cda7c7 - Credits: 2
+  Latest invoice: 2026-03-11T10:14:39.004409+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-11T09:14:39.004Z (Expired: false)
+
+User ID: ca94c291-0e4c-47c1-8505-e66cbf8c5162 - Credits: 18
+  Latest invoice: 2026-03-29T19:56:29.221215+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-29T20:56:29.221Z (Expired: false)
+
+User ID: 9b10f114-93ff-4593-8e4d-d09835dfdb0b - Credits: 1
+  Latest invoice: 2026-03-08T18:13:55.222922+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-08T17:13:55.222Z (Expired: false)
+
+User ID: 7d830ca4-b8e6-46ad-972a-42c7dd871646 - Credits: 25
+  Latest invoice: 2026-03-16T17:15:40.995034+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-16T17:15:40.995Z (Expired: false)
+
+User ID: 8e40e9e7-ee32-471f-b224-2fe21ec97fc0 - Credits: 2
+  Latest invoice: 2026-03-15T11:27:53.803299+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-15T10:27:53.803Z (Expired: false)
+
+User ID: 1fc3e779-2343-45d6-8645-326810111356 - Credits: 7
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-03-29T07:25:11.775514+00:00
+  -> Estimated expiration: 2026-06-29T07:25:11.775Z (Expired: false)
+
+User ID: fe41ab46-267f-4abd-83ac-38e75a965bc7 - Credits: 2
+  Latest invoice: 2026-03-20T17:58:32.589495+00:00 - N├íkup: Oasis Intro Pass (27ÔéČ)
+  -> Estimated expiration: 2026-04-20T16:58:32.589Z (Expired: true)
+
+User ID: 42446327-f0c2-4dc2-af5b-8755aeff941a - Credits: 1
+  Latest invoice: 2026-03-16T21:32:06.437168+00:00 - N├íkup: Oasis WomenÔÇÖs Day Pass (60ÔéČ)
+  -> Estimated expiration: 2026-06-16T20:32:06.437Z (Expired: false)
+
+User ID: 096f9972-8f1a-443a-92f6-b728f6b019c6 - Credits: 1
+  Latest invoice: 2026-03-26T11:12:39.903968+00:00 - N├íkup: Oasis Intro Pass (27ÔéČ)
+  -> Estimated expiration: 2026-04-26T10:12:39.903Z (Expired: false)
+
+User ID: 9e9a1fb4-02fb-4731-9833-5de33232b9e6 - Credits: 2
+  Latest invoice: 2026-02-27T15:41:39.330825+00:00 - N├íkup: Oasis Welcome Pass (60ÔéČ)
+  -> Estimated expiration: 2026-05-27T14:41:39.330Z (Expired: false)
+
+User ID: d2c99fa9-6097-4acf-b510-3d8379f6159a - Credits: 17
+  Latest invoice: 2026-03-31T19:21:35.629186+00:00 - N├íkup: Oasis Balance Builder Pass (500ÔéČ)
+  -> Estimated expiration: 2026-12-31T20:21:35.629Z (Expired: false)
+
+User ID: 1b8b5abd-9291-418a-b5c7-36f1835ce5d7 - Credits: 2
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-04-21T16:18:21.028281+00:00
+  -> Estimated expiration: 2026-07-21T16:18:21.028Z (Expired: false)
+
+User ID: 47340919-dd93-4d0a-8863-fbff6dbef57f - Credits: 1
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-04-20T07:29:49.836686+00:00
+  -> Estimated expiration: 2026-07-20T07:29:49.836Z (Expired: false)
+
+User ID: 091532c0-1dce-481e-bbae-262d83b973c8 - Credits: 25
+  No invoices found. Checking created_at of profile...
+  Profile created at: 2026-04-22T13:24:40.427152+00:00
+  -> Estimated expiration: 2026-07-22T13:24:40.427Z (Expired: false)
