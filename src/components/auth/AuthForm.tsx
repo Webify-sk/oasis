@@ -77,7 +77,7 @@ export function AuthForm() {
         if (field === 'month') newMonth = value;
         if (field === 'day') newDay = value;
 
-        const newDob = (newYear && newMonth && newDay) ? `${newYear}-${newMonth}-${newDay}` : '';
+        const newDob = `${newYear}-${newMonth}-${newDay}`;
         const updatedData = { ...formData, date_of_birth: newDob };
         setFormData(updatedData);
         localStorage.setItem('registration_draft', JSON.stringify(updatedData));
