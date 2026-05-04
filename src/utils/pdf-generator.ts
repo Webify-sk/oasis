@@ -4,8 +4,9 @@ import path from 'path';
 import fs from 'fs';
 
 // Helper to remove accents for StandardFonts compatibility (WinAnsi) - ONLY used for default fonts if needed
-function removeAccents(str: string): string {
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function removeAccents(str: any): string {
+    if (str == null) return "";
+    return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 export async function generateVoucherPDF(data: {
