@@ -155,6 +155,42 @@ export function UserForm({ initialData }: UserFormProps) {
                             }}
                         />
                     </div>
+                </div>
+
+                {initialData?.id && initialData?.batches && initialData.batches.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', backgroundColor: '#FEF2F2', padding: '1rem', borderRadius: '4px', border: '1px solid #FECACA' }}>
+                        <div>
+                            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#991B1B' }}>➖ Odobrať vstupy z konkrétnej dávky (Voliteľné)</h4>
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: '#B91C1C' }}>Zadajte počet vstupov, ktoré chcete odobrať.</p>
+                        </div>
+                        {initialData.batches.map(batch => (
+                            <div key={batch.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderTop: '1px solid #FCA5A5', paddingTop: '0.5rem' }}>
+                                <div style={{ flex: 1, fontSize: '0.85rem', color: '#7F1D1D' }}>
+                                    <strong>Dávka:</strong> {batch.expires_at ? `Platí do ${new Date(batch.expires_at).toLocaleDateString('sk-SK')}` : 'Neobmedzená'} (Zostatok: {batch.remaining_amount})
+                                </div>
+                                <div style={{ width: '100px' }}>
+                                    <input
+                                        type="number"
+                                        name={`remove_batch_${batch.id}`}
+                                        defaultValue=""
+                                        placeholder="0"
+                                        min="0"
+                                        max={batch.remaining_amount}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.4rem',
+                                            border: '1px solid #FECACA',
+                                            borderRadius: '4px',
+                                            outline: 'none',
+                                            textAlign: 'center'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                     
                     {/* Skrytý pôvodný credits pre bezpečnosť DB integrity */}
                     <input type="hidden" name="credits" value={initialData?.credits?.toString() || '0'} />
@@ -188,7 +224,6 @@ export function UserForm({ initialData }: UserFormProps) {
                             </select>
                         </div>
                     </div>
-                </div>
 
                 <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                     {initialData?.id && (

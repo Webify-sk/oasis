@@ -20,6 +20,8 @@ export async function upsertUser(prevState: any, formData: FormData) {
     const newBatchExpireRaw = formData.get('new_batch_expire_at') as string;
     const newBatchExpireAt = newBatchExpireRaw ? new Date(newBatchExpireRaw).toISOString() : null;
 
+    // Specific batch removal fields are parsed dynamically below
+
     try {
         // FÁZA 2: Ak admin pridáva novú dávku
         let updatedCredits = credits; // from hidden field
@@ -42,6 +44,42 @@ export async function upsertUser(prevState: any, formData: FormData) {
                 });
                 
             if (batchError) console.error('Error inserting new batch from admin:', batchError);
+        }
+
+        // FÁZA 2: Odobratie kreditov z konkrétnych dávok (dynamicky z formData)
+        let totalRemoved = 0;
+        const batchUpdates: { id: string; removeAmount: number }[] = [];
+
+        for (const [key, value] of formData.entries()) {
+            if (key.startsWith('remove_batch_')) {
+                const batchId = key.replace('remove_batch_', '');
+                const amountToRemove = parseInt(value as string);
+                if (amountToRemove > 0) {
+                    batchUpdates.push({ id: batchId, removeAmount: amountToRemove });
+                    totalRemoved += amountToRemove;
+                }
+            }
+        }
+
+        if (batchUpdates.length > 0) {
+            // Pred odpočítaním musíme zistiť aktuálny stav danej dávky z DB kvôli presnému zostatku
+            for (const update of batchUpdates) {
+                const { data: batchData } = await supabase
+                    .from('credit_batches')
+                    .select('remaining_amount')
+                    .eq('id', update.id)
+                    .single();
+
+                if (batchData) {
+                    const newAmount = Math.max(0, Number(batchData.remaining_amount) - update.removeAmount);
+                    await supabase
+                        .from('credit_batches')
+                        .update({ remaining_amount: newAmount })
+                        .eq('id', update.id);
+                }
+            }
+            
+            updatedCredits = Math.max(0, updatedCredits - totalRemoved);
         }
 
         const { error } = await supabase
