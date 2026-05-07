@@ -143,6 +143,7 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
     const isPast = session.isPast ?? (new Date(session.startTimeISO) < new Date());
 
     const [joinModalOpen, setJoinModalOpen] = React.useState(false);
+    const [participantsCount, setParticipantsCount] = React.useState(1);
 
     // Check dynamic deadline
     // Only check if NOT registered (if registered, logic is about cancellation)
@@ -165,6 +166,7 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
         }
 
         // If not registered -> Open Join Modal
+        setParticipantsCount(1);
         setJoinModalOpen(true);
     };
 
@@ -285,6 +287,11 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
         }
     }
 
+    const maxAllowed = Math.max(1, session.occupancy.max - session.occupancy.current);
+    const selfCost = isUnlimited ? 0 : session.priceCredits;
+    const additionalCost = (participantsCount - 1) * session.priceCredits;
+    const totalCost = selfCost + additionalCost;
+
     return (
         <>
             {/* Join Modal */}
@@ -298,29 +305,45 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
                         Koľko osôb chcete prihlásiť?
                     </p>
 
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                        <Button
-                            onClick={() => executeBooking(1)}
-                            style={{ minWidth: '120px', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0.75rem' }}
-                        >
-                            <span>Len ja</span>
-                            <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                                ({isUnlimited ? 'Zadarmo' : `${session.priceCredits} kredit`} )
-                            </span>
-                        </Button>
-
-                        <Button
-                            onClick={() => executeBooking(2)}
-                            variant="outline"
-                            style={{ minWidth: '120px', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0.75rem' }}
-                            disabled={session.occupancy.current + 2 > session.occupancy.max} // Disable if not enough space
-                        >
-                            <span>Ja + 1</span>
-                            <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                                ({isUnlimited ? `${session.priceCredits} kredit` : `${session.priceCredits * 2} kredity`})
-                            </span>
-                        </Button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setParticipantsCount(p => Math.max(1, p - 1))}
+                            disabled={participantsCount <= 1}
+                            style={{ width: '44px', height: '44px', padding: 0, fontSize: '1.5rem', borderRadius: '50%' }}
+                        >-</Button>
+                        
+                        <div style={{ fontSize: '1.75rem', fontWeight: 'bold', width: '40px', textAlign: 'center', color: '#4A403A' }}>
+                            {participantsCount}
+                        </div>
+                        
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setParticipantsCount(p => Math.min(maxAllowed, p + 1))}
+                            disabled={participantsCount >= maxAllowed}
+                            style={{ width: '44px', height: '44px', padding: 0, fontSize: '1.5rem', borderRadius: '50%' }}
+                        >+</Button>
                     </div>
+
+                    <div style={{ marginBottom: '2rem', fontSize: '0.95rem', color: '#666' }}>
+                        {participantsCount === 1 ? (
+                            <span>(Len ja)</span>
+                        ) : (
+                            <span>(Ja + {participantsCount - 1})</span>
+                        )}
+                        <br/>
+                        <div style={{ marginTop: '0.5rem', fontSize: '1.1rem', color: '#4A403A' }}>
+                            Spolu na zaplatenie: <strong>{totalCost === 0 ? 'Zadarmo' : `${totalCost} kredit${totalCost === 1 ? '' : (totalCost > 1 && totalCost < 5 ? 'y' : 'ov')}`}</strong>
+                        </div>
+                    </div>
+
+                    <Button 
+                        onClick={() => executeBooking(participantsCount)}
+                        disabled={participantsCount > maxAllowed}
+                        style={{ width: '100%', padding: '0.875rem', fontSize: '1.05rem' }}
+                    >
+                        Potvrdiť prihlásenie
+                    </Button>
                 </div>
             </Modal>
             <Button
