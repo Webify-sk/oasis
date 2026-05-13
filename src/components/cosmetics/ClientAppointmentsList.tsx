@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Clock, User, XCircle, AlertCircle, Edit3, Save } from 'lucide-react';
 import { cancelAppointment, rescheduleAppointment } from '@/actions/cosmetic-actions';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { sk } from 'date-fns/locale';
 import { Button } from '@/components/ui/Button'; // Assuming Button is available
 import { Modal } from '@/components/ui/Modal'; // Assuming Modal is available

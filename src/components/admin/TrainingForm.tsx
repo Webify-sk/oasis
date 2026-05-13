@@ -98,6 +98,12 @@ export function TrainingForm({ trainers, initialData, schedule }: { trainers: Tr
                     </div>
                 </div>
             </div>
+
+            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <Button type="submit">
+                    {initialData ? 'Uložiť zmeny' : 'Vytvoriť tréning'}
+                </Button>
+            </div>
         </form>
     );
 }

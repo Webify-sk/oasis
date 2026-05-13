@@ -4,7 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { StatItem } from '@/actions/statistics-actions';
 import { Search, Calendar, Filter, Download, User, BarChart2, Table } from 'lucide-react';
 import clsx from 'clsx';
-import { format, isWithinInterval, parseISO } from 'date-fns';
+import { isWithinInterval, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { sk } from 'date-fns/locale';
 
 interface StatisticsDashboardProps {
@@ -359,8 +360,8 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
                                         paginatedItems.map(item => (
                                             <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', transition: 'background-color 0.1s' }}>
                                                 <td style={{ padding: '1rem' }}>
-                                                    <div style={{ fontWeight: 500 }}>{format(parseISO(item.date), 'dd.MM.yyyy', { locale: sk })}</div>
-                                                    <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>{format(parseISO(item.date), 'HH:mm', { locale: sk })}</div>
+                                                    <div style={{ fontWeight: 500 }}>{formatInTimeZone(parseISO(item.date), 'Europe/Bratislava', 'dd.MM.yyyy', { locale: sk })}</div>
+                                                    <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>{formatInTimeZone(parseISO(item.date), 'Europe/Bratislava', 'HH:mm', { locale: sk })}</div>
                                                 </td>
                                                 <td style={{ padding: '1rem' }}>
                                                     <div style={{ fontWeight: 500, color: '#111827' }}>{item.title}</div>

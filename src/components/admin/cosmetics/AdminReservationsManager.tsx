@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { sk } from 'date-fns/locale';
 import { Button } from '@/components/ui/Button';
 import { Pencil, Trash2, Plus, Calendar as CalendarIcon, Clock, User, Phone, Mail, FileText } from 'lucide-react';
@@ -125,11 +125,11 @@ export default function AdminReservationsManager({
                                     <tr key={app.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ fontWeight: '500', color: '#1f2937', marginBottom: '0.25rem' }}>
-                                                {format(startDate, 'd. MMMM yyyy', { locale: sk })}
+                                                {formatInTimeZone(startDate, 'Europe/Bratislava', 'd. MMMM yyyy', { locale: sk })}
                                             </div>
                                             <div style={{ color: '#6b7280', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                                 <Clock size={14} />
-                                                {format(startDate, 'HH:mm')} - {format(endDate, 'HH:mm')}
+                                                {formatInTimeZone(startDate, 'Europe/Bratislava', 'HH:mm')} - {formatInTimeZone(endDate, 'Europe/Bratislava', 'HH:mm')}
                                             </div>
                                             {app.status === 'cancelled' && (
                                                 <div style={{ marginTop: '0.5rem', display: 'inline-block', backgroundColor: '#fee2e2', color: '#991b1b', padding: '0.1rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
