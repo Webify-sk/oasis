@@ -10,10 +10,32 @@ export default async function AdminUsersPage() {
     const supabase = await createClient();
 
     // Fetch all profiles
-    const { data: users, error } = await supabase
+    const { data: usersData, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
+
+    // Fetch all active credit batches
+    const { data: activeBatches } = await supabase
+        .from('credit_batches')
+        .select('user_id, remaining_amount, expires_at')
+        .gt('remaining_amount', 0)
+        .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`);
+
+    const batchesMap = new Map<string, number>();
+    if (activeBatches) {
+        for (const batch of activeBatches) {
+            batchesMap.set(
+                batch.user_id,
+                (batchesMap.get(batch.user_id) || 0) + Number(batch.remaining_amount)
+            );
+        }
+    }
+
+    const users = usersData?.map(user => ({
+        ...user,
+        credits: batchesMap.get(user.id) || 0
+    }));
 
     return (
         <div style={{ padding: '0rem' }}>
