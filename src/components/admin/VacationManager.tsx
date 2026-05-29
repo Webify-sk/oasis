@@ -11,6 +11,12 @@ interface Vacation {
     start_time: string;
     end_time: string;
     description: string | null;
+    trainer_id: string | null;
+}
+
+interface Trainer {
+    id: string;
+    full_name: string;
 }
 
 export function VacationManager() {
@@ -20,6 +26,7 @@ export function VacationManager() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [trainers, setTrainers] = useState<Trainer[]>([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -27,7 +34,8 @@ export function VacationManager() {
         startTime: '08:00',
         endDate: '',
         endTime: '20:00',
-        description: ''
+        description: '',
+        trainerId: 'global' // 'global' alebo konkrétne UUID
     });
 
     const supabase = createClient();
@@ -45,6 +53,16 @@ export function VacationManager() {
         } else {
             setVacations(data || []);
         }
+
+        const { data: trainersData } = await supabase
+            .from('trainers')
+            .select('id, full_name')
+            .order('full_name');
+        
+        if (trainersData) {
+            setTrainers(trainersData);
+        }
+
         setIsLoading(false);
     };
 
@@ -72,13 +90,14 @@ export function VacationManager() {
             const { error } = await supabase.from('vacations').insert({
                 start_time: start,
                 end_time: end,
-                description: formData.description
+                description: formData.description,
+                trainer_id: formData.trainerId === 'global' ? null : formData.trainerId
             });
 
             if (error) throw error;
 
             setShowAddModal(false);
-            setFormData({ startDate: '', startTime: '08:00', endDate: '', endTime: '20:00', description: '' });
+            setFormData({ startDate: '', startTime: '08:00', endDate: '', endTime: '20:00', description: '', trainerId: 'global' });
             fetchVacations();
         } catch (error: any) {
             alert('Chyba pri vytváraní dovolenky: ' + (error.message || error));
@@ -133,6 +152,15 @@ export function VacationManager() {
                                     {new Date(vacation.end_time).toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava' })} {new Date(vacation.end_time).toLocaleTimeString('sk-SK', { timeZone: 'Europe/Bratislava', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
+                            {vacation.trainer_id ? (
+                                <p style={{ margin: '0 0 0.25rem 0', color: '#10B981', fontSize: '0.85rem', fontWeight: 500 }}>
+                                    Tréner: {trainers.find(t => t.id === vacation.trainer_id)?.full_name || 'Neznámy'}
+                                </p>
+                            ) : (
+                                <p style={{ margin: '0 0 0.25rem 0', color: '#6366F1', fontSize: '0.85rem', fontWeight: 500 }}>
+                                    Celé štúdio (Globálne)
+                                </p>
+                            )}
                             {vacation.description && (
                                 <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>{vacation.description}</p>
                             )}
@@ -154,6 +182,21 @@ export function VacationManager() {
             {/* Add Modal */}
             <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Pridať nové voľno">
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Pre koho je dovolenka?</label>
+                        <select
+                            value={formData.trainerId}
+                            onChange={e => setFormData({ ...formData, trainerId: e.target.value })}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white' }}
+                        >
+                            <option value="global">Celé štúdio (Globálna dovolenka)</option>
+                            {trainers.map(t => (
+                                <option key={t.id} value={t.id}>Tréner: {t.full_name}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Dátum od</label>

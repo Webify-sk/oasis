@@ -191,18 +191,21 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                     const isIndividual = exception?.is_individual || false;
 
                     // Check for VACATIONS
-                    // We need to fetch vacations first (will add fetch above loop)
                     const isVacation = vacations?.some((v: any) => {
                         const vStart = new Date(v.start_time).getTime();
                         const vEnd = new Date(v.end_time).getTime();
                         const sessionTime = new Date(sessionStartISO).getTime();
 
-                        // Debug overlaps
-                        // if (sessionTime >= vStart && sessionTime < vEnd) {
-                        //    console.log(`[Vacation Match] Session: ${sessionStartISO} (${sessionTime}) matches Vacation: ${v.start_time} - ${v.end_time}`);
-                        // }
+                        const isOverlapping = sessionTime >= vStart && sessionTime < vEnd;
+                        
+                        if (isOverlapping) {
+                            // Ak vacation nemá trainer_id, je to globálna dovolenka (zatvorené celé štúdio)
+                            if (!v.trainer_id) return true;
+                            // Ak má trainer_id, musí sa zhodovať s trénerom daného termínu
+                            if (v.trainer_id === term.trainer_id) return true;
+                        }
 
-                        return sessionTime >= vStart && sessionTime < vEnd;
+                        return false;
                     });
 
                     // 5. Calculate Occupancy with 60s Fuzzy Match

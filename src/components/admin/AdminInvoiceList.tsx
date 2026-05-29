@@ -1,9 +1,10 @@
 'use client';
 
 import { AdminInvoice, updateInvoice, createCreditNote } from '@/app/admin/invoices/actions';
-import { Download, Search, Trash2, ArchiveRestore, Edit2, Undo2 } from 'lucide-react';
+import { Download, Search, Trash2, ArchiveRestore, Edit2, Undo2, Plus } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { CreateManualInvoiceModal } from './CreateManualInvoiceModal';
 
 interface AdminInvoiceListProps {
     invoices: AdminInvoice[];
@@ -17,6 +18,9 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
     const [invoiceToDelete, setInvoiceToDelete] = useState<AdminInvoice | null>(null);
     const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
     const [isDownloading, setIsDownloading] = useState(false);
+    
+    // Create Manual Invoice Modal
+    const [createModalOpen, setCreateModalOpen] = useState(false);
 
     // Refund Modal State
     const [refundModalOpen, setRefundModalOpen] = useState(false);
@@ -321,29 +325,51 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
                     </select>
                 </div>
 
-                {selectedInvoices.size > 0 && (
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    {selectedInvoices.size > 0 && (
+                        <button
+                            onClick={handleBulkDownload}
+                            disabled={isDownloading}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.75rem 1.5rem',
+                                backgroundColor: '#93745F',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: isDownloading ? 'not-allowed' : 'pointer',
+                                fontWeight: 500,
+                                opacity: isDownloading ? 0.7 : 1,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <ArchiveRestore size={18} />
+                            {isDownloading ? 'Pripravujem ZIP...' : `Stiahnuť vybrané (${selectedInvoices.size})`}
+                        </button>
+                    )}
+
                     <button
-                        onClick={handleBulkDownload}
-                        disabled={isDownloading}
+                        onClick={() => setCreateModalOpen(true)}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
                             padding: '0.75rem 1.5rem',
-                            backgroundColor: '#93745F',
+                            backgroundColor: '#1f2937',
                             color: 'white',
                             border: 'none',
                             borderRadius: '8px',
-                            cursor: isDownloading ? 'not-allowed' : 'pointer',
+                            cursor: 'pointer',
                             fontWeight: 500,
-                            opacity: isDownloading ? 0.7 : 1,
                             transition: 'all 0.2s'
                         }}
                     >
-                        <ArchiveRestore size={18} />
-                        {isDownloading ? 'Pripravujem ZIP...' : `Stiahnuť vybrané (${selectedInvoices.size})`}
+                        <Plus size={18} />
+                        Vytvoriť faktúru
                     </button>
-                )}
+                </div>
             </div>
 
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #E5E0DD', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -519,6 +545,17 @@ export function AdminInvoiceList({ invoices }: AdminInvoiceListProps) {
             <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666', textAlign: 'right' }}>
                 Zobrazených {filteredInvoices.length} z {invoices.length} faktúr
             </div>
+
+            {/* Create Manual Invoice Modal */}
+            {createModalOpen && (
+                <CreateManualInvoiceModal
+                    onClose={() => setCreateModalOpen(false)}
+                    onSuccess={() => {
+                        setCreateModalOpen(false);
+                        router.refresh();
+                    }}
+                />
+            )}
 
             {/* Edit Invoice Modal */}
             {editModalOpen && editingInvoice && (

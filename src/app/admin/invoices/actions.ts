@@ -315,3 +315,57 @@ export async function createCreditNote(invoiceId: string) {
     revalidatePath('/admin/invoices');
     return { success: true };
 }
+
+export async function createManualInvoice(data: Partial<AdminInvoice>) {
+    await requireAdmin();
+
+    const supabase = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+
+    const { generateNextInvoiceNumber } = await import('@/utils/invoice');
+    const invoiceNumber = await generateNextInvoiceNumber(supabase);
+
+    const payload = {
+        user_id: data.user_id || null,
+        invoice_number: invoiceNumber,
+        description: data.description || 'Manuálna faktúra',
+        amount: data.amount || 0,
+        currency: data.currency || 'eur',
+        status: data.status || 'paid',
+        variable_symbol: invoiceNumber.replace(/\D/g, ''),
+        
+        billing_name: data.billing_name || null,
+        billing_street: data.billing_street || null,
+        billing_city: data.billing_city || null,
+        billing_zip: data.billing_zip || null,
+        billing_country: data.billing_country || 'Slovensko',
+        
+        company_name: data.company_name || null,
+        company_ico: data.company_ico || null,
+        company_dic: data.company_dic || null,
+        company_ic_dph: data.company_ic_dph || null,
+        
+        discount_amount: data.discount_amount || null,
+        service_type: data.service_type || 'Iné'
+    };
+
+    const { error: insertError } = await supabase
+        .from('invoices')
+        .insert(payload);
+
+    if (insertError) {
+        console.error('Error creating manual invoice:', insertError);
+        throw new Error('Chyba pri vytváraní manuálnej faktúry.');
+    }
+
+    revalidatePath('/admin/invoices');
+    return { success: true, invoiceNumber };
+}
