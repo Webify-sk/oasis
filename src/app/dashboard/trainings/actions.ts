@@ -28,7 +28,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
     // Check if training type exists and get capacity
     const { data: trainingType, error: typeError } = await supabase
         .from('training_types')
-        .select('capacity, title, price_credits')
+        .select('capacity, title, price_credits, schedule')
         .eq('id', trainingTypeId)
         .single();
 
@@ -139,6 +139,28 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         }
     }
 
+    // Resolve trainer_id from the schedule
+    let resolvedTrainerId = null;
+    if (trainingType.schedule && Array.isArray(trainingType.schedule)) {
+        const dateObj = new Date(startTimeISO);
+        const slovakDays = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+        const dayName = slovakDays[dateObj.getUTCDay()];
+        const timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+        const dateString = startTimeISO.split('T')[0];
+
+        const scheduleItem = trainingType.schedule.find((s: any) => {
+            if (s.isRecurring !== false) {
+                return s.day === dayName && s.time && s.time.startsWith(timeString);
+            } else {
+                return s.date === dateString && s.time && s.time.startsWith(timeString);
+            }
+        });
+
+        if (scheduleItem?.trainer_id) {
+            resolvedTrainerId = scheduleItem.trainer_id;
+        }
+    }
+
     // Insert booking
     const { data: newBookingParams, error: bookingError } = await supabase
         .from('bookings')
@@ -146,7 +168,8 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
             user_id: user.id,
             training_type_id: trainingTypeId,
             start_time: startTimeISO,
-            participants_count: participantsCount
+            participants_count: participantsCount,
+            trainer_id: resolvedTrainerId
         })
         .select('id')
         .single();

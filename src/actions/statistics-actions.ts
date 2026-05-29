@@ -30,7 +30,8 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
                 user_id,
                 participants_count,
                 training_type_id,
-                status
+                status,
+                trainer_id
             `);
 
         if (bookingsError) {
@@ -101,15 +102,17 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
             const user = b.user_id ? usersMap.get(b.user_id) : null;
             const dateObj = new Date(b.start_time);
 
-            // Try to find the trainer from the schedule
-            let trainerId = null;
-            if (trainingType && trainingType.schedule && Array.isArray(trainingType.schedule)) {
-                // Determine day name in Slovak
+            // Try to find the trainer from the booking itself (new robust method)
+            let trainerId = b.trainer_id;
+            
+            // Fallback for historical bookings without trainer_id
+            if (!trainerId && trainingType && trainingType.schedule && Array.isArray(trainingType.schedule)) {
+                // The start_time in DB is naive UTC (e.g. 2026-05-06T17:40:00+00:00 for 17:40 local).
+                // Use UTC methods to extract exactly the stored values regardless of server timezone.
                 const slovakDays = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
-                const dayName = slovakDays[dateObj.getDay()];
-                // Extract HH:mm
-                const timeString = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
-                const dateString = dateObj.toISOString().split('T')[0];
+                const dayName = slovakDays[dateObj.getUTCDay()];
+                const timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+                const dateString = b.start_time.split('T')[0];
 
                 const scheduleItem = trainingType.schedule.find((s: any) => {
                     if (s.isRecurring !== false) {
@@ -121,9 +124,6 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
 
                 if (scheduleItem?.trainer_id) {
                     trainerId = scheduleItem.trainer_id;
-                } else {
-                    // Fallback to first trainer if exact match is not found
-                    trainerId = trainingType.schedule.find((s: any) => s.trainer_id)?.trainer_id;
                 }
             }
 
