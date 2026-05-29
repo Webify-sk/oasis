@@ -43,7 +43,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
     const { data: monthBookings } = await supabase
         .from('bookings')
-        .select('training_type_id, start_time, user_id')
+        .select('training_type_id, start_time, user_id, participants_count')
         .gte('start_time', startDate)
         .lte('start_time', endDate);
 
@@ -124,7 +124,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                     const bookedCount = allBookings.filter((b: any) => {
                         const bDate = new Date(b.start_time);
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
-                    }).length;
+                    }).reduce((sum: number, b: any) => sum + (b.participants_count || 1), 0);
 
                     const isRegistered = userBookings.some((b: any) => {
                         const bDate = new Date(b.start_time);

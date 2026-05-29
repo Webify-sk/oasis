@@ -45,7 +45,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
 
     const { data: monthlyBookings } = await supabase
         .from('bookings')
-        .select('training_type_id, start_time')
+        .select('training_type_id, start_time, participants_count')
         .gte('start_time', startDate)
         .lt('start_time', endDate);
 
@@ -132,7 +132,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                     const currentBookings = allBookings.filter((b: any) => {
                         const bDate = new Date(b.start_time);
                         return b.training_type_id === tt.id && Math.abs(bDate.getTime() - sessionStartTimestamp) < 60000;
-                    }).length;
+                    }).reduce((sum: number, b: any) => sum + (b.participants_count || 1), 0);
 
                     // If vacation, report max occupancy (full)
                     // If individual, it might have differnet capacity but for public view, we mainly care about "is it full?"
