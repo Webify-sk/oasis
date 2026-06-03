@@ -1,0 +1,44 @@
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config({ path: '.env.local' });
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function printFailedUTC() {
+    const { data: bookings } = await supabase.from('bookings').select('id, start_time, training_type_id');
+    const { data: trainingTypes } = await supabase.from('training_types').select('id, title, schedule');
+    
+    const typesMap = {};
+    for (const t of trainingTypes) typesMap[t.id] = t;
+    
+    let count = 0;
+
+    for (const b of bookings) {
+        const type = typesMap[b.training_type_id];
+        if (!type || !type.schedule) continue;
+        
+        const dateObj = new Date(b.start_time);
+        
+        const slovakDays = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+        const dayName = slovakDays[dateObj.getUTCDay()];
+        const timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+        const dateString = b.start_time.split('T')[0];
+
+        const scheduleItem = type.schedule.find((s) => {
+            if (s.isRecurring !== false) {
+                return s.day === dayName && s.time && s.time.startsWith(timeString);
+            } else {
+                return s.date === dateString && s.time && s.time.startsWith(timeString);
+            }
+        });
+
+        if (!scheduleItem?.trainer_id) {
+            console.log(`Fallback: ${type.title} | start_time: ${b.start_time} | dayName: ${dayName} | timeString: ${timeString} | dateString: ${dateString}`);
+            count++;
+            if (count > 20) break;
+        }
+    }
+}
+
+printFailedUTC();

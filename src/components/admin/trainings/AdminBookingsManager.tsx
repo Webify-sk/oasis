@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { formatInTimeZone } from 'date-fns-tz';
 import { sk } from 'date-fns/locale';
 import { Button } from '@/components/ui/Button';
-import { Pencil, Trash2, Clock, Phone, Mail } from 'lucide-react';
+import { Pencil, Trash2, Clock, Phone, Mail, Search } from 'lucide-react';
 import { cancelBooking, rescheduleBooking } from '@/app/dashboard/trainings/actions';
 import { Modal } from '@/components/ui/Modal';
 import { Toast } from '@/components/ui/Toast';
@@ -58,6 +58,17 @@ export default function AdminBookingsManager({ initialBookings, scheduleData }: 
     // Global states
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [toastState, setToastState] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredBookings = bookings.filter(b => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        return (
+            b.user?.full_name?.toLowerCase().includes(term) ||
+            b.user?.email?.toLowerCase().includes(term) ||
+            b.user?.phone?.toLowerCase().includes(term)
+        );
+    });
 
     const handleCancelClick = (id: string) => setBookingToCancel(id);
     const handleRescheduleClick = (id: string) => {
@@ -131,6 +142,39 @@ export default function AdminBookingsManager({ initialBookings, scheduleData }: 
 
     return (
         <div style={{ padding: '0 1rem 2rem 1rem' }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                marginTop: '1rem'
+            }}>
+                <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'normal', fontFamily: "var(--font-heading)", display: 'flex', alignItems: 'center', gap: '1rem', color: '#93745F' }}>
+                    Rezervácie Tréningov
+                    <span style={{ fontSize: '1.2rem', backgroundColor: '#f3f4f6', padding: '0.2rem 0.8rem', borderRadius: '999px', color: '#6b7280', fontFamily: 'var(--font-geist-sans)' }}>
+                        {bookings.length}
+                    </span>
+                </h1>
+                <div style={{ position: 'relative', width: '300px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                    <input
+                        type="text"
+                        placeholder="Hľadať podľa mena, e-mailu..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '0.5rem 1rem 0.5rem 2.5rem',
+                            borderRadius: '8px',
+                            border: '1px solid #D1D5DB',
+                            outline: 'none',
+                            fontSize: '0.9rem'
+                        }}
+                    />
+                </div>
+            </div>
             <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
                 <table style={{ minWidth: '800px', width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
@@ -143,14 +187,14 @@ export default function AdminBookingsManager({ initialBookings, scheduleData }: 
                         </tr>
                     </thead>
                     <tbody>
-                        {bookings.length === 0 ? (
+                        {filteredBookings.length === 0 ? (
                             <tr>
                                 <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
-                                    Žiadne nadchádzajúce rezervácie.
+                                    {searchTerm ? 'Nenašli sa žiadne rezervácie pre zadaný výraz.' : 'Žiadne nadchádzajúce rezervácie.'}
                                 </td>
                             </tr>
                         ) : (
-                            bookings.map((booking) => {
+                            filteredBookings.map((booking) => {
                                 const startDate = new Date(booking.start_time);
                                 const isProcessing = loadingId === booking.id;
 

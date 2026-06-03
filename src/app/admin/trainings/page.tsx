@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import clsx from 'clsx';
 import styles from '@/components/ui/Button.module.css';
+import { getAdminScheduleData } from '@/utils/schedule-helpers';
 
 export default async function AdminTrainingsPage() {
     const supabase = createAdminClient();
@@ -25,6 +26,7 @@ export default async function AdminTrainingsPage() {
     const { data: bookingsDataRaw, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
+            id,
             start_time,
             training_type_id,
             user_id,
@@ -76,7 +78,7 @@ export default async function AdminTrainingsPage() {
             sessions.set(time, []);
         }
         if (attendee) {
-            sessions.get(time)!.push({ ...attendee, participants_count: pc });
+            sessions.get(time)!.push({ ...attendee, booking_id: b.id, participants_count: pc });
         }
     });
 
@@ -95,6 +97,8 @@ export default async function AdminTrainingsPage() {
             upcomingSessions: sessions
         };
     });
+
+    const scheduleData = await getAdminScheduleData(supabase);
 
     return (
         <div style={{ padding: '0rem' }} >
@@ -118,7 +122,7 @@ export default async function AdminTrainingsPage() {
             </div>
 
             <div style={{ padding: '0 2rem' }}>
-                <TrainingList trainings={trainings || []} />
+                <TrainingList trainings={trainings || []} scheduleData={scheduleData} />
             </div>
         </div >
     );
