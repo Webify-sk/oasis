@@ -2102,3 +2102,117 @@ export async function deleteAdminCosmeticAppointment(id: string) {
     revalidatePath('/dashboard/cosmetics/appointments');
     return { success: true };
 }
+
+export async function rescheduleCosmeticAppointment(id: string, data: { start_time: string; end_time: string; employee_id: string }) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'Unauthorized' };
+
+    // 1. Check Permissions and fetch existing appointment
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const isStaff = profile?.role === 'employee' || profile?.role === 'admin';
+
+    let query = supabase
+        .from('cosmetic_appointments')
+        .select(`*, cosmetic_services(title), employees(email, name), profiles(full_name)`)
+        .eq('id', id);
+
+    if (!isStaff) {
+        query = query.eq('user_id', user.id);
+    }
+
+    const { data: existingApp } = await query.single();
+
+    if (!existingApp) {
+        return { error: 'Rezervácia sa nenašla alebo nemáte oprávnenie na jej úpravu.' };
+    }
+
+    // 2. Check for overlapping appointments
+    const { data: overlappingAppointments, error: conflictError } = await supabase
+        .from('cosmetic_appointments')
+        .select('id')
+        .eq('employee_id', data.employee_id)
+        .lt('start_time', data.end_time)
+        .gt('end_time', data.start_time)
+        .neq('status', 'cancelled')
+        .neq('id', id);
+
+    if (conflictError) {
+        return { error: 'Nastala chyba pri overovaní dostupnosti termínu.' };
+    }
+
+    if (overlappingAppointments && overlappingAppointments.length > 0) {
+        return { error: 'Vybraný termín už je obsadený iným zákazníkom.' };
+    }
+
+    // 3. Update the appointment
+    const { error: updateError } = await supabase
+        .from('cosmetic_appointments')
+        .update({
+            start_time: data.start_time,
+            end_time: data.end_time,
+            employee_id: data.employee_id,
+        })
+        .eq('id', id);
+
+    if (updateError) {
+        return { error: 'Nepodarilo sa presunúť rezerváciu.' };
+    }
+
+    // 4. Send emails
+    try {
+        const formattedOldDate = new Date(existingApp.start_time).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const formattedNewDate = new Date(data.start_time).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        // @ts-ignore
+        const serviceName = existingApp.cosmetic_services?.title || 'Služba';
+
+        // Client Email
+        if (user.email) {
+            const clientSubject = `Zmena termínu - ${serviceName}`;
+            const clientBody = `
+                <p>Dobrý deň,</p>
+                <p>Vaša rezervácia na službu <strong>${serviceName}</strong> bola úspešne presunutá.</p>
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                     <p style="margin: 5px 0;"><del>Pôvodný termín: ${formattedOldDate}</del></p>
+                     <p style="margin: 5px 0;"><strong>Nový termín: ${formattedNewDate}</strong></p>
+                </div>
+            `;
+            await sendEmail({ to: user.email, subject: clientSubject, html: getEmailTemplate(clientSubject, clientBody) });
+        }
+
+        // Employee Email
+        // @ts-ignore
+        const oldEmpEmail = existingApp.employees?.email;
+        if (oldEmpEmail) {
+            const empSubject = `Zmena termínu: ${serviceName}`;
+            // @ts-ignore
+            const clientName = existingApp.profiles?.full_name || existingApp.client_name || 'Klient';
+            const empBody = `
+                <p>Ahoj,</p>
+                <p>klient presunul rezerváciu na službu <strong>${serviceName}</strong>.</p>
+                <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                     <p style="margin: 5px 0;"><del>Pôvodný termín: ${formattedOldDate}</del></p>
+                     <p style="margin: 5px 0;"><strong>Nový termín: ${formattedNewDate}</strong></p>
+                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                </div>
+            `;
+            await sendEmail({ to: oldEmpEmail, subject: empSubject, html: getEmailTemplate(empSubject, empBody) });
+            
+            // If they changed the employee, notify the new employee as well!
+            if (data.employee_id !== existingApp.employee_id) {
+                const { data: newEmp } = await supabase.from('employees').select('email, name').eq('id', data.employee_id).single();
+                if (newEmp?.email) {
+                    await sendEmail({ to: newEmp.email, subject: empSubject, html: getEmailTemplate(empSubject, empBody) });
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to send reschedule emails:', e);
+    }
+
+    revalidatePath('/dashboard/cosmetics/appointments');
+    revalidatePath('/admin/cosmetics/reservations');
+    revalidatePath('/dashboard');
+    return { success: true };
+}

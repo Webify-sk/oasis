@@ -12,6 +12,7 @@ import styles from '@/components/dashboard/Sidebar.module.css'; // Reusing dashb
 const navItems = [
     { name: 'Užívatelia', href: '/admin/users', icon: Users },
     { name: 'Tréningy', href: '/admin/trainings', icon: Dumbbell },
+    { name: 'Rezervácie tréningov', href: '/admin/bookings', icon: Calendar },
     { name: 'Pilates - Voľno', href: '/admin/vacations', icon: Calendar },
     { name: 'Zľavové kupóny', href: '/admin/coupons', icon: Gift },
     { name: 'Trainers', href: '/admin/trainers', icon: Users },

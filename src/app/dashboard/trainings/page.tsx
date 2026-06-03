@@ -282,7 +282,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                 </div>
             </div>
 
-            <MyBookings bookings={myUpcomingBookings} />
+            <MyBookings bookings={myUpcomingBookings} scheduleData={scheduleData} />
 
             <TrainingCalendar
                 schedule={scheduleData}

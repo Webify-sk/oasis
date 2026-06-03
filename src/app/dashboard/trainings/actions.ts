@@ -419,3 +419,279 @@ export async function cancelBooking(bookingId: string) {
         message: shouldRefund ? 'Rezervácia zrušená, vstup bol vrátený.' : 'Rezervácia zrušená (bez vrátenia kreditu, < 12h).'
     };
 }
+
+export async function rescheduleBooking(
+    bookingId: string, 
+    newTrainingTypeId: string, 
+    newStartTimeISO: string, 
+    participantsCount: number = 1
+) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: 'Musíte byť prihlásený.' };
+
+    // 1. Fetch old booking and check permissions
+    const { data: oldBooking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('*, training_type:training_type_id(title, price_credits)')
+        .eq('id', bookingId)
+        .single();
+        
+    if (fetchError || !oldBooking) {
+        return { success: false, message: 'Pôvodná rezervácia sa nenašla.' };
+    }
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const isAdmin = profile?.role === 'admin';
+
+    if (!isAdmin && oldBooking.user_id !== user.id) {
+        return { success: false, message: 'Nemáte oprávnenie upraviť túto rezerváciu.' };
+    }
+
+    // 2. Check time logic (12h rule) for old booking
+    const oldStartTime = new Date(oldBooking.start_time);
+    const now = new Date();
+    const diffMs = oldStartTime.getTime() - now.getTime();
+    const hoursValues = diffMs / (1000 * 60 * 60);
+    const shouldRefundOld = isAdmin || hoursValues >= 12;
+
+    // 3. Check new training capacity
+    const trainingDate = new Date(newStartTimeISO);
+    if (trainingDate < now && !isAdmin) {
+        return { success: false, message: 'Na vybraný tréning sa už nedá prihlásiť (termín uplynul).' };
+    }
+
+    const { data: newTrainingType } = await supabase
+        .from('training_types')
+        .select('capacity, title, price_credits, schedule')
+        .eq('id', newTrainingTypeId)
+        .single();
+
+    if (!newTrainingType) return { success: false, message: 'Nový tréning sa nenašiel.' };
+
+    const { data: slotBookings } = await supabase
+        .from('bookings')
+        .select('participants_count')
+        .eq('training_type_id', newTrainingTypeId)
+        .eq('start_time', newStartTimeISO);
+
+    const currentOccupancy = slotBookings?.reduce((sum, b) => sum + (b.participants_count || 1), 0) || 0;
+
+    if (currentOccupancy + participantsCount > newTrainingType.capacity) {
+        return { success: false, message: 'Na novom tréningu nie je dostatok voľných miest.' };
+    }
+
+    if (!isAdmin && currentOccupancy === 0) {
+        const { isBookingLocked } = await import('@/utils/booking-logic');
+        const { isLocked, deadlineMsg } = isBookingLocked(newStartTimeISO);
+        if (isLocked) {
+            return { success: false, message: `Na nový tréning sa nedá prihlásiť. (Deadline: ${deadlineMsg} vopred)` };
+        }
+    }
+
+    // 4. Resolve trainer_id for new training
+    let resolvedTrainerId = null;
+    if (newTrainingType.schedule && Array.isArray(newTrainingType.schedule)) {
+        const dateObj = new Date(newStartTimeISO);
+        const slovakDays = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+        const dayName = slovakDays[dateObj.getUTCDay()];
+        const timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+        const dateString = newStartTimeISO.split('T')[0];
+
+        const scheduleItem = newTrainingType.schedule.find((s: any) => {
+            if (s.isRecurring !== false) {
+                return s.day === dayName && s.time && s.time.startsWith(timeString);
+            } else {
+                return s.date === dateString && s.time && s.time.startsWith(timeString);
+            }
+        });
+        if (scheduleItem?.trainer_id) resolvedTrainerId = scheduleItem.trainer_id;
+    }
+
+    // 5. Credit logic check
+    const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('credits, unlimited_expires_at')
+        .eq('id', oldBooking.user_id)
+        .single();
+    
+    const isUnlimited = userProfile?.unlimited_expires_at && new Date(userProfile.unlimited_expires_at) > new Date();
+    const priceCredits = newTrainingType.price_credits ?? 1;
+    const selfCost = isUnlimited ? 0 : priceCredits;
+    const additionalCost = (participantsCount - 1) * priceCredits;
+    const totalCost = selfCost + additionalCost;
+
+    let activeBatches: any[] = [];
+    if (totalCost > 0) {
+        const { data: batches } = await supabase
+            .from('credit_batches')
+            .select('*')
+            .eq('user_id', oldBooking.user_id)
+            .gt('remaining_amount', 0)
+            .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
+            .order('expires_at', { ascending: true, nullsFirst: false });
+        
+        activeBatches = batches || [];
+    }
+
+    let totalRefund = 0;
+    const { data: deductions } = await supabase
+        .from('booking_deductions')
+        .select('*')
+        .eq('booking_id', bookingId);
+        
+    if (shouldRefundOld && deductions) {
+        totalRefund = deductions.reduce((sum, d) => sum + Number(d.amount), 0);
+    } else if (shouldRefundOld && !deductions?.length) {
+        const oldTrainingData = oldBooking.training_type as any;
+        const oldPrice = (Array.isArray(oldTrainingData) ? oldTrainingData[0]?.price_credits : oldTrainingData?.price_credits) ?? 1;
+        const oldSelfRefund = isUnlimited ? 0 : oldPrice;
+        const oldAdditionalRefund = (oldBooking.participants_count - 1) * oldPrice;
+        totalRefund = oldSelfRefund + oldAdditionalRefund;
+    }
+
+    const totalAvailableNow = activeBatches.reduce((sum, b) => sum + Number(b.remaining_amount), 0);
+    if (totalCost > 0 && (totalAvailableNow + totalRefund) < totalCost) {
+        return { success: false, message: `Nemáte dostatok kreditov na zmenu termínu (vyžaduje sa ${totalCost}, budete mať ${totalAvailableNow + totalRefund}).` };
+    }
+
+    // 6. Delete old booking and process refund
+    const { error: deleteError } = await supabase.from('bookings').delete().eq('id', bookingId);
+    if (deleteError) return { success: false, message: 'Chyba pri rušení pôvodnej rezervácie: ' + deleteError.message };
+
+    if (totalRefund > 0) {
+        if (deductions && deductions.length > 0) {
+            for (const deduction of deductions) {
+                const { data: batchData } = await supabase.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
+                if (batchData) {
+                    await supabase
+                        .from('credit_batches')
+                        .update({ remaining_amount: Number(batchData.remaining_amount) + Number(deduction.amount) })
+                        .eq('id', deduction.batch_id);
+                }
+            }
+        } else {
+            const { data: latestBatch } = await supabase
+                .from('credit_batches')
+                .select('*')
+                .eq('user_id', oldBooking.user_id)
+                .order('expires_at', { ascending: false, nullsFirst: true })
+                .limit(1)
+                .single();
+            if (latestBatch) {
+                await supabase.from('credit_batches').update({ remaining_amount: Number(latestBatch.remaining_amount) + totalRefund }).eq('id', latestBatch.id);
+            } else {
+                let endD = new Date();
+                endD.setMonth(endD.getMonth() + 1);
+                await supabase.from('credit_batches').insert({ user_id: oldBooking.user_id, amount: totalRefund, remaining_amount: totalRefund, expires_at: endD.toISOString() });
+            }
+        }
+    }
+
+    if (userProfile && totalRefund > 0) {
+        await supabase.from('profiles').update({ credits: (userProfile.credits || 0) + totalRefund }).eq('id', oldBooking.user_id);
+    }
+
+    // 7. Create new booking
+    const { data: newBookingParams, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+            user_id: oldBooking.user_id,
+            training_type_id: newTrainingTypeId,
+            start_time: newStartTimeISO,
+            participants_count: participantsCount,
+            trainer_id: resolvedTrainerId
+        })
+        .select('id')
+        .single();
+
+    if (bookingError || !newBookingParams) {
+        console.error('Failed to insert new booking during reschedule:', bookingError);
+        return { success: false, message: 'Pôvodná rezervácia bola zrušená, ale novú sa nepodarilo vytvoriť.' };
+    }
+
+    const newBookingId = newBookingParams.id;
+
+    // 8. Deduct credits for new booking
+    if (totalCost > 0) {
+        const { data: updatedBatches } = await supabase
+            .from('credit_batches')
+            .select('*')
+            .eq('user_id', oldBooking.user_id)
+            .gt('remaining_amount', 0)
+            .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
+            .order('expires_at', { ascending: true, nullsFirst: false });
+
+        let costToDeduct = totalCost;
+        if (updatedBatches) {
+            for (const batch of updatedBatches) {
+                if (costToDeduct <= 0) break;
+                const availableInBatch = Number(batch.remaining_amount);
+                const deductionAmount = Math.min(availableInBatch, costToDeduct);
+                await supabase.from('credit_batches').update({ remaining_amount: availableInBatch - deductionAmount }).eq('id', batch.id);
+                await supabase.from('booking_deductions').insert({ booking_id: newBookingId, batch_id: batch.id, amount: deductionAmount });
+                costToDeduct -= deductionAmount;
+            }
+        }
+
+        const { data: currentProf } = await supabase.from('profiles').select('credits').eq('id', oldBooking.user_id).single();
+        if (currentProf) {
+            await supabase.from('profiles').update({ credits: (currentProf.credits || 0) - totalCost }).eq('id', oldBooking.user_id);
+        }
+    }
+
+    revalidatePath('/dashboard/trainings');
+    revalidatePath('/admin/trainings');
+    revalidatePath('/dashboard');
+
+    // 9. Send Reschedule Email
+    try {
+        const { sendEmail } = await import('@/utils/email');
+        const { getEmailTemplate } = await import('@/utils/email-template');
+        
+        const { data: targetProfile } = await supabase.from('profiles').select('email').eq('id', oldBooking.user_id).single();
+        const targetEmail = targetProfile?.email;
+
+        if (targetEmail) {
+            const formattedOldDate = new Date(oldBooking.start_time).toLocaleString('sk-SK');
+            const formattedNewDate = new Date(newStartTimeISO).toLocaleString('sk-SK');
+            
+            // @ts-ignore
+            const oldTrainingTitle = oldBooking.training_type?.title || 'Tréning';
+
+            const refundMessage = shouldRefundOld
+                ? ''
+                : '<p style="color: red;">Upozornenie: Keďže zmena prebehla menej ako 12 hodín pred pôvodným tréningom, kredit za pôvodný tréning Vám prepadol.</p>';
+
+            const html = getEmailTemplate(
+                'Zmena termínu tréningu',
+                `
+                <p>Dobrý deň,</p>
+                <p>Vaša rezervácia na tréning bola úspešne presunutá.</p>
+                
+                <div class="highlight-box">
+                    <p style="margin: 5px 0;"><del>Pôvodný tréning: ${oldTrainingTitle} (${formattedOldDate})</del></p>
+                    <p style="margin: 5px 0;"><strong>Nový tréning: ${newTrainingType.title}</strong></p>
+                    <p style="margin: 5px 0;"><strong>Nový dátum a čas: ${formattedNewDate}</strong></p>
+                </div>
+                ${refundMessage}
+                <p>Tešíme sa na Vás!</p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/trainings" class="button">Moje rezervácie</a>
+                </div>
+                `
+            );
+
+            await sendEmail({
+                to: targetEmail,
+                subject: 'Potvrdenie zmena termínu tréningu',
+                html: html
+            });
+        }
+    } catch (mailError) {
+        console.error('Failed to send reschedule email:', mailError);
+    }
+
+    return { success: true, message: 'Termín tréningu bol úspešne zmenený.' };
+}

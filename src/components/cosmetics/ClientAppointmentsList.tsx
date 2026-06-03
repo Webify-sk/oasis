@@ -6,8 +6,9 @@ import { cancelAppointment, rescheduleAppointment } from '@/actions/cosmetic-act
 import { format } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { sk } from 'date-fns/locale';
-import { Button } from '@/components/ui/Button'; // Assuming Button is available
-import { Modal } from '@/components/ui/Modal'; // Assuming Modal is available
+import { Button } from '@/components/ui/Button'; 
+import { Modal } from '@/components/ui/Modal'; 
+import { Toast } from '@/components/ui/Toast';
 
 interface Appointment {
     id: string;
@@ -38,6 +39,7 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
     const [appointments, setAppointments] = useState(initialAppointments);
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [cancelModalId, setCancelModalId] = useState<string | null>(null);
+    const [toastState, setToastState] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     useEffect(() => {
         setAppointments(initialAppointments);
@@ -70,8 +72,9 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
             setAppointments(prev => prev.map(app =>
                 app.id === id ? { ...app, status: 'cancelled' } : app
             ));
+            setToastState({ message: 'Rezervácia bola úspešne zrušená.', type: 'success' });
         } else {
-            alert('Nepodarilo sa zrušiť rezerváciu.');
+            setToastState({ message: 'Nepodarilo sa zrušiť rezerváciu.', type: 'error' });
         }
         setLoadingId(null);
         setCancelModalId(null);
@@ -108,8 +111,9 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
             ));
             setIsRescheduleModalOpen(false);
             setRescheduleData(null);
+            setToastState({ message: 'Termín bol úspešne zmenený.', type: 'success' });
         } else {
-            alert('Nepodarilo sa zmeniť termín. Skúste iný čas.');
+            setToastState({ message: 'Nepodarilo sa zmeniť termín. Skúste iný čas.', type: 'error' });
         }
     };
 
@@ -226,6 +230,14 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
                     </form>
                 )}
             </Modal>
+
+            {toastState && (
+                <Toast 
+                    message={toastState.message} 
+                    type={toastState.type} 
+                    onClose={() => setToastState(null)} 
+                />
+            )}
         </div>
     );
 }
@@ -325,9 +337,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
 
                 {!readOnly && !isCancelled && (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {/* Reschedule (Employee Only? Or client too? User asked for Employee Dashboard) */}
-                        {/* Let's showing it generally as it's useful, or check isEmployeeView */}
-                        {isEmployeeView && onReschedule && (
+                        {onReschedule && (
                             <button
                                 onClick={onReschedule}
                                 title="Zmeniť čas"
