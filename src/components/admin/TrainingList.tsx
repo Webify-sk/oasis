@@ -360,7 +360,7 @@ export function TrainingList({ trainings, scheduleData = [] }: { trainings: Trai
                                 <div key={day.date}>
                                     <h5 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#6B7280', marginBottom: '0.5rem' }}>{day.date}</h5>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {availableSessions.map(session => (
+                                        {availableSessions.map((session: any) => (
                                             <div 
                                                 key={session.id}
                                                 onClick={() => setSelectedNewSession(session)}
