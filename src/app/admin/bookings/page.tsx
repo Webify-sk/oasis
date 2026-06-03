@@ -28,7 +28,7 @@ export default async function AdminBookingsPage() {
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true });
 
-    const bookings = bookingsRaw || [];
+    const bookings = (bookingsRaw as any) || [];
 
     // 2. Fetch data for schedule generation (for Reschedule Modal)
     const { data: trainingTypes } = await supabase.from('training_types').select('*');
