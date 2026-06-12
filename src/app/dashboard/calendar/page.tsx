@@ -116,7 +116,13 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         const vStart = new Date(v.start_time).getTime();
                         const vEnd = new Date(v.end_time).getTime();
                         // sessionStartTimestamp is already UTC timestamp constructed from Face Value
-                        return sessionStartTimestamp >= vStart && sessionStartTimestamp < vEnd;
+                        const isOverlapping = sessionStartTimestamp >= vStart && sessionStartTimestamp < vEnd;
+                        
+                        if (isOverlapping) {
+                            if (!v.trainer_id) return true; // Global vacation
+                            if (v.trainer_id === term.trainer_id) return true; // Match specific trainer
+                        }
+                        return false;
                     });
 
                     const maxOccupancy = tt.capacity || 10;
