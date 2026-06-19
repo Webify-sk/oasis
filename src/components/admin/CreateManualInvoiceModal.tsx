@@ -150,10 +150,9 @@ export function CreateManualInvoiceModal({ onClose, onSuccess }: CreateManualInv
                             </label>
 
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
-                                <span>Ulica a číslo *</span>
+                                <span>Ulica a číslo</span>
                                 <input
                                     type="text"
-                                    required
                                     value={formData.billing_street || ''}
                                     onChange={(e) => setFormData({ ...formData, billing_street: e.target.value })}
                                     style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
@@ -161,10 +160,9 @@ export function CreateManualInvoiceModal({ onClose, onSuccess }: CreateManualInv
                             </label>
 
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
-                                <span>Mesto *</span>
+                                <span>Mesto</span>
                                 <input
                                     type="text"
-                                    required
                                     value={formData.billing_city || ''}
                                     onChange={(e) => setFormData({ ...formData, billing_city: e.target.value })}
                                     style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
@@ -173,10 +171,9 @@ export function CreateManualInvoiceModal({ onClose, onSuccess }: CreateManualInv
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: '#374151' }}>
-                                    <span>PSČ *</span>
+                                    <span>PSČ</span>
                                     <input
                                         type="text"
-                                        required
                                         value={formData.billing_zip || ''}
                                         onChange={(e) => setFormData({ ...formData, billing_zip: e.target.value })}
                                         style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db' }}
