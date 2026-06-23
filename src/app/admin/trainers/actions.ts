@@ -61,7 +61,28 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
             full_name,
             specialties,
             bio,
+            email: email || null,
+            phone: phone || null,
         };
+
+        // Ak upravujeme existujúceho trénera a je zadaný email, pokúsime sa prepojiť profil
+        if (id && email) {
+            const supabaseAdmin = createAdminClient();
+            const { data: existingProfiles } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('email', email.toLowerCase().trim());
+            
+            if (existingProfiles && existingProfiles.length > 0) {
+                data.profile_id = existingProfiles[0].id;
+                
+                // Uistíme sa, že prepojený profil má rolu trénera
+                await supabaseAdmin
+                    .from('profiles')
+                    .update({ role: 'trainer' })
+                    .eq('id', data.profile_id);
+            }
+        }
 
         // Only update avatar_url if a new one was uploaded
         if (avatar_url) {
