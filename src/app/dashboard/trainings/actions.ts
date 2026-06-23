@@ -449,6 +449,8 @@ export async function rescheduleBooking(
         return { success: false, message: 'Nemáte oprávnenie upraviť túto rezerváciu.' };
     }
 
+    const db = isAdmin ? (await import('@/utils/supabase/admin')).createAdminClient() : supabase;
+
     // 2. Check time logic (12h rule) for old booking
     const oldStartTime = new Date(oldBooking.start_time);
     const now = new Date();
@@ -557,22 +559,22 @@ export async function rescheduleBooking(
     }
 
     // 6. Delete old booking and process refund
-    const { error: deleteError } = await supabase.from('bookings').delete().eq('id', bookingId);
+    const { error: deleteError } = await db.from('bookings').delete().eq('id', bookingId);
     if (deleteError) return { success: false, message: 'Chyba pri rušení pôvodnej rezervácie: ' + deleteError.message };
 
     if (totalRefund > 0) {
         if (deductions && deductions.length > 0) {
             for (const deduction of deductions) {
-                const { data: batchData } = await supabase.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
+                const { data: batchData } = await db.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
                 if (batchData) {
-                    await supabase
+                    await db
                         .from('credit_batches')
                         .update({ remaining_amount: Number(batchData.remaining_amount) + Number(deduction.amount) })
                         .eq('id', deduction.batch_id);
                 }
             }
         } else {
-            const { data: latestBatch } = await supabase
+            const { data: latestBatch } = await db
                 .from('credit_batches')
                 .select('*')
                 .eq('user_id', oldBooking.user_id)
@@ -580,21 +582,21 @@ export async function rescheduleBooking(
                 .limit(1)
                 .single();
             if (latestBatch) {
-                await supabase.from('credit_batches').update({ remaining_amount: Number(latestBatch.remaining_amount) + totalRefund }).eq('id', latestBatch.id);
+                await db.from('credit_batches').update({ remaining_amount: Number(latestBatch.remaining_amount) + totalRefund }).eq('id', latestBatch.id);
             } else {
                 let endD = new Date();
                 endD.setMonth(endD.getMonth() + 1);
-                await supabase.from('credit_batches').insert({ user_id: oldBooking.user_id, amount: totalRefund, remaining_amount: totalRefund, expires_at: endD.toISOString() });
+                await db.from('credit_batches').insert({ user_id: oldBooking.user_id, amount: totalRefund, remaining_amount: totalRefund, expires_at: endD.toISOString() });
             }
         }
     }
 
     if (userProfile && totalRefund > 0) {
-        await supabase.from('profiles').update({ credits: (userProfile.credits || 0) + totalRefund }).eq('id', oldBooking.user_id);
+        await db.from('profiles').update({ credits: (userProfile.credits || 0) + totalRefund }).eq('id', oldBooking.user_id);
     }
 
     // 7. Create new booking
-    const { data: newBookingParams, error: bookingError } = await supabase
+    const { data: newBookingParams, error: bookingError } = await db
         .from('bookings')
         .insert({
             user_id: oldBooking.user_id,
@@ -615,7 +617,7 @@ export async function rescheduleBooking(
 
     // 8. Deduct credits for new booking
     if (totalCost > 0) {
-        const { data: updatedBatches } = await supabase
+        const { data: updatedBatches } = await db
             .from('credit_batches')
             .select('*')
             .eq('user_id', oldBooking.user_id)
@@ -629,15 +631,15 @@ export async function rescheduleBooking(
                 if (costToDeduct <= 0) break;
                 const availableInBatch = Number(batch.remaining_amount);
                 const deductionAmount = Math.min(availableInBatch, costToDeduct);
-                await supabase.from('credit_batches').update({ remaining_amount: availableInBatch - deductionAmount }).eq('id', batch.id);
-                await supabase.from('booking_deductions').insert({ booking_id: newBookingId, batch_id: batch.id, amount: deductionAmount });
+                await db.from('credit_batches').update({ remaining_amount: availableInBatch - deductionAmount }).eq('id', batch.id);
+                await db.from('booking_deductions').insert({ booking_id: newBookingId, batch_id: batch.id, amount: deductionAmount });
                 costToDeduct -= deductionAmount;
             }
         }
 
-        const { data: currentProf } = await supabase.from('profiles').select('credits').eq('id', oldBooking.user_id).single();
+        const { data: currentProf } = await db.from('profiles').select('credits').eq('id', oldBooking.user_id).single();
         if (currentProf) {
-            await supabase.from('profiles').update({ credits: (currentProf.credits || 0) - totalCost }).eq('id', oldBooking.user_id);
+            await db.from('profiles').update({ credits: (currentProf.credits || 0) - totalCost }).eq('id', oldBooking.user_id);
         }
     }
 
@@ -650,7 +652,7 @@ export async function rescheduleBooking(
         const { sendEmail } = await import('@/utils/email');
         const { getEmailTemplate } = await import('@/utils/email-template');
         
-        const { data: targetProfile } = await supabase.from('profiles').select('email').eq('id', oldBooking.user_id).single();
+        const { data: targetProfile } = await db.from('profiles').select('email').eq('id', oldBooking.user_id).single();
         const targetEmail = targetProfile?.email;
 
         if (targetEmail) {
