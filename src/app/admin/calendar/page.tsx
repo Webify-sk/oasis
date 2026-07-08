@@ -41,25 +41,33 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
         return `${y}-${m}-${day}`;
     };
 
-    // Bounds of the visible month (as face-value date strings)
-    const monthStartStr = toDateStr(new Date(year, month, 1));
-    const monthEndStr = toDateStr(new Date(year, month + 1, 0));
+    // Visible grid range: 6 weeks (42 cells) starting from the Monday on/before the 1st,
+    // so leading/trailing days from the adjacent months are also populated.
+    const firstOfMonth = new Date(year, month, 1);
+    let startOffset = firstOfMonth.getDay() - 1; // Monday = 0
+    if (startOffset === -1) startOffset = 6;
+    const TOTAL_CELLS = 42;
+    const gridStart = new Date(year, month, 1 - startOffset);
+    const gridEnd = new Date(year, month, 1 - startOffset + (TOTAL_CELLS - 1));
 
-    // 2b. Fetch vacations overlapping this month (global or per-trainer)
+    const gridStartStr = toDateStr(gridStart);
+    const gridEndStr = toDateStr(gridEnd);
+
+    // 2b. Fetch vacations overlapping the visible range (global or per-trainer)
     const { data: vacations } = await supabase
         .from('vacations')
         .select('id, start_time, end_time, description, trainer_id')
-        .lte('start_time', `${monthEndStr}T23:59:59.999Z`)
-        .gte('end_time', `${monthStartStr}T00:00:00.000Z`);
+        .lte('start_time', `${gridEndStr}T23:59:59.999Z`)
+        .gte('end_time', `${gridStartStr}T00:00:00.000Z`);
 
-    // 3. Generate Events for the Month
+    // 3. Generate Events for every visible day
     const events: any[] = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const dayNames = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
 
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateObj = new Date(year, month, day);
+    for (let i = 0; i < TOTAL_CELLS; i++) {
+        const dateObj = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
         const dayName = dayNames[dateObj.getDay()];
+        const dayStr = toDateStr(dateObj);
 
         trainingTypes?.forEach(tt => {
             if (Array.isArray(tt.schedule)) {
@@ -82,7 +90,7 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
 
                 terms.forEach((term: any) => {
                     events.push({
-                        id: `${tt.id}-${term.id}-${day}`,
+                        id: `${tt.id}-${term.id}-${dayStr}`,
                         time: term.time,
                         title: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || '?',
@@ -93,19 +101,20 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
         });
 
         // Vacation banners for this day (compare on face-value date strings)
-        const dayStr = toDateStr(dateObj);
         vacations?.forEach(vac => {
             const vacStart = (vac.start_time as string).slice(0, 10);
             const vacEnd = (vac.end_time as string).slice(0, 10);
             if (dayStr >= vacStart && dayStr <= vacEnd) {
                 const trainerName = vac.trainer_id ? (trainersMap.get(vac.trainer_id) || 'Neznámy tréner') : '';
                 events.push({
-                    id: `vac-${vac.id}-${day}`,
+                    id: `vac-${vac.id}-${dayStr}`,
                     type: 'vacation',
                     time: '',
                     title: vac.trainer_id ? `Dovolenka – ${trainerName}` : 'Zatvorené – celé štúdio',
                     trainer: trainerName,
                     description: vac.description,
+                    vacStart: vac.start_time,
+                    vacEnd: vac.end_time,
                     date: dateObj
                 });
             }

@@ -15,6 +15,8 @@ interface TrainingSession {
     date: Date;
     type?: 'training' | 'vacation';
     description?: string | null;
+    vacStart?: string;
+    vacEnd?: string;
     isRegistered?: boolean;
     occupancy?: {
         current: number;
@@ -138,7 +140,15 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
     };
 
     const [selectedEvent, setSelectedEvent] = useState<TrainingSession | null>(null);
+    const [selectedVacation, setSelectedVacation] = useState<TrainingSession | null>(null);
     const router = useRouter();
+
+    // Format a face-value ISO date ("2026-08-01T08:00:00.000Z") as "1. 8. 2026"
+    const formatVacDate = (iso?: string) => {
+        if (!iso) return '';
+        const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+        return `${d}. ${m}. ${y}`;
+    };
 
     const handlePrev = () => {
         router.push(prevLink);
@@ -214,16 +224,21 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                 // Vacation / time-off banner (full day, independent of training filters)
                                 if (evt.type === 'vacation') {
                                     const isGlobal = !evt.trainer;
+                                    // Short label so the name is visible directly in the cell
+                                    const vacLabel = isGlobal ? 'Celé štúdio' : evt.trainer;
                                     return (
                                         <div
                                             key={i}
                                             className={styles.event}
                                             title={evt.description ? `${evt.title} – ${evt.description}` : evt.title}
+                                            onClick={() => setSelectedVacation(evt)}
                                             style={{
-                                                cursor: 'default',
+                                                cursor: 'pointer',
                                                 backgroundColor: isGlobal ? '#FEE2E2' : '#FEF3C7',
                                                 borderLeft: `3px solid ${isGlobal ? '#DC2626' : '#D97706'}`,
-                                                color: isGlobal ? '#991B1B' : '#92400E'
+                                                color: isGlobal ? '#991B1B' : '#92400E',
+                                                whiteSpace: 'normal',
+                                                lineHeight: 1.3
                                             }}
                                         >
                                             <div className={styles.mobileEventContent}>
@@ -243,7 +258,7 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                                                 </div>
                                             </div>
                                             <div className={styles.desktopEventContent}>
-                                                🌴 {evt.title}
+                                                🌴 {vacLabel}
                                             </div>
                                         </div>
                                     );
@@ -353,6 +368,72 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                     );
                 })}
             </div>
+
+            {/* Vacation popup */}
+            {selectedVacation && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    backdropFilter: 'blur(4px)'
+                }} onClick={() => setSelectedVacation(null)}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '2rem',
+                        borderRadius: '16px',
+                        width: '90%',
+                        maxWidth: '400px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ fontFamily: 'serif', fontSize: '1.5rem', marginBottom: '1rem', color: !selectedVacation.trainer ? '#991B1B' : '#92400E' }}>
+                            🌴 {selectedVacation.title}
+                        </h3>
+                        <div style={{ marginBottom: '1.5rem', color: '#666' }}>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                📅 <strong style={{ color: '#333' }}>
+                                    {formatVacDate(selectedVacation.vacStart)} – {formatVacDate(selectedVacation.vacEnd)}
+                                </strong>
+                            </p>
+                            {selectedVacation.trainer ? (
+                                <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    👤 Tréner: <strong>{selectedVacation.trainer}</strong>
+                                </p>
+                            ) : (
+                                <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#991B1B' }}>
+                                    🔒 Zatvorené celé štúdio
+                                </p>
+                            )}
+                            {selectedVacation.description && (
+                                <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    📝 {selectedVacation.description}
+                                </p>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setSelectedVacation(null)}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid #ddd',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    color: '#666'
+                                }}
+                            >
+                                Zavrieť
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Simple Modal */}
             {selectedEvent && (
