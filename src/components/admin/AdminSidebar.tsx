@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { Users, Dumbbell, UserCheck, LogOut, Gift, Calendar, List, LayoutDashboard, Settings, FileText, UserPlus, Scissors, CreditCard, Menu, X } from 'lucide-react';
+import { Users, Dumbbell, UserCheck, LogOut, Gift, Calendar, List, LayoutDashboard, Settings, FileText, UserPlus, Scissors, CreditCard, Menu, X, Mail } from 'lucide-react';
 import { signOut } from '@/app/auth/actions';
 import styles from '@/components/dashboard/Sidebar.module.css'; // Reusing dashboard sidebar styles for consistency
 
@@ -13,8 +13,10 @@ const navItems = [
     { name: 'Užívatelia', href: '/admin/users', icon: Users },
     { name: 'Tréningy', href: '/admin/trainings', icon: Dumbbell },
     { name: 'Rezervácie tréningov', href: '/admin/bookings', icon: Calendar },
+    { name: 'Kalendár tréningov', href: '/admin/calendar', icon: Calendar },
     { name: 'Pilates - Voľno', href: '/admin/vacations', icon: Calendar },
     { name: 'Zľavové kupóny', href: '/admin/coupons', icon: Gift },
+    { name: 'Newsletter / Email', href: '/admin/newsletter', icon: Mail },
     { name: 'Trainers', href: '/admin/trainers', icon: Users },
     { name: 'Kreditné balíky', href: '/admin/credits', icon: CreditCard },
     { name: 'Darčekové poukazy', href: '/admin/vouchers', icon: Gift },

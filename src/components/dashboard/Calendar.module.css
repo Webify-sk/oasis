@@ -38,7 +38,7 @@
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     background: #e5e5e5;
     gap: 1px;
     border: 1px solid #e5e5e5;
@@ -60,6 +60,7 @@
 .dayCell {
     background: #fff;
     min-height: 120px;
+    min-width: 0;
     padding: 0.5rem;
     transition: background 0.2s;
     display: flex;

@@ -13,6 +13,8 @@ interface TrainingSession {
     title: string;
     trainer: string;
     date: Date;
+    type?: 'training' | 'vacation';
+    description?: string | null;
     isRegistered?: boolean;
     occupancy?: {
         current: number;
@@ -209,6 +211,44 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
 
                             <span className={styles.dayNumber}>{cell.day}</span>
                             {cellEvents.map((evt, i) => {
+                                // Vacation / time-off banner (full day, independent of training filters)
+                                if (evt.type === 'vacation') {
+                                    const isGlobal = !evt.trainer;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={styles.event}
+                                            title={evt.description ? `${evt.title} – ${evt.description}` : evt.title}
+                                            style={{
+                                                cursor: 'default',
+                                                backgroundColor: isGlobal ? '#FEE2E2' : '#FEF3C7',
+                                                borderLeft: `3px solid ${isGlobal ? '#DC2626' : '#D97706'}`,
+                                                color: isGlobal ? '#991B1B' : '#92400E'
+                                            }}
+                                        >
+                                            <div className={styles.mobileEventContent}>
+                                                <div className={styles.timeColumn}>
+                                                    <span className={styles.startTime}>🌴</span>
+                                                    <span className={styles.duration}>Voľno</span>
+                                                </div>
+                                                <div className={styles.detailsColumn}>
+                                                    <div className={styles.titleRow}>
+                                                        <span className={styles.eventTitle}>{evt.title}</span>
+                                                    </div>
+                                                    {evt.description && (
+                                                        <div className={styles.trainerRow}>
+                                                            <span className={styles.trainerName}>{evt.description}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className={styles.desktopEventContent}>
+                                                🌴 {evt.title}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
                                 const isPast = isEventPast(evt);
                                 if (isPast) return null; // Hide past events
 

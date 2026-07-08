@@ -33,6 +33,25 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
         .select('id, full_name');
     const trainersMap = new Map(trainers?.map(t => [t.id, t.full_name]) || []);
 
+    // Helper for local date string YYYY-MM-DD
+    const toDateStr = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    // Bounds of the visible month (as face-value date strings)
+    const monthStartStr = toDateStr(new Date(year, month, 1));
+    const monthEndStr = toDateStr(new Date(year, month + 1, 0));
+
+    // 2b. Fetch vacations overlapping this month (global or per-trainer)
+    const { data: vacations } = await supabase
+        .from('vacations')
+        .select('id, start_time, end_time, description, trainer_id')
+        .lte('start_time', `${monthEndStr}T23:59:59.999Z`)
+        .gte('end_time', `${monthStartStr}T00:00:00.000Z`);
+
     // 3. Generate Events for the Month
     const events: any[] = [];
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -44,8 +63,22 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
 
         trainingTypes?.forEach(tt => {
             if (Array.isArray(tt.schedule)) {
-                // Find matching day terms
-                const terms = tt.schedule.filter((term: any) => term.day === dayName && term.active !== false);
+                // Find matching terms for this specific day.
+                // Recurring terms match by weekday; one-time terms match by exact date.
+                const terms = tt.schedule.filter((term: any) => {
+                    if (term.active === false) return false;
+
+                    if (term.isRecurring !== false) {
+                        return term.day === dayName;
+                    }
+
+                    if (term.date) {
+                        const termDate = new Date(term.date);
+                        return termDate.toDateString() === dateObj.toDateString();
+                    }
+
+                    return false;
+                });
 
                 terms.forEach((term: any) => {
                     events.push({
@@ -55,6 +88,25 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
                         trainer: trainersMap.get(term.trainer_id) || '?',
                         date: dateObj
                     });
+                });
+            }
+        });
+
+        // Vacation banners for this day (compare on face-value date strings)
+        const dayStr = toDateStr(dateObj);
+        vacations?.forEach(vac => {
+            const vacStart = (vac.start_time as string).slice(0, 10);
+            const vacEnd = (vac.end_time as string).slice(0, 10);
+            if (dayStr >= vacStart && dayStr <= vacEnd) {
+                const trainerName = vac.trainer_id ? (trainersMap.get(vac.trainer_id) || 'Neznámy tréner') : '';
+                events.push({
+                    id: `vac-${vac.id}-${day}`,
+                    type: 'vacation',
+                    time: '',
+                    title: vac.trainer_id ? `Dovolenka – ${trainerName}` : 'Zatvorené – celé štúdio',
+                    trainer: trainerName,
+                    description: vac.description,
+                    date: dateObj
                 });
             }
         });
