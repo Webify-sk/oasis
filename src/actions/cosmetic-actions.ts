@@ -1089,7 +1089,72 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     // Simple check: Just ensure they are logged in as employee/admin
     // (Realistically we should check if they own the appointment or are admin, but let's trust role check for now)
 
-    // 2. Update Appointment
+    // 2. Check for conflicting appointments on the new slot.
+    // Must use the service role key — RLS hides other clients' appointments from a regular user,
+    // so a conflict check with the session client would silently pass.
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
+
+    const { data: currentApp } = await supabaseAdmin
+        .from('cosmetic_appointments')
+        .select('employee_id, service_id')
+        .eq('id', id)
+        .single();
+
+    if (!currentApp) {
+        return { error: 'Rezervácia sa nenašla.' };
+    }
+
+    // Same machine-sharing logic as createAppointment: services on the same machine block each other
+    let sharedServiceIds: string[] = [];
+    if (currentApp.service_id) {
+        const { data: service } = await supabaseAdmin
+            .from('cosmetic_services')
+            .select('machine_id')
+            .eq('id', currentApp.service_id)
+            .single();
+
+        if (service?.machine_id) {
+            const { data: sharedServices } = await supabaseAdmin
+                .from('cosmetic_services')
+                .select('id')
+                .eq('machine_id', service.machine_id);
+            if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
+        }
+    }
+
+    const bufferedStartTime = new Date(new Date(newStartTime).getTime() - 15 * 60000).toISOString();
+    const bufferedEndTime = new Date(new Date(newEndTime).getTime() + 15 * 60000).toISOString();
+
+    let conflictQuery = supabaseAdmin
+        .from('cosmetic_appointments')
+        .select('id')
+        .lt('start_time', bufferedEndTime)
+        .gt('end_time', bufferedStartTime)
+        .neq('status', 'cancelled')
+        .neq('id', id);
+
+    if (sharedServiceIds.length > 0) {
+        conflictQuery = conflictQuery.or(`employee_id.eq.${currentApp.employee_id},service_id.in.(${sharedServiceIds.join(',')})`);
+    } else {
+        conflictQuery = conflictQuery.eq('employee_id', currentApp.employee_id);
+    }
+
+    const { data: overlappingAppointments, error: conflictError } = await conflictQuery;
+
+    if (conflictError) {
+        console.error('Error checking for conflicting appointments during reschedule:', conflictError);
+        return { error: 'Nastala chyba pri overovaní dostupnosti termínu. Prosím, skúste to znova.' };
+    }
+
+    if (overlappingAppointments && overlappingAppointments.length > 0) {
+        return { error: 'Tento termín už je obsadený iným zákazníkom (alebo prístroj už je zarezervovaný pre inú službu). Prosím, vyberte si iný termín.' };
+    }
+
+    // 3. Update Appointment
     const { error, data: updatedAppointment } = await supabase
         .from('cosmetic_appointments')
         .update({
@@ -1110,7 +1175,7 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
         return { error: 'Failed to reschedule' }
     }
 
-    // 3. Send Notification Email
+    // 4. Send Notification Email
     if (updatedAppointment && updatedAppointment.profiles && updatedAppointment.profiles.email) {
         try {
             const serviceTitle = updatedAppointment.cosmetic_services?.title || 'Služba';

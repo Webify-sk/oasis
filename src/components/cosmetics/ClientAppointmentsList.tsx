@@ -123,6 +123,23 @@ export function ClientAppointmentsList({ initialAppointments, isEmployeeView = f
 
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <style>{`
+                .appt-details { min-width: 0; }
+                .appt-details h4 { overflow-wrap: anywhere; }
+                .appt-contact span { word-break: break-all; }
+                @media (max-width: 640px) {
+                    .appt-card { padding: 1rem !important; gap: 0.75rem !important; flex-wrap: wrap !important; }
+                    .appt-date-box { min-width: 52px !important; }
+                    .appt-contact { flex-direction: column !important; gap: 0.15rem !important; }
+                    .appt-actions {
+                        flex-direction: row !important;
+                        align-items: center !important;
+                        justify-content: space-between !important;
+                        width: 100%;
+                        margin-top: 0.25rem;
+                    }
+                }
+            `}</style>
             {upcoming.length === 0 ? (
                 <div style={{
                     padding: '2rem',
@@ -254,7 +271,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
     const start = new Date(appointment.start_time);
 
     return (
-        <div style={{
+        <div className="appt-card" style={{
             backgroundColor: 'white',
             borderRadius: '12px',
             padding: '1.5rem',
@@ -277,7 +294,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
             }} />
 
             {/* Date Box */}
-            <div style={{
+            <div className="appt-date-box" style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -293,7 +310,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
             </div>
 
             {/* Details */}
-            <div style={{ flex: 1 }}>
+            <div className="appt-details" style={{ flex: 1 }}>
                 <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1.1rem', color: isCancelled ? '#999' : '#333', textDecoration: isCancelled ? 'line-through' : 'none' }}>
                     {appointment.cosmetic_services?.title || 'Unknown Service'}
                 </h4>
@@ -312,7 +329,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                             }
                         </div>
                         {isEmployeeView && (appointment.profiles?.phone || appointment.client_phone || appointment.profiles?.email || appointment.client_email) && (
-                            <div style={{ fontSize: '0.8rem', color: '#888', display: 'flex', gap: '0.8rem', marginLeft: '1.4rem' }}>
+                            <div className="appt-contact" style={{ fontSize: '0.8rem', color: '#888', display: 'flex', flexWrap: 'wrap', gap: '0.8rem', marginLeft: '1.4rem' }}>
                                 {(appointment.profiles?.phone || appointment.client_phone) && <span>{appointment.profiles?.phone || appointment.client_phone}</span>}
                                 {(appointment.profiles?.email || appointment.client_email) && <span>{appointment.profiles?.email || appointment.client_email}</span>}
                             </div>
@@ -330,7 +347,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
             </div>
 
             {/* Price & Action */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+            <div className="appt-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                 <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#5E715D' }}>
                     {appointment.cosmetic_services?.price} €
                 </span>
