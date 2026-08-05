@@ -225,7 +225,17 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         const { sendEmail } = await import('@/utils/email');
         const { getEmailTemplate } = await import('@/utils/email-template');
 
-        const formattedDate = new Date(startTimeISO).toLocaleString('sk-SK');
+        // Training times are stored as face-value wall time labelled UTC (see schedule-helpers:
+        // Date.UTC over the Bratislava wall time), so formatting must use timeZone 'UTC' —
+        // otherwise the server's timezone shifts the displayed time.
+        const formattedDate = new Date(startTimeISO).toLocaleString('sk-SK', {
+            timeZone: 'UTC',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
         const html = getEmailTemplate(
             'Potvrdenie rezervácie',
             `
@@ -656,8 +666,10 @@ export async function rescheduleBooking(
         const targetEmail = targetProfile?.email;
 
         if (targetEmail) {
-            const formattedOldDate = new Date(oldBooking.start_time).toLocaleString('sk-SK');
-            const formattedNewDate = new Date(newStartTimeISO).toLocaleString('sk-SK');
+            // Face-value-as-UTC storage (see bookTraining) — format with timeZone 'UTC'
+            const fmt: Intl.DateTimeFormatOptions = { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const formattedOldDate = new Date(oldBooking.start_time).toLocaleString('sk-SK', fmt);
+            const formattedNewDate = new Date(newStartTimeISO).toLocaleString('sk-SK', fmt);
             
             // @ts-ignore
             const oldTrainingTitle = oldBooking.training_type?.title || 'Tréning';

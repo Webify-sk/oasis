@@ -90,12 +90,16 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
 
         setIsUpdating(true);
 
-        // Calculate new end time
+        // newDate from datetime-local is Bratislava wall time. Send it as a naive string —
+        // the server anchors it to Europe/Bratislava, so this works even if the employee's
+        // browser is in a different timezone (start.toISOString() would shift it).
         const start = new Date(newDate);
         const duration = selectedApp.cosmetic_services.duration_minutes;
         const end = new Date(start.getTime() + duration * 60000);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const endNaive = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}:00`;
 
-        const res = await rescheduleAppointment(selectedApp.id, start.toISOString(), end.toISOString());
+        const res = await rescheduleAppointment(selectedApp.id, `${newDate}:00`, endNaive);
 
         setIsUpdating(false);
         if (res?.success) {

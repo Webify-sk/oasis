@@ -60,8 +60,12 @@ export async function GET(request: NextRequest) {
             continue;
         }
 
+        // Training bookings store start_time as face-value wall time labelled UTC
+        // (schedule-helpers builds sessions via Date.UTC over Bratislava wall time),
+        // so it must be rendered with timeZone 'UTC'. Using Europe/Bratislava here
+        // shifted every reminder by +2 hours in summer.
         const startTime = new Date(booking.start_time).toLocaleString('sk-SK', {
-            timeZone: 'Europe/Bratislava',
+            timeZone: 'UTC',
             weekday: 'long',
             day: 'numeric',
             month: 'long',

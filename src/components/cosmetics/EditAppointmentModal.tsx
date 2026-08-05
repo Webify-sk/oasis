@@ -33,14 +33,17 @@ export function EditAppointmentModal({ appointment, onClose, onUpdate }: EditApp
     const handleSave = async () => {
         setIsLoading(true);
         try {
+            // date/time are Bratislava wall time — send naive strings, the server anchors
+            // them to Europe/Bratislava (toISOString here would depend on the browser timezone)
             const startDateTime = new Date(`${date}T${time}`);
             const duration = appointment.cosmetic_services?.duration_minutes || 60;
             const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+            const endNaive = format(endDateTime, "yyyy-MM-dd'T'HH:mm:ss");
 
             const result = await rescheduleAppointment(
                 appointment.id,
-                startDateTime.toISOString(),
-                endDateTime.toISOString()
+                `${date}T${time}:00`,
+                endNaive
             );
 
             if (result.success) {

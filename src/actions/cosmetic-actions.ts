@@ -709,10 +709,13 @@ export async function createAppointmentAnyEmployee(data: {
         return { success: false, error: 'Žiadny zamestnanec nie je priradený k tejto službe.' };
     }
 
-    // Extract the local date part (e.g., '2026-02-26') from the ISO string to check availability
+    // Extract the Bratislava-local date/time from the ISO string to check availability.
+    // Must be explicit about the timezone — the server (Vercel) runs in UTC, so relying on
+    // the default locale conversion would shift the slot by 2 hours and never match.
+    const { formatInTimeZone } = await import('date-fns-tz');
     const dateObj = new Date(data.start_time);
-    const localDateStr = dateObj.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD
-    const localTimeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const localDateStr = formatInTimeZone(dateObj, 'Europe/Bratislava', 'yyyy-MM-dd');
+    const localTimeStr = formatInTimeZone(dateObj, 'Europe/Bratislava', 'HH:mm');
 
     let assignedEmployeeId: string | null = null;
     let assignedEmployeeDetails: any = null;
@@ -1089,6 +1092,18 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     // Simple check: Just ensure they are logged in as employee/admin
     // (Realistically we should check if they own the appointment or are admin, but let's trust role check for now)
 
+    // Normalize input times to real UTC instants. Callers send either a full ISO string with
+    // offset ("...Z") or a naive wall-clock string ("2026-08-06T11:00:00") that means Bratislava
+    // time — a naive string must NOT be left for Postgres/JS to interpret in the server timezone.
+    const { getRealUtcDate } = await import('@/utils/booking-logic');
+    const hasOffset = (s: string) => /(?:Z|[+-]\d{2}:?\d{2})$/.test(s);
+    const startInstant = hasOffset(newStartTime) ? new Date(newStartTime) : getRealUtcDate(newStartTime);
+    const endInstant = hasOffset(newEndTime) ? new Date(newEndTime) : getRealUtcDate(newEndTime);
+
+    if (isNaN(startInstant.getTime()) || isNaN(endInstant.getTime())) {
+        return { error: 'Neplatný dátum alebo čas.' };
+    }
+
     // 2. Check for conflicting appointments on the new slot.
     // Must use the service role key — RLS hides other clients' appointments from a regular user,
     // so a conflict check with the session client would silently pass.
@@ -1126,8 +1141,8 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
         }
     }
 
-    const bufferedStartTime = new Date(new Date(newStartTime).getTime() - 15 * 60000).toISOString();
-    const bufferedEndTime = new Date(new Date(newEndTime).getTime() + 15 * 60000).toISOString();
+    const bufferedStartTime = new Date(startInstant.getTime() - 15 * 60000).toISOString();
+    const bufferedEndTime = new Date(endInstant.getTime() + 15 * 60000).toISOString();
 
     let conflictQuery = supabaseAdmin
         .from('cosmetic_appointments')
@@ -1158,8 +1173,8 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     const { error, data: updatedAppointment } = await supabase
         .from('cosmetic_appointments')
         .update({
-            start_time: newStartTime,
-            end_time: newEndTime,
+            start_time: startInstant.toISOString(),
+            end_time: endInstant.toISOString(),
             status: 'confirmed'
         })
         .eq('id', id)
@@ -1179,7 +1194,7 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     if (updatedAppointment && updatedAppointment.profiles && updatedAppointment.profiles.email) {
         try {
             const serviceTitle = updatedAppointment.cosmetic_services?.title || 'Služba';
-            const formattedDate = new Date(newStartTime).toLocaleString('sk-SK', {
+            const formattedDate = startInstant.toLocaleString('sk-SK', {
                 timeZone: 'Europe/Bratislava',
                 day: 'numeric',
                 month: 'long',
