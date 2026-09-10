@@ -782,10 +782,18 @@ export async function createAppointment(data: {
     if (!service) return { error: 'Služba nebola nájdená.' };
     const machineId = service.machine_id;
 
-    // Verify availability again before inserting (Race condition check)
+    // Verify availability again before inserting (Race condition check).
+    // Must use the service role key — RLS hides other clients' appointments from a regular user,
+    // so a conflict check with the session client would silently pass and allow a double booking.
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
+
     let sharedServiceIds: string[] = [];
     if (machineId) {
-        const { data: sharedServices } = await supabase
+        const { data: sharedServices } = await supabaseAdmin
             .from('cosmetic_services')
             .select('id')
             .eq('machine_id', machineId);
@@ -797,7 +805,7 @@ export async function createAppointment(data: {
     const bufferedStartTime = new Date(bufferedBaseStartObj.getTime() - 15 * 60000).toISOString();
     const bufferedEndTime = new Date(endObj.getTime() + 15 * 60000).toISOString();
 
-    let appsQuery = supabase
+    let appsQuery = supabaseAdmin
         .from('cosmetic_appointments')
         .select('id')
         .lt('start_time', bufferedEndTime)
@@ -832,6 +840,14 @@ export async function createAppointment(data: {
             notes: data.notes,
             status: 'confirmed' // Default status now confirmed
         })
+
+    if (error) {
+        console.error('Error inserting appointment:', error);
+        if (error.code === '23P01') {
+            return { error: 'Tento termín už bol bohužiaľ obsadený iným zákazníkom. Prosím, vyberte si iný termín.' };
+        }
+        return { error: 'Rezerváciu sa nepodarilo vytvoriť. Prosím, skúste to znova.' };
+    }
 
     // Send Confirmation Email
     if (user.email && service) {
