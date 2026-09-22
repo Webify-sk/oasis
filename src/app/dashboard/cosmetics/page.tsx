@@ -9,6 +9,8 @@ import { BookingWizard } from '@/components/cosmetics/BookingWizard';
 export default async function CosmeticsPage(props: any) {
     const searchParams = props.searchParams ? await props.searchParams : {};
     const serviceId = searchParams?.serviceId;
+    const prefillDate = typeof searchParams?.date === 'string' ? searchParams.date : undefined;
+    const prefillTime = typeof searchParams?.time === 'string' ? searchParams.time : undefined;
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -84,7 +86,11 @@ export default async function CosmeticsPage(props: any) {
             {/* Client View: Booking Wizard */}
             {!isEmployeeOrAdmin && (
                 <div style={{ maxWidth: '800px', margin: '0 auto', paddingTop: '1rem' }}>
-                    <BookingWizard initialServiceId={serviceId} />
+                    <BookingWizard
+                        initialServiceId={serviceId}
+                        initialDate={prefillDate}
+                        initialTime={prefillTime}
+                    />
                 </div>
             )}
         </div>

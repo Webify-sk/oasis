@@ -1274,7 +1274,14 @@ export async function deleteEmployee(id: string) {
 // --- Slot Calculation Logic ---
 
 export async function getAvailableDaysInMonth(employeeId: string, serviceId: string, year: number, month: number) {
-    const supabase = await createClient();
+    // Must use the service role key, exactly like getAvailableSlots does. RLS only lets a
+    // client see their OWN appointments (and an anonymous visitor none at all), so with the
+    // session client this marked fully booked days as free.
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+    const supabase = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
 
     // 1. Get Service Info
     const { data: service } = await supabase
@@ -1432,7 +1439,11 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
 }
 
 export async function getAvailableDaysInMonthAnyEmployee(employeeId: string, serviceId: string, year: number, month: number) {
-    const supabase = await createClient();
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+    const supabase = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
 
     // Get all active employees for this service
     const { data: employeeIds } = await supabase

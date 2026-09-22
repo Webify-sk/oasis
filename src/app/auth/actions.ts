@@ -34,6 +34,13 @@ export async function login(formData: FormData) {
         }
     }
 
+    // Honour an explicit destination, but only a path on this site — never an
+    // absolute or protocol-relative URL, which would be an open redirect.
+    const requested = formData.get('redirect')
+    if (typeof requested === 'string' && requested.startsWith('/') && !requested.startsWith('//')) {
+        redirectUrl = requested
+    }
+
     revalidatePath('/', 'layout')
     redirect(redirectUrl)
 }

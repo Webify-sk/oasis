@@ -3,6 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const AUTH_TIMEOUT_MS = 5000
 
+// Send an unauthenticated visitor to the login page, remembering where they wanted
+// to go — deep links from the public calendar carry the chosen service, day and time.
+function redirectToLogin(request: NextRequest) {
+    const target = new URL('/', request.url)
+    target.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
+    return NextResponse.redirect(target)
+}
+
 export async function updateSession(request: NextRequest) {
     let response = NextResponse.next({
         request: {
@@ -19,7 +27,7 @@ export async function updateSession(request: NextRequest) {
 
     if (!hasSupabaseCookies) {
         if (request.nextUrl.pathname.startsWith('/dashboard')) {
-            return NextResponse.redirect(new URL('/', request.url))
+            return redirectToLogin(request)
         }
         return response
     }
@@ -63,13 +71,13 @@ export async function updateSession(request: NextRequest) {
         user = result.data.user
     } catch {
         if (request.nextUrl.pathname.startsWith('/dashboard')) {
-            return NextResponse.redirect(new URL('/', request.url))
+            return redirectToLogin(request)
         }
         return response
     }
 
     if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
-        return NextResponse.redirect(new URL('/', request.url))
+        return redirectToLogin(request)
     }
 
     return response

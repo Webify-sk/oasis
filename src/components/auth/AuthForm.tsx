@@ -99,6 +99,11 @@ export function AuthForm() {
         const form = e.currentTarget;
         const submitData = new FormData(form);
 
+        // Carry the "where was I heading" hint the middleware put in the URL, so a deep
+        // link from the public calendar survives the login.
+        const redirectTo = new URLSearchParams(window.location.search).get('redirect');
+        if (redirectTo) submitData.set('redirect', redirectTo);
+
         setError(null);
         setSuccessMessage(null);
         setIsLoading(true);
