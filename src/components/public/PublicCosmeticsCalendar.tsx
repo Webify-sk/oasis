@@ -92,84 +92,89 @@ export function PublicCosmeticsCalendar({ service, baseUrl }: Props) {
                 </p>
             </div>
 
-            <Calendar
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                minDate={todayStr()}
-                availableDates={availableDates}
-                onMonthChange={handleMonthChange}
-            />
+            {/* Side by side when there is room; flex-wrap stacks them on a phone. */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
+                <div style={{ flex: '0 1 350px', minWidth: '280px', margin: '0 auto' }}>
+                    <Calendar
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        minDate={todayStr()}
+                        availableDates={availableDates}
+                        onMonthChange={handleMonthChange}
+                    />
+                </div>
 
-            <div style={{ marginTop: '1.25rem' }}>
-                <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem 0', textAlign: 'center', fontWeight: 600, color: '#374151' }}>
-                    {formatDayLabel(selectedDate)}
-                </h3>
+                <div style={{ flex: '1 1 300px', minWidth: '280px' }}>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem 0', textAlign: 'center', fontWeight: 600, color: '#374151' }}>
+                        {formatDayLabel(selectedDate)}
+                    </h3>
 
-                {loadingSlots ? (
-                    <p style={{ textAlign: 'center', color: '#9ca3af', margin: 0 }}>Načítavam voľné termíny…</p>
-                ) : slots.length === 0 ? (
-                    <div style={{
-                        textAlign: 'center', color: '#6b7280', padding: '1.25rem',
-                        backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px solid #f0f0f0'
-                    }}>
-                        <CalendarX size={22} style={{ color: '#d1d5db', marginBottom: '0.4rem' }} />
-                        <p style={{ margin: 0, fontSize: '0.92rem' }}>
-                            V tento deň už nie sú voľné termíny. Skúste prosím iný deň —
-                            dni s voľnými termínmi sú v kalendári označené zelenou bodkou.
-                        </p>
-                    </div>
-                ) : (
-                    <>
-                        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#6b7280', margin: '0 0 0.9rem 0' }}>
-                            Kliknutím na čas prejdete k rezervácii.
-                        </p>
-                        {groups.map(group => (
-                            <div key={group.label} style={{ marginBottom: '1.1rem' }}>
-                                <h4 style={{
-                                    margin: '0 0 0.55rem 0', fontSize: '0.75rem', fontWeight: 700,
-                                    letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9ca3af'
-                                }}>
-                                    {group.label}
-                                </h4>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
-                                    gap: '0.45rem'
-                                }}>
-                                    {group.times.map(time => (
-                                        <a
-                                            key={time}
-                                            href={bookingUrl(time)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            title={`Objednať sa na ${time}`}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                padding: '0.5rem 0.3rem',
-                                                borderRadius: '8px', border: '1px solid #e5e7eb',
-                                                backgroundColor: 'white', color: '#111827',
-                                                textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600,
-                                                transition: 'all 0.15s'
-                                            }}
-                                            onMouseEnter={e => {
-                                                e.currentTarget.style.borderColor = BRAND;
-                                                e.currentTarget.style.backgroundColor = BRAND;
-                                                e.currentTarget.style.color = 'white';
-                                            }}
-                                            onMouseLeave={e => {
-                                                e.currentTarget.style.borderColor = '#e5e7eb';
-                                                e.currentTarget.style.backgroundColor = 'white';
-                                                e.currentTarget.style.color = '#111827';
-                                            }}
-                                        >
-                                            {time}
-                                        </a>
-                                    ))}
+                    {loadingSlots ? (
+                        <p style={{ textAlign: 'center', color: '#9ca3af', margin: 0 }}>Načítavam voľné termíny…</p>
+                    ) : slots.length === 0 ? (
+                        <div style={{
+                            textAlign: 'center', color: '#6b7280', padding: '1.25rem',
+                            backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px solid #f0f0f0'
+                        }}>
+                            <CalendarX size={22} style={{ color: '#d1d5db', marginBottom: '0.4rem' }} />
+                            <p style={{ margin: 0, fontSize: '0.92rem' }}>
+                                V tento deň už nie sú voľné termíny. Skúste prosím iný deň —
+                                dni s voľnými termínmi sú v kalendári označené zelenou bodkou.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#6b7280', margin: '0 0 0.9rem 0' }}>
+                                Kliknutím na čas prejdete k rezervácii.
+                            </p>
+                            {groups.map(group => (
+                                <div key={group.label} style={{ marginBottom: '1.1rem' }}>
+                                    <h4 style={{
+                                        margin: '0 0 0.55rem 0', fontSize: '0.75rem', fontWeight: 700,
+                                        letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9ca3af'
+                                    }}>
+                                        {group.label}
+                                    </h4>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+                                        gap: '0.45rem'
+                                    }}>
+                                        {group.times.map(time => (
+                                            <a
+                                                key={time}
+                                                href={bookingUrl(time)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title={`Objednať sa na ${time}`}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    padding: '0.5rem 0.3rem',
+                                                    borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    backgroundColor: 'white', color: '#111827',
+                                                    textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600,
+                                                    transition: 'all 0.15s'
+                                                }}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.borderColor = BRAND;
+                                                    e.currentTarget.style.backgroundColor = BRAND;
+                                                    e.currentTarget.style.color = 'white';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.borderColor = '#e5e7eb';
+                                                    e.currentTarget.style.backgroundColor = 'white';
+                                                    e.currentTarget.style.color = '#111827';
+                                                }}
+                                            >
+                                                {time}
+                                            </a>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </>
-                )}
+                            ))}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );
