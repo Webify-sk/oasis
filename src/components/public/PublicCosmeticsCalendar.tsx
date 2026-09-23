@@ -94,7 +94,7 @@ export function PublicCosmeticsCalendar({ service, baseUrl }: Props) {
 
             {/* Side by side when there is room; flex-wrap stacks them on a phone. */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
-                <div style={{ flex: '0 1 350px', minWidth: '280px', margin: '0 auto' }}>
+                <div style={{ flex: '0 0 350px', maxWidth: '100%', minWidth: '280px', margin: '0 auto' }}>
                     <Calendar
                         selectedDate={selectedDate}
                         onDateSelect={setSelectedDate}
@@ -104,7 +104,7 @@ export function PublicCosmeticsCalendar({ service, baseUrl }: Props) {
                     />
                 </div>
 
-                <div style={{ flex: '1 1 300px', minWidth: '280px' }}>
+                <div style={{ flex: '1 1 300px', minWidth: '280px', maxWidth: '900px' }}>
                     <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem 0', textAlign: 'center', fontWeight: 600, color: '#374151' }}>
                         {formatDayLabel(selectedDate)}
                     </h3>

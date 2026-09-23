@@ -21,7 +21,7 @@ export default async function CosmeticsEmbedPage({ searchParams }: PageProps) {
         <>
             {/* The embed sits inside the client's own page — let their background show through. */}
             <style>{`html, body { background: transparent !important; margin: 0; }`}</style>
-            <div style={{ padding: '0.75rem', maxWidth: '900px', margin: '0 auto' }}>
+            <div style={{ padding: '0.75rem' }}>
                 {service ? (
                     <PublicCosmeticsCalendar service={service} baseUrl={baseUrl} />
                 ) : (
