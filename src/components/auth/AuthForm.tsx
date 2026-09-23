@@ -26,12 +26,16 @@ function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 export function AuthForm() {
+    const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>('login');
+
     // ?mode=register opens the registration tab directly (used by the booking hand-off).
-    const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(() =>
-        typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'register'
-            ? 'register'
-            : 'login'
-    );
+    // Read it after mount: the server renders the login tab and a state initializer
+    // would be ignored on hydration.
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('mode') === 'register') {
+            setMode('register');
+        }
+    }, []);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
