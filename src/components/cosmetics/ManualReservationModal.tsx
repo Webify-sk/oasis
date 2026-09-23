@@ -23,6 +23,7 @@ export function ManualReservationModal() {
     const [clientPhone, setClientPhone] = useState('');
     const [notes, setNotes] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [roomWarning, setRoomWarning] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
     const router = useRouter();
 
@@ -63,10 +64,17 @@ export function ManualReservationModal() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        await submit(false);
+    }
+
+    // The two-room limit only warns staff; `ignoreRoomWarning` is the explicit override.
+    async function submit(ignoreRoomWarning: boolean) {
         setLoading(true);
         setError(null);
+        setRoomWarning(null);
 
         const formData = new FormData();
+        if (ignoreRoomWarning) formData.append('ignoreRoomWarning', '1');
         formData.append('serviceId', selectedService);
         formData.append('employeeId', selectedEmployee);
         formData.append('date', date);
@@ -82,6 +90,8 @@ export function ManualReservationModal() {
 
         if (result?.error) {
             setError(result.error);
+        } else if (result?.roomWarning) {
+            setRoomWarning(result.roomWarning);
         } else {
             setIsSuccess(true);
             router.refresh();
@@ -180,6 +190,28 @@ export function ManualReservationModal() {
                                     }}>
                                         <AlertCircle size={18} />
                                         {error}
+                                    </div>
+                                )}
+
+                                {roomWarning && (
+                                    <div style={{
+                                        backgroundColor: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412',
+                                        padding: '0.75rem', borderRadius: '6px', fontSize: '0.9rem'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                                            <AlertCircle size={18} /> {roomWarning}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => submit(true)}
+                                            disabled={loading}
+                                            style={{
+                                                backgroundColor: '#9a3412', color: 'white', border: 'none',
+                                                padding: '0.45rem 0.9rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem'
+                                            }}
+                                        >
+                                            Vytvoriť rezerváciu aj tak
+                                        </button>
                                     </div>
                                 )}
 

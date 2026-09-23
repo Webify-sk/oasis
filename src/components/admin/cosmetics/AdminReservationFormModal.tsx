@@ -30,6 +30,7 @@ export default function AdminReservationFormModal({
     const [endTime, setEndTime] = useState('');
     const [notes, setNotes] = useState(appointment?.notes || '');
     const [errorMessage, setErrorMessage] = useState('');
+    const [roomWarning, setRoomWarning] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
     // Client Info
@@ -113,6 +114,12 @@ export default function AdminReservationFormModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        await submit(false);
+    };
+
+    // The two-room limit only warns staff; `ignoreRoomWarning` is the explicit override.
+    const submit = async (ignoreRoomWarning: boolean) => {
+        setRoomWarning('');
 
         setErrorMessage('');
         setSuccessMessage('');
@@ -159,7 +166,8 @@ export default function AdminReservationFormModal({
                 notes,
                 client_name: clientName,
                 client_phone: clientPhone,
-                client_email: clientEmail
+                client_email: clientEmail,
+                ignoreRoomWarning
             };
 
             let result;
@@ -171,6 +179,8 @@ export default function AdminReservationFormModal({
 
             if (result.error) {
                 setErrorMessage(result.error);
+            } else if (result.roomWarning) {
+                setRoomWarning(result.roomWarning);
             } else {
                 setSuccessMessage(isEdit ? 'Rezervácia bola úspešne upravená.' : 'Rezervácia bola úspešne vytvorená.');
                 setTimeout(() => onSuccess(), 1500); // Give user time to see the success message
@@ -209,6 +219,26 @@ export default function AdminReservationFormModal({
                     {errorMessage && (
                         <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem', borderRadius: '6px', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
                             {errorMessage}
+                        </div>
+                    )}
+
+                    {roomWarning && (
+                        <div style={{
+                            backgroundColor: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412',
+                            padding: '0.75rem 1rem', borderRadius: '8px', margin: '0 1.5rem 1rem 1.5rem', fontSize: '0.9rem'
+                        }}>
+                            <div style={{ marginBottom: '0.6rem' }}>{roomWarning}</div>
+                            <button
+                                type="button"
+                                onClick={() => submit(true)}
+                                disabled={loading}
+                                style={{
+                                    backgroundColor: '#9a3412', color: 'white', border: 'none',
+                                    padding: '0.45rem 0.9rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem'
+                                }}
+                            >
+                                {isEdit ? 'Uložiť aj tak' : 'Vytvoriť rezerváciu aj tak'}
+                            </button>
                         </div>
                     )}
 

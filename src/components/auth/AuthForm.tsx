@@ -26,7 +26,12 @@ function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 export function AuthForm() {
-    const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>('login');
+    // ?mode=register opens the registration tab directly (used by the booking hand-off).
+    const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>(() =>
+        typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'register'
+            ? 'register'
+            : 'login'
+    );
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);

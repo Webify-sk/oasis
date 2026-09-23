@@ -478,6 +478,30 @@ export async function updateEmployeeServices(employeeId: string, serviceIds: str
     return { success: true }
 }
 
+// All non-cancelled appointments overlapping a window (with the 15-min clean-up buffer),
+// regardless of employee or device — this is what decides whether a room is free.
+async function fetchRoomOccupancy(
+    supabase: any,
+    startISO: string,
+    endISO: string,
+    excludeId?: string
+): Promise<{ start_time: string; end_time: string }[]> {
+    const { ROOM_BUFFER_MS } = await import('@/utils/rooms');
+    const from = new Date(new Date(startISO).getTime() - ROOM_BUFFER_MS).toISOString();
+    const to = new Date(new Date(endISO).getTime() + ROOM_BUFFER_MS).toISOString();
+
+    let q = supabase
+        .from('cosmetic_appointments')
+        .select('start_time, end_time')
+        .lt('start_time', to)
+        .gt('end_time', from)
+        .neq('status', 'cancelled');
+    if (excludeId) q = q.neq('id', excludeId);
+
+    const { data } = await q;
+    return data || [];
+}
+
 // Check for conflicting appointments
 export async function checkConflictingAppointments(employeeId: string, date: string, startTime?: string, endTime?: string, endDate?: string) {
     const supabase = await createClient();
@@ -827,6 +851,12 @@ export async function createAppointment(data: {
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
         return { error: 'Tento termín už bol bohužiaľ obsadený iným zákazníkom (alebo prístroj už bol zarezervovaný pre inú službu). Prosím, vyberte si iný termín.' };
+    }
+
+    const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
+    const occupancy = await fetchRoomOccupancy(supabaseAdmin, data.start_time, data.end_time);
+    if (roomsAreFull(occupancy, new Date(data.start_time), endObj)) {
+        return { error: `${ROOM_FULL_MESSAGE} Prosím, vyberte si iný termín.` };
     }
 
     const { error } = await supabase
@@ -1185,6 +1215,12 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
         return { error: 'Tento termín už je obsadený iným zákazníkom (alebo prístroj už je zarezervovaný pre inú službu). Prosím, vyberte si iný termín.' };
     }
 
+    const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
+    const occupancy = await fetchRoomOccupancy(supabaseAdmin, startInstant.toISOString(), endInstant.toISOString(), id);
+    if (roomsAreFull(occupancy, startInstant, endInstant)) {
+        return { error: `${ROOM_FULL_MESSAGE} Prosím, vyberte si iný termín.` };
+    }
+
     // 3. Update Appointment
     const { error, data: updatedAppointment } = await supabase
         .from('cosmetic_appointments')
@@ -1326,22 +1362,19 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
         if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
     }
 
-    let appsQuery = supabase
+    const { data: allAppointments } = await supabase
         .from('cosmetic_appointments')
-        .select('start_time, end_time')
+        .select('start_time, end_time, employee_id, service_id')
         .gte('start_time', searchStart)
         .lte('start_time', searchEnd)
         .filter('status', 'neq', 'cancelled');
 
-    if (sharedServiceIds.length > 0) {
-        appsQuery = appsQuery.or(`employee_id.eq.${employeeId},service_id.in.(${sharedServiceIds.join(',')})`);
-    } else {
-        appsQuery = appsQuery.eq('employee_id', employeeId);
-    }
-
-    const { data: appointments } = await appsQuery;
+    const appointments = (allAppointments || []).filter(a =>
+        a.employee_id === employeeId || sharedServiceIds.includes(a.service_id)
+    );
 
     const { getRealUtcDate } = await import('@/utils/booking-logic');
+    const { roomsAreFull } = await import('@/utils/rooms');
 
     const daysInMonth = endDateObj.getDate();
     const availableDates: string[] = [];
@@ -1419,7 +1452,9 @@ export async function getAvailableDaysInMonth(employeeId: string, serviceId: str
                     return (currentMinutes < excEndMins && (currentMinutes + duration) > excStartMins);
                 });
 
-                if (!isCollision && !isExceptionCollision) {
+                const isRoomCollision = roomsAreFull(allAppointments, slotStartUTC, slotEndUTC);
+
+                if (!isCollision && !isExceptionCollision && !isRoomCollision) {
                     const { allowed } = isBookingAllowed(slotStartUTC);
                     if (allowed) {
                         hasAvailableSlot = true;
@@ -1552,25 +1587,24 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
         if (sharedServices) sharedServiceIds = sharedServices.map(s => s.id);
     }
 
-    let appsQuery = supabaseAdmin
+    // Every appointment of the day is needed: the employee's own and the device's for the
+    // usual collision check, and all of them together for the two-room limit.
+    const { data: allAppointments } = await supabaseAdmin
         .from('cosmetic_appointments')
-        .select('start_time, end_time')
+        .select('start_time, end_time, employee_id, service_id')
         .gte('start_time', searchStart)
         .lte('start_time', searchEnd)
         .filter('status', 'neq', 'cancelled');
 
-    if (sharedServiceIds.length > 0) {
-        appsQuery = appsQuery.or(`employee_id.eq.${employeeId},service_id.in.(${sharedServiceIds.join(',')})`);
-    } else {
-        appsQuery = appsQuery.eq('employee_id', employeeId);
-    }
-
-    const { data: appointments, error: appsError } = await appsQuery;
+    const appointments = (allAppointments || []).filter(a =>
+        a.employee_id === employeeId || sharedServiceIds.includes(a.service_id)
+    );
 
     // 4. Generate Slots from ALL active ranges
     const slots: string[] = []
 
     const { getRealUtcDate, isBookingLocked } = await import('@/utils/booking-logic');
+    const { roomsAreFull } = await import('@/utils/rooms');
 
     for (const range of activeSlots) {
         if (!range.start_time || !range.end_time) continue;
@@ -1612,7 +1646,9 @@ export async function getAvailableSlots(employeeId: string, serviceId: string, d
                 return (currentMinutes < excEndMins && (currentMinutes + duration) > excStartMins);
             });
 
-            if (!isCollision && !isExceptionCollision) {
+            const isRoomCollision = roomsAreFull(allAppointments, slotStartUTC, slotEndUTC);
+
+            if (!isCollision && !isExceptionCollision && !isRoomCollision) {
                 // Check Deadline using real UTC date
                 const { isLocked } = isBookingLocked(slotStartUTC);
 
@@ -1912,6 +1948,15 @@ export async function createManualReservation(prevState: any, formData: FormData
         return { error: 'V tomto čase už existuje iná rezervácia.' };
     }
 
+    // Two-room limit is only a warning for staff — they may knowingly override it.
+    if (formData.get('ignoreRoomWarning') !== '1') {
+        const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
+        const occupancy = await fetchRoomOccupancy(supabase, startDateTime.toISOString(), endDateTime.toISOString());
+        if (roomsAreFull(occupancy, startDateTime, endDateTime)) {
+            return { roomWarning: ROOM_FULL_MESSAGE };
+        }
+    }
+
     // Check if user exists with this email to link them?
     // Optional feature: strict linking or loose linking.
     let userId = null;
@@ -2034,6 +2079,7 @@ export async function createAdminCosmeticAppointment(data: {
     client_email?: string;
     client_phone?: string;
     user_id?: string;
+    ignoreRoomWarning?: boolean;
 }) {
     await requireAdmin();
     const supabase = await createClient();
@@ -2054,6 +2100,14 @@ export async function createAdminCosmeticAppointment(data: {
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
         return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    }
+
+    if (!data.ignoreRoomWarning) {
+        const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
+        const occupancy = await fetchRoomOccupancy(supabase, data.start_time, data.end_time);
+        if (roomsAreFull(occupancy, new Date(data.start_time), new Date(data.end_time))) {
+            return { roomWarning: ROOM_FULL_MESSAGE };
+        }
     }
 
     const { error } = await supabase
@@ -2144,6 +2198,7 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
     client_name?: string;
     client_email?: string;
     client_phone?: string;
+    ignoreRoomWarning?: boolean;
 }) {
     await requireAdmin();
     const supabase = await createClient();
@@ -2165,6 +2220,14 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
         return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    }
+
+    if (!data.ignoreRoomWarning) {
+        const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
+        const occupancy = await fetchRoomOccupancy(supabase, data.start_time, data.end_time, id);
+        if (roomsAreFull(occupancy, new Date(data.start_time), new Date(data.end_time))) {
+            return { roomWarning: ROOM_FULL_MESSAGE };
+        }
     }
 
     const { error } = await supabase

@@ -78,8 +78,8 @@ export function PublicCosmeticsCalendar({ service, baseUrl }: Props) {
     ].filter(g => g.times.length > 0);
 
     const bookingUrl = (time: string) =>
-        `${baseUrl}/dashboard/cosmetics?serviceId=${encodeURIComponent(service.id)}` +
-        `&date=${encodeURIComponent(selectedDate)}&time=${encodeURIComponent(time)}`;
+        `${baseUrl}/rezervacia?sluzba=${encodeURIComponent(service.id)}` +
+        `&datum=${encodeURIComponent(selectedDate)}&cas=${encodeURIComponent(time)}`;
 
     return (
         <div ref={containerRef} style={{ fontFamily: 'inherit', color: '#333', display: 'flow-root' }}>

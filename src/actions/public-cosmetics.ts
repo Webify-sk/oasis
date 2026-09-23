@@ -10,6 +10,9 @@ export interface PublicServiceInfo {
     id: string;
     title: string;
     duration_minutes: number;
+    price: number;
+    /** Active employees who perform this service — decides whether choosing one makes sense. */
+    staff_count: number;
 }
 
 function adminClientPromise() {
@@ -31,13 +34,25 @@ export async function getPublicServiceInfo(serviceId: string): Promise<PublicSer
     const supabase = await adminClientPromise();
     const { data } = await supabase
         .from('cosmetic_services')
-        .select('id, title, duration_minutes, is_active')
+        .select('id, title, duration_minutes, price, is_active')
         .eq('id', serviceId)
         .single();
 
     if (!data || !data.is_active) return null;
 
-    return { id: data.id, title: data.title, duration_minutes: data.duration_minutes };
+    const { count } = await supabase
+        .from('employee_services')
+        .select('employee_id, employees!inner(is_active)', { count: 'exact', head: true })
+        .eq('service_id', serviceId)
+        .eq('employees.is_active', true);
+
+    return {
+        id: data.id,
+        title: data.title,
+        duration_minutes: data.duration_minutes,
+        price: Number(data.price),
+        staff_count: count ?? 0
+    };
 }
 
 /** Days in the given month that still have at least one free slot, across all staff. */

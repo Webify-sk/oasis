@@ -13,11 +13,9 @@ interface Employee { id: string; name: string; color: string; }
 
 interface BookingWizardProps {
     initialServiceId?: string;
-    initialDate?: string;
-    initialTime?: string;
 }
 
-export function BookingWizard({ initialServiceId, initialDate, initialTime }: BookingWizardProps) {
+export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const router = useRouter();
     const { isVerified } = useVerification();
     const [step, setStep] = useState(1);
@@ -39,11 +37,6 @@ export function BookingWizard({ initialServiceId, initialDate, initialTime }: Bo
     const [isMorningOpen, setIsMorningOpen] = useState(false);
     const [isAfternoonOpen, setIsAfternoonOpen] = useState(false);
     const [notes, setNotes] = useState('');
-
-    // Slot requested by a deep link from the public calendar, applied once the
-    // real slot list for that day has loaded.
-    const [pendingTime, setPendingTime] = useState<string | null>(initialTime || null);
-    const [prefillMissed, setPrefillMissed] = useState(false);
 
     // Initial Fetch
     useEffect(() => {
@@ -80,44 +73,6 @@ export function BookingWizard({ initialServiceId, initialDate, initialTime }: Bo
             });
         }
     }, [selectedService, step]);
-
-    // Deep link from the public calendar embed: the service, day and time are all known,
-    // so jump straight to the slot step with everything already chosen.
-    useEffect(() => {
-        if (!initialServiceId || !initialDate || !initialTime) return;
-        if (services.length === 0) return;
-
-        const svc = services.find(s => s.id === initialServiceId);
-        if (!svc) return;
-
-        let cancelled = false;
-        getEmployeesForService(svc.id).then(data => {
-            if (cancelled) return;
-            const emps = data as Employee[];
-            if (emps.length === 0) return;
-
-            const anyOption = { id: 'any', name: 'Nezáleží', color: '#9ca3af' };
-            setAllEmployees(emps.length > 1 ? [anyOption, ...emps] : emps);
-            setSelectedCategory((svc.category as 'beauty' | 'body') || 'beauty');
-            setSelectedService(svc);
-            setSelectedEmployee(emps.length > 1 ? anyOption : emps[0]);
-            setSelectedDate(initialDate);
-            setStep(4);
-        });
-
-        return () => { cancelled = true; };
-    }, [initialServiceId, initialDate, initialTime, services]);
-
-    // Apply the deep-linked time, but only if it is genuinely still free.
-    useEffect(() => {
-        if (!pendingTime) return;
-        if (slots.includes(pendingTime)) {
-            setSelectedTime(pendingTime);
-        } else {
-            setPrefillMissed(true);
-        }
-        setPendingTime(null);
-    }, [slots]);
 
     const handleCategorySelect = (category: 'beauty' | 'body') => {
         if (!isVerified) return;
@@ -403,15 +358,6 @@ export function BookingWizard({ initialServiceId, initialDate, initialTime }: Bo
                         <ChevronLeft size={16} /> Späť
                     </button>
                     <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Vyberte termín</h2>
-
-                    {prefillMissed && (
-                        <p style={{
-                            backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa',
-                            borderRadius: '8px', padding: '0.8rem 1rem', marginBottom: '1.5rem', textAlign: 'center'
-                        }}>
-                            Termín, na ktorý ste klikli, je medzičasom obsadený. Vyberte si prosím iný z voľných termínov nižšie.
-                        </p>
-                    )}
 
                     <div style={{
                         display: 'flex',

@@ -126,7 +126,12 @@ export async function signup(formData: FormData) {
         }
     }
     revalidatePath('/', 'layout')
-    redirect('/dashboard')
+    // Same rule as login: only a path on this site may be used as the destination.
+    const requested = formData.get('redirect')
+    const destination = typeof requested === 'string' && requested.startsWith('/') && !requested.startsWith('//')
+        ? requested
+        : '/dashboard'
+    redirect(destination)
 }
 
 export async function signOut() {
