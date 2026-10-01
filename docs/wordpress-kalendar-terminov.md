@@ -1,11 +1,12 @@
 # Kalendár voľných termínov na web (WordPress)
 
 Každá procedúra má vlastný kalendár. Na stránku procedúry vložte jej vlastný kód nižšie.
+Kód pre ktorúkoľvek službu nájdete aj v administrácii: **Kozmetika → Služby → klik na službu → „Kód pre web“** (úplne dole).
 
 ## 1. Jednorazovo: skript pre automatickú výšku
 
-Vložte **raz** do pätičky webu (Vzhľad → Editor motívu → footer, alebo cez plugin na vlastný kód).
-Bez neho bude kalendár fungovať, ale na mobile sa v ňom objaví vlastný posuvník.
+Vložte **raz** do pätičky webu (Vzhľad → Editor motívu → footer, alebo cez plugin na vlastný kód, napr. WPCode).
+Bez neho bude kalendár fungovať, ale bude mať pevnú výšku — pod obsahom zostane prázdne miesto a na mobile sa v ňom objaví vlastný posuvník.
 
 ```html
 <script>
@@ -21,7 +22,13 @@ window.addEventListener('message', function (e) {
 
 ## 2. Na každú stránku procedúry jej vlastný kód
 
-Kód sa dá kedykoľvek skopírovať aj priamo v administrácii: **Kozmetika → Služby → daná služba → „Kód pre web"**.
+### Comfort zone - Body Strategist Osmotic Massage - 60 min (70 min)
+
+```html
+<iframe src="https://profil.oasislounge.sk/cosmetics/embed?sluzba=62ae4dff-382e-4da1-92b7-8ce0e25739fa"
+        class="oasis-terminy" style="width:100%;border:0" height="760"
+        title="Voľné termíny – Comfort zone - Body Strategist Osmotic Massage - 60 min"></iframe>
+```
 
 ### Endosphère Therapy - Celé telo (60 min)
 
@@ -141,3 +148,4 @@ Kód sa dá kedykoľvek skopírovať aj priamo v administrácii: **Kozmetika →
 - `height="760"` je len východisková výška, kým sa kalendár načíta. Skript ju potom dorovná.
 - Kalendár ukazuje iba voľné termíny, žiadne mená ani údaje klientok.
 - Kliknutie na čas otvorí rezerváciu v novej záložke s predvyplnenou procedúrou, dátumom aj časom.
+- Keď pribudne nová procedúra, jej kód skopírujete v administrácii (nie je potrebné nič programovať).
