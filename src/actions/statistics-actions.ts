@@ -15,6 +15,25 @@ export interface StatItem {
     participantsCount: number;
 }
 
+// PostgREST silently caps any single select at 1000 rows. The bookings table passed
+// that long ago, so an unbounded select quietly dropped the most recent months and the
+// statistics showed zeros for them. Page through in chunks instead.
+const PAGE_SIZE = 1000;
+
+async function fetchAll<T>(
+    build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<{ data: T[]; error: any }> {
+    const all: T[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await build(from, from + PAGE_SIZE - 1);
+        if (error) return { data: all, error };
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE_SIZE) break;
+    }
+    return { data: all, error: null };
+}
+
 export async function getAdminStatistics(): Promise<{ items: StatItem[], error?: string }> {
     const supabase = createAdminClient();
 
@@ -22,7 +41,7 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
         const items: StatItem[] = [];
 
         // 1. Fetch Trainings Data
-        const { data: bookingsData, error: bookingsError } = await supabase
+        const { data: bookingsData, error: bookingsError } = await fetchAll((from, to) => supabase
             .from('bookings')
             .select(`
                 id,
@@ -32,7 +51,9 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
                 training_type_id,
                 status,
                 trainer_id
-            `);
+            `)
+            .order('id')
+            .range(from, to));
 
         if (bookingsError) {
             console.error('Error fetching bookings:', bookingsError);
@@ -44,7 +65,7 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
             .select('id, title, price_credits, schedule');
 
         // 2. Fetch Cosmetic Procedures Data
-        const { data: appointmentsData, error: appointmentsError } = await supabase
+        const { data: appointmentsData, error: appointmentsError } = await fetchAll((from, to) => supabase
             .from('cosmetic_appointments')
             .select(`
                 id,
@@ -55,7 +76,9 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
                 status,
                 client_name
             `)
-            .neq('status', 'cancelled');
+            .neq('status', 'cancelled')
+            .order('id')
+            .range(from, to));
 
         if (appointmentsError) {
             console.error('Error fetching appointments:', appointmentsError);
