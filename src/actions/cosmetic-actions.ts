@@ -502,6 +502,53 @@ async function fetchRoomOccupancy(
     return data || [];
 }
 
+// Returns a message when the employee has a day off / vacation (or blocked hours) that
+// overlaps the given window, otherwise null. Times are compared in Bratislava local time,
+// the same way the exceptions are entered in the admin.
+async function findEmployeeUnavailability(
+    supabase: any,
+    employeeId: string,
+    start: Date,
+    end: Date
+): Promise<string | null> {
+    const { formatInTimeZone } = await import('date-fns-tz');
+    const tz = 'Europe/Bratislava';
+    const day = formatInTimeZone(start, tz, 'yyyy-MM-dd');
+    const startMin = toMinutes(formatInTimeZone(start, tz, 'HH:mm'));
+    const endMin = formatInTimeZone(end, tz, 'yyyy-MM-dd') === day
+        ? toMinutes(formatInTimeZone(end, tz, 'HH:mm'))
+        : 24 * 60;
+
+    const { data: exceptions } = await supabase
+        .from('employee_availability_exceptions')
+        .select('exception_date, end_date, start_time, end_time')
+        .eq('employee_id', employeeId)
+        .eq('is_available', false)
+        .lte('exception_date', day);
+
+    const hit = (exceptions || []).find((e: any) => {
+        const last = e.end_date || e.exception_date;
+        if (day < e.exception_date || day > last) return false;
+        if (!e.start_time || !e.end_time) return true; // whole day off
+        return startMin < toMinutes(e.end_time) && endMin > toMinutes(e.start_time);
+    });
+    if (!hit) return null;
+
+    const fmt = (d: string) => d.split('-').reverse().map(Number).slice(0, 2).join('. ') + '.';
+    const range = hit.end_date && hit.end_date !== hit.exception_date
+        ? `${fmt(hit.exception_date)} – ${fmt(hit.end_date)}`
+        : fmt(hit.exception_date);
+    const hours = hit.start_time && hit.end_time
+        ? ` od ${hit.start_time.slice(0, 5)} do ${hit.end_time.slice(0, 5)}`
+        : '';
+    return `Zamestnankyňa má v tomto čase nahlásené voľno / dovolenku (${range}${hours}). Vyberte iný termín alebo inú zamestnankyňu.`;
+}
+
+function toMinutes(hhmm: string) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+}
+
 // Check for conflicting appointments
 export async function checkConflictingAppointments(employeeId: string, date: string, startTime?: string, endTime?: string, endDate?: string) {
     const supabase = await createClient();
@@ -851,6 +898,10 @@ export async function createAppointment(data: {
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
         return { error: 'Tento termín už bol bohužiaľ obsadený iným zákazníkom (alebo prístroj už bol zarezervovaný pre inú službu). Prosím, vyberte si iný termín.' };
+    }
+
+    if (await findEmployeeUnavailability(supabaseAdmin, data.employee_id, new Date(data.start_time), endObj)) {
+        return { error: 'Na tento termín sa už nedá objednať. Prosím, vyberte si iný termín.' };
     }
 
     const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
@@ -1213,6 +1264,11 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
         return { error: 'Tento termín už je obsadený iným zákazníkom (alebo prístroj už je zarezervovaný pre inú službu). Prosím, vyberte si iný termín.' };
+    }
+
+    if (currentApp?.employee_id) {
+        const vacation = await findEmployeeUnavailability(supabaseAdmin, currentApp.employee_id, startInstant, endInstant);
+        if (vacation) return { error: vacation };
     }
 
     const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
@@ -1938,9 +1994,12 @@ export async function createManualReservation(prevState: any, formData: FormData
 
     // --- Availability Check ---
 
-    // We intentionally skip checking "Exceptions" (vacations) and "Regular Weekly Schedules" here,
-    // because manual reservations created by employees/admins should be able to override these limitations
-    // as requested by the user.
+    // Staff may book outside the regular weekly schedule, but never into a day off /
+    // vacation — the client asked for that to be a hard rule.
+    const vacation = await findEmployeeUnavailability(supabase, employeeId, startDateTime, endDateTime);
+    if (vacation) {
+        return { error: vacation };
+    }
 
     // 3. Check Conflicts with existing appointments
     const { count: conflictCount } = await checkConflictingAppointments(employeeId, date, time, endTime);
@@ -2102,6 +2161,13 @@ export async function createAdminCosmeticAppointment(data: {
         return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
     }
 
+    const vacation = await findEmployeeUnavailability(
+        supabase, data.employee_id, new Date(data.start_time), new Date(data.end_time)
+    );
+    if (vacation) {
+        return { error: vacation };
+    }
+
     if (!data.ignoreRoomWarning) {
         const { roomsAreFull, ROOM_FULL_MESSAGE } = await import('@/utils/rooms');
         const occupancy = await fetchRoomOccupancy(supabase, data.start_time, data.end_time);
@@ -2220,6 +2286,26 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
 
     if (overlappingAppointments && overlappingAppointments.length > 0) {
         return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    }
+
+    // Only when the time or the employee changes — editing a note on an appointment that
+    // already sits in a vacation (booked before this rule existed) must still work.
+    const { data: before } = await supabase
+        .from('cosmetic_appointments')
+        .select('start_time, end_time, employee_id')
+        .eq('id', id)
+        .single();
+    const moved = !before
+        || before.employee_id !== data.employee_id
+        || new Date(before.start_time).getTime() !== new Date(data.start_time).getTime()
+        || new Date(before.end_time).getTime() !== new Date(data.end_time).getTime();
+    if (moved) {
+        const vacation = await findEmployeeUnavailability(
+            supabase, data.employee_id, new Date(data.start_time), new Date(data.end_time)
+        );
+        if (vacation) {
+            return { error: vacation };
+        }
     }
 
     if (!data.ignoreRoomWarning) {
