@@ -209,6 +209,10 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
 
                                 const booked = evt.bookedCount || 0;
                                 const capacity = evt.totalCapacity || 10;
+                                const isFull = booked >= capacity;
+                                // An individual session is never "free" for the public — it is
+                                // either taken, or reserved for someone who books it in person.
+                                const statusLabel = isFull ? 'Obsadené' : evt.isIndividual ? 'Individuálne' : 'Voľné';
 
                                 // If individual, use specific red logic
                                 // If Locked (and empty), use grey/locked logic
@@ -217,8 +221,8 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                 return (
                                     <div
                                         key={i}
-                                        className={`${styles.event} ${booked >= capacity ? styles.full : ''}`}
-                                        title={`${evt.time} - ${evt.title} (${booked >= capacity ? 'Obsadené' : 'Voľné'})`}
+                                        className={`${styles.event} ${isFull ? styles.full : ''}`}
+                                        title={`${evt.time} - ${evt.title} (${statusLabel})`}
                                         onClick={() => setSelectedEvent(evt)}
                                         style={{
                                             cursor: 'pointer',
@@ -253,12 +257,12 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                                                     <span
                                                         className={styles.levelBadge}
                                                         style={{
-                                                            backgroundColor: booked >= capacity ? '#FEF2F2' : '#F3F4F6',
-                                                            color: booked >= capacity ? '#DC2626' : '#374151',
-                                                            border: booked >= capacity ? '1px solid #FECACA' : '1px solid #E5E7EB'
+                                                            backgroundColor: isFull ? '#FEF2F2' : '#F3F4F6',
+                                                            color: isFull ? '#DC2626' : '#374151',
+                                                            border: isFull ? '1px solid #FECACA' : '1px solid #E5E7EB'
                                                         }}
                                                     >
-                                                        {booked >= capacity ? 'Obsadené' : 'Voľné'}
+                                                        {statusLabel}
                                                     </span>
                                                 </div>
                                                 <div className={styles.trainerRow}>

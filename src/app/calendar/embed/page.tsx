@@ -132,7 +132,10 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                     });
                     const isIndividual = exception?.is_individual || false;
 
-                    const maxOccupancy = tt.capacity || 10;
+                    // An individual session is reserved for a single client, so one booking
+                    // fills it. Using the group capacity here showed booked individual
+                    // sessions as free on the public site.
+                    const maxOccupancy = isIndividual ? 1 : (tt.capacity || 10);
 
                     // Calculate Occupancy with fuzzy matching
                     const currentBookings = allBookings.filter((b: any) => {
