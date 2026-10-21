@@ -31,6 +31,9 @@ export async function POST(request: NextRequest) {
         if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
             return new NextResponse('No invoice IDs provided', { status: 400 });
         }
+        if (invoiceIds.length > 200) {
+            return new NextResponse('Naraz je možné stiahnuť najviac 200 faktúr.', { status: 400 });
+        }
 
         // 3. Fetch Invoices and process one by one
         const zip = new JSZip();

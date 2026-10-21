@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { fetchAll } from '@/utils/supabase/fetch-all';
 import { requireEmployeeOrAdmin } from '@/utils/check-role';
 import { getAdminScheduleData } from '@/utils/schedule-helpers';
 import AdminBookingsManager from '@/components/admin/trainings/AdminBookingsManager';
@@ -8,7 +9,7 @@ export default async function AdminBookingsPage() {
     const supabase = await createClient();
 
     // 1. Fetch upcoming bookings
-    const { data: bookingsRaw } = await supabase
+    const { data: bookingsRaw } = await fetchAll((from, to) => supabase
         .from('bookings')
         .select(`
             id,
@@ -27,7 +28,8 @@ export default async function AdminBookingsPage() {
             )
         `)
         .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true });
+        .order('start_time', { ascending: true })
+        .range(from, to));
 
     const bookings = (bookingsRaw as any) || [];
 

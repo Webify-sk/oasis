@@ -8,6 +8,8 @@ interface Appointment {
     start_time: string;
     end_time: string;
     status: string;
+    client_name?: string | null;
+    client_phone?: string | null;
     cosmetic_services: { title: string; duration_minutes: number; price: number } | null;
     employees: { name: string; color: string } | null;
     profiles: { full_name: string; email: string; phone: string } | null;
@@ -85,7 +87,7 @@ export function AppointmentCalendar({ initialAppointments }: { initialAppointmen
                                 </h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
                                     <User size={14} />
-                                    <span>{app.profiles?.full_name || 'Neznámy klient'} ({app.profiles?.phone || 'Bez tel.'})</span>
+                                    <span>{app.profiles?.full_name || app.client_name || 'Neznámy klient'} ({app.profiles?.phone || app.client_phone || 'Bez tel.'})</span>
                                 </div>
                             </div>
 

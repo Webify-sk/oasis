@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
+// Only a plain path on this site: a leading slash that is not followed by '/' or '\\'
+// (browsers resolve '/\\evil.com' to https://evil.com).
+function safeRedirectPath(value: FormDataEntryValue | null): string | null {
+    return typeof value === 'string' && /^\/(?![\/\\])/.test(value) ? value : null;
+}
+
 export async function login(formData: FormData) {
     const rememberMe = formData.get('rememberMe') === 'on'
     const supabase = await createClient(rememberMe)
@@ -36,10 +42,8 @@ export async function login(formData: FormData) {
 
     // Honour an explicit destination, but only a path on this site — never an
     // absolute or protocol-relative URL, which would be an open redirect.
-    const requested = formData.get('redirect')
-    if (typeof requested === 'string' && requested.startsWith('/') && !requested.startsWith('//')) {
-        redirectUrl = requested
-    }
+    const safe = safeRedirectPath(formData.get('redirect'))
+    if (safe) redirectUrl = safe
 
     revalidatePath('/', 'layout')
     redirect(redirectUrl)
@@ -127,10 +131,7 @@ export async function signup(formData: FormData) {
     }
     revalidatePath('/', 'layout')
     // Same rule as login: only a path on this site may be used as the destination.
-    const requested = formData.get('redirect')
-    const destination = typeof requested === 'string' && requested.startsWith('/') && !requested.startsWith('//')
-        ? requested
-        : '/dashboard'
+    const destination = safeRedirectPath(formData.get('redirect')) ?? '/dashboard'
     redirect(destination)
 }
 

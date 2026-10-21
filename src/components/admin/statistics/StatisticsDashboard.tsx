@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { StatItem } from '@/actions/statistics-actions';
 import { Search, Calendar, Filter, Download, User, BarChart2, Table } from 'lucide-react';
 import clsx from 'clsx';
@@ -38,8 +38,10 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
         return Array.from(persons).sort();
     }, [items]);
 
+    // Reset pagination whenever a filter changes (was a state update inside useMemo)
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, typeFilter, personFilter, dateFrom, dateTo]);
+
     const filteredItems = useMemo(() => {
-        setCurrentPage(1); // Reset pagination on filter change
         return items.filter(item => {
             // Type
             if (typeFilter !== 'all' && item.type !== typeFilter) return false;
@@ -59,20 +61,16 @@ export default function StatisticsDashboard({ initialItems }: StatisticsDashboar
                 }
             }
 
-            // Date processing
+            // Date filter on calendar days. Training dates are face-value Bratislava time
+            // labelled UTC (take the date part as is); procedure dates are real instants
+            // (convert to Bratislava first). Mixing UTC midnight with local setHours
+            // used to drop or add late-evening items at the range edges.
             if (dateFrom || dateTo) {
-                const itemDate = new Date(item.date);
-                if (dateFrom && dateTo) {
-                    const from = new Date(dateFrom); from.setHours(0, 0, 0, 0);
-                    const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-                    if (itemDate < from || itemDate > to) return false;
-                } else if (dateFrom) {
-                    const from = new Date(dateFrom); from.setHours(0, 0, 0, 0);
-                    if (itemDate < from) return false;
-                } else if (dateTo) {
-                    const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-                    if (itemDate > to) return false;
-                }
+                const itemDay = item.type === 'training'
+                    ? String(item.date).slice(0, 10)
+                    : formatInTimeZone(new Date(item.date), 'Europe/Bratislava', 'yyyy-MM-dd');
+                if (dateFrom && itemDay < dateFrom) return false;
+                if (dateTo && itemDay > dateTo) return false;
             }
 
             return true;

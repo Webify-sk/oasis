@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { unstable_noStore as noStore } from 'next/cache';
+import { fetchAll } from '@/utils/supabase/fetch-all';
 import { redirect } from 'next/navigation'
 import { requireAdmin, requireEmployeeOrAdmin } from '@/utils/check-role'
 import { sendEmail } from '@/utils/email'
@@ -11,6 +12,13 @@ import { format } from 'date-fns'
 import { sk } from 'date-fns/locale'
 
 // --- Services ---
+
+// Client-supplied text (names, notes) is interpolated into staff e-mails as HTML.
+function esc(value: unknown): string {
+    return String(value ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
+    )[c]);
+}
 
 export async function getCosmeticServices() {
     // Public/Client view - fetch ALL active services
@@ -755,17 +763,14 @@ export async function updateWeeklyAvailability(employeeId: string, schedule: any
 
     console.log(`Updating availability for ${employeeId}`, schedule);
 
-    // 1. Delete existing weekly slots for this employee
-    const { error: deleteError } = await supabase
+    // Insert the new week first and only then remove the old rows: delete-then-insert
+    // left the employee with no working hours at all whenever the insert failed.
+    const { data: oldRows } = await supabase
         .from('employee_availability')
-        .delete()
+        .select('id')
         .eq('employee_id', employeeId)
         .eq('is_recurring', true)
-
-    if (deleteError) {
-        console.error('Error deleting availability:', deleteError);
-        return { error: 'Failed to delete existing availability' }
-    }
+    const oldIds = (oldRows || []).map(r => r.id)
 
     // 2. Insert new slots
     const inserts = schedule.map(slot => ({
@@ -785,6 +790,17 @@ export async function updateWeeklyAvailability(employeeId: string, schedule: any
     if (insertError) {
         console.error('Error inserting availability:', insertError)
         return { error: 'Failed to update availability' }
+    }
+
+    if (oldIds.length > 0) {
+        const { error: deleteError } = await supabase
+            .from('employee_availability')
+            .delete()
+            .in('id', oldIds)
+        if (deleteError) {
+            console.error('Error deleting old availability:', deleteError);
+            return { error: 'Nové hodiny sú uložené, ale staré sa nepodarilo odstrániť — skontrolujte rozvrh.' }
+        }
     }
 
     revalidatePath('/dashboard/cosmetics/staff') // or calendar
@@ -978,7 +994,7 @@ export async function createAppointment(data: {
             service_id: data.service_id,
             start_time: data.start_time,
             end_time: data.end_time,
-            notes: data.notes,
+            notes: data.notes?.slice(0, 500),
             status: 'confirmed' // Default status now confirmed
         })
 
@@ -1062,17 +1078,17 @@ export async function createAppointment(data: {
                 const clientPhone = clientProfile?.phone || 'N/A';
                 const clientEmail = clientProfile?.email || user.email || 'N/A';
 
-                const empSubject = `Nová rezervácia: ${service.title} - ${clientName}`;
+                const empSubject = `Nová rezervácia: ${service.title} - ${esc(clientName)}`;
                 const empBody = `
                     <p>Ahoj ${employeeData.name},</p>
                     <p>máš novú rezerváciu na službu <strong>${service.title}</strong>.</p>
                     
                     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
                         <p style="margin: 5px 0;"><strong>Dátum a čas:</strong> ${formattedDateEmp}</p>
-                        <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
-                        <p style="margin: 5px 0;"><strong>Email:</strong> ${clientEmail}</p>
-                        <p style="margin: 5px 0;"><strong>Telefón:</strong> ${clientPhone}</p>
-                        ${data.notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${data.notes}</p>` : ''}
+                        <p style="margin: 5px 0;"><strong>Klient:</strong> ${esc(clientName)}</p>
+                        <p style="margin: 5px 0;"><strong>Email:</strong> ${esc(clientEmail)}</p>
+                        <p style="margin: 5px 0;"><strong>Telefón:</strong> ${esc(clientPhone)}</p>
+                        ${data.notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${esc(data.notes)}</p>` : ''}
                     </div>
 
                     <p>Viac detailov nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
@@ -1112,8 +1128,8 @@ export async function getEmployeeAppointments() {
 
     if (!employee) return []
 
-    // 2. Fetch appointments
-    const { data, error } = await supabase
+    // 2. Fetch appointments (paged — see fetch-all.ts)
+    const { data, error } = await fetchAll((from, to) => supabase
         .from('cosmetic_appointments')
         .select(`
             *,
@@ -1122,6 +1138,7 @@ export async function getEmployeeAppointments() {
         `)
         .eq('employee_id', employee.id)
         .order('start_time', { ascending: true })
+        .range(from, to))
 
     if (error) {
         console.error('Error fetching employee appointments:', error)
@@ -1133,21 +1150,20 @@ export async function getEmployeeAppointments() {
 export async function getAppointments(employeeId?: string) {
     const supabase = await createClient()
 
-    let query = supabase
-        .from('cosmetic_appointments')
-        .select(`
-            *,
-            cosmetic_services(title, duration_minutes, price),
-            employees(name, color),
-            profiles(full_name, email, phone)
-        `)
-        .order('start_time', { ascending: true })
-
-    if (employeeId) {
-        query = query.eq('employee_id', employeeId)
-    }
-
-    const { data, error } = await query
+    const { data, error } = await fetchAll((from, to) => {
+        let query = supabase
+            .from('cosmetic_appointments')
+            .select(`
+                *,
+                cosmetic_services(title, duration_minutes, price),
+                employees(name, color),
+                profiles(full_name, email, phone)
+            `)
+            .order('start_time', { ascending: true })
+            .range(from, to)
+        if (employeeId) query = query.eq('employee_id', employeeId)
+        return query
+    })
 
     if (error) {
         console.error('Error fetching appointments:', error)
@@ -1208,14 +1224,14 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
                     minute: '2-digit'
                 });
 
-                const subject = `Zrušená rezervácia: ${serviceTitle} - ${clientName}`;
+                const subject = `Zrušená rezervácia: ${serviceTitle} - ${esc(clientName)}`;
                 const body = `
                     <p>Ahoj ${empName},</p>
                     <p>rezervácia na službu <strong>${serviceTitle}</strong> bola zrušená.</p>
                     
                     <div style="background-color: #fff0f0; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffcccc;">
                         <p style="margin: 5px 0;"><strong>Pôvodný termín:</strong> ${formattedDate}</p>
-                        <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                        <p style="margin: 5px 0;"><strong>Klient:</strong> ${esc(clientName)}</p>
                     </div>
 
                     <p>Aktuálny kalendár nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
@@ -2044,14 +2060,14 @@ export async function cancelAppointment(id: string) {
                 minute: '2-digit'
             });
 
-            const subject = `Zrušená rezervácia: ${serviceName} - ${clientName}`;
+            const subject = `Zrušená rezervácia: ${serviceName} - ${esc(clientName)}`;
             const body = `
                 <p>Ahoj ${empName},</p>
                 <p>klient zrušil rezerváciu na službu <strong>${serviceName}</strong>.</p>
                 
                 <div style="background-color: #fff0f0; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffcccc;">
                      <p style="margin: 5px 0;"><strong>Pôvodný termín:</strong> ${formattedDate}</p>
-                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${esc(clientName)}</p>
                 </div>
 
                 <p>Aktuálny kalendár nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
@@ -2142,7 +2158,7 @@ export async function createManualReservation(prevState: any, formData: FormData
     // Optional feature: strict linking or loose linking.
     let userId = null;
     if (clientEmail) {
-        const { data: existingUser } = await supabase.from('profiles').select('id').eq('email', clientEmail).single();
+        const { data: existingUser } = await supabase.from('profiles').select('id').ilike('email', clientEmail.trim()).limit(1).maybeSingle();
         if (existingUser) {
             userId = existingUser.id;
         }
@@ -2159,7 +2175,7 @@ export async function createManualReservation(prevState: any, formData: FormData
             client_name: clientName,
             client_email: clientEmail,
             client_phone: clientPhone,
-            notes: notes,
+            notes: notes?.slice(0, 500),
             status: 'confirmed', // Manual reservations are usually confirmed immediately
             created_at: new Date().toISOString()
         });
@@ -2203,7 +2219,7 @@ export async function createManualReservation(prevState: any, formData: FormData
                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${cName}</p>
                     <p style="margin: 5px 0;"><strong>Email:</strong> ${cEmail}</p>
                     <p style="margin: 5px 0;"><strong>Telefón:</strong> ${cPhone}</p>
-                    ${notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${notes}</p>` : ''}
+                    ${notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${esc(notes)}</p>` : ''}
                 </div>
 
                 <p>Viac detailov nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
@@ -2296,7 +2312,7 @@ export async function createAdminCosmeticAppointment(data: {
             service_id: data.service_id,
             start_time: data.start_time,
             end_time: data.end_time,
-            notes: data.notes,
+            notes: data.notes?.slice(0, 500),
             status: 'confirmed',
             user_id: data.user_id || null,
             client_name: data.client_name || null,
@@ -2345,7 +2361,7 @@ export async function createAdminCosmeticAppointment(data: {
                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${cName}</p>
                     <p style="margin: 5px 0;"><strong>Email:</strong> ${cEmail}</p>
                     <p style="margin: 5px 0;"><strong>Telefón:</strong> ${cPhone}</p>
-                    ${data.notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${data.notes}</p>` : ''}
+                    ${data.notes ? `<p style="margin: 15px 0 0 0; font-style: italic;"> Poznámka: ${esc(data.notes)}</p>` : ''}
                 </div>
 
                 <p>Viac detailov nájdeš v <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk'}/dashboard/cosmetics/appointments">dashboarde</a>.</p>
@@ -2426,7 +2442,7 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
             end_time: data.end_time,
             employee_id: data.employee_id,
             service_id: data.service_id,
-            notes: data.notes,
+            notes: data.notes?.slice(0, 500),
             client_name: data.client_name || null,
             client_email: data.client_email || null,
             client_phone: data.client_phone || null
@@ -2554,7 +2570,7 @@ export async function rescheduleCosmeticAppointment(id: string, data: { start_ti
                 <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
                      <p style="margin: 5px 0;"><del>Pôvodný termín: ${formattedOldDate}</del></p>
                      <p style="margin: 5px 0;"><strong>Nový termín: ${formattedNewDate}</strong></p>
-                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${clientName}</p>
+                     <p style="margin: 5px 0;"><strong>Klient:</strong> ${esc(clientName)}</p>
                 </div>
             `;
             await sendEmail({ to: oldEmpEmail, subject: empSubject, html: getEmailTemplate(empSubject, empBody) });

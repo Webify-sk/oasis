@@ -8,6 +8,13 @@ import { useVerification } from '@/components/auth/VerificationContext';
 import { Calendar } from '@/components/ui/Calendar';
 import { getRealUtcDate } from '@/utils/booking-logic';
 
+// YYYY-MM-DD in the browser's own zone; toISOString() is UTC and pre-selected
+// yesterday between midnight and 02:00.
+function localToday() {
+    const d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+}
+
 interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; display_order?: number; }
 interface Employee { id: string; name: string; color: string; }
 
@@ -32,7 +39,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [selectedCategory, setSelectedCategory] = useState<'beauty' | 'body' | null>(null);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState<string>(localToday());
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [isMorningOpen, setIsMorningOpen] = useState(false);
     const [isAfternoonOpen, setIsAfternoonOpen] = useState(false);
@@ -371,7 +378,7 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                             <Calendar
                                 selectedDate={selectedDate}
                                 onDateSelect={handleDateChange}
-                                minDate={new Date().toISOString().split('T')[0]}
+                                minDate={localToday()}
                                 availableDates={availableDates}
                                 onMonthChange={handleMonthChange}
                             />

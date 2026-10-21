@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/utils/supabase/admin';
+import { fetchAll } from '@/utils/supabase/fetch-all';
 import { TrainingList } from '@/components/admin/TrainingList';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -23,7 +24,7 @@ export default async function AdminTrainingsPage() {
     const fromDate = now.toISOString();
 
     // 1. Fetch bookings (raw, no join)
-    const { data: bookingsDataRaw, error: bookingsError } = await supabase
+    const { data: bookingsDataRaw, error: bookingsError } = await fetchAll((from, to) => supabase
         .from('bookings')
         .select(`
             id,
@@ -33,7 +34,8 @@ export default async function AdminTrainingsPage() {
             participants_count
         `)
         .gte('start_time', fromDate)
-        .order('start_time', { ascending: true });
+        .order('start_time', { ascending: true })
+        .range(from, to));
 
     if (bookingsError) {
         console.error('AdminTrainingsPage: Error fetching bookings:', JSON.stringify(bookingsError, null, 2));

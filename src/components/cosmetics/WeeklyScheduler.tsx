@@ -11,6 +11,8 @@ interface Appointment {
     start_time: string;
     end_time: string;
     status: string;
+    client_name?: string | null;
+    client_phone?: string | null;
     cosmetic_services: { title: string; duration_minutes: number; price: number } | null;
     employees: { id: string, name: string; color: string } | null;
     profiles: { full_name: string; phone: string | null } | null;
@@ -161,7 +163,7 @@ export function WeeklyScheduler({ initialAppointments, employees }: WeeklySchedu
                                                 onClick={() => setSelectedAppointment(app)}
                                             >
                                                 <div style={{ fontWeight: 'bold', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {app.profiles?.full_name || 'Hosť'}
+                                                    {app.profiles?.full_name || app.client_name || 'Hosť'}
                                                 </div>
                                                 <div style={{ color: '#555', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     {app.cosmetic_services?.title}

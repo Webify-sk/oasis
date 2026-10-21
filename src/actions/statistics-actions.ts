@@ -52,6 +52,7 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
                 status,
                 trainer_id
             `)
+            .neq('status', 'cancelled')
             .order('id')
             .range(from, to));
 
@@ -152,7 +153,8 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
 
             const trainerName = trainerId ? (trainersMap.get(trainerId)?.full_name || 'Neznámy tréner') : 'Tréner neuvedený';
 
-            const sessionKey = `train_${b.training_type_id}_${b.start_time}`;
+            // to the minute: a start_time stored with seconds must not become its own session
+            const sessionKey = `train_${b.training_type_id}_${String(b.start_time).slice(0, 16)}`;
             const existingSession = trainingSessionsMap.get(sessionKey);
             const currentCustomer = user?.full_name || user?.email || 'Neznámy klient';
 
