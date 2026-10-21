@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { sendEmail } from '@/utils/email';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Cron requests carry no user cookie, so the session client would run as anon.
+    const supabase = createAdminClient();
 
     // 2. Časové okno - hľadáme expirácie medzi (o 6 dní) až (o 8 dní)
     // Týmto zachytíme všetky, ktorým platnosť vyprší presne "o týždeň" s dostatočne veľkou toleranciou cyklu pingu.

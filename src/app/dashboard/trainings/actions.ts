@@ -1,10 +1,14 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
 
 export async function bookTraining(trainingTypeId: string, startTimeISO: string, participantsCount: number = 1) {
     const supabase = await createClient();
+    // Credit tables are no longer writable by clients (RLS); all credit bookkeeping
+    // below runs with the service role after the checks in this action.
+    const db = createAdminClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -119,7 +123,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
     // FÁZA 2: Získanie aktívnych dávok kreditov (FIFO logika)
     let activeBatches: any[] = [];
     if (totalCost > 0) {
-        const { data: batches, error: batchesError } = await supabase
+        const { data: batches, error: batchesError } = await db
             .from('credit_batches')
             .select('*')
             .eq('user_id', user.id)
@@ -191,13 +195,13 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
             const deductionAmount = Math.min(availableInBatch, costToDeduct);
             
             // Znížime zostávajúci amount v batchi
-            await supabase
+            await db
                 .from('credit_batches')
                 .update({ remaining_amount: availableInBatch - deductionAmount })
                 .eq('id', batch.id);
                 
             // Zaznamenáme deduction kvôli referencii na vrátenie
-            await supabase
+            await db
                 .from('booking_deductions')
                 .insert({
                     booking_id: newBookingId,
@@ -209,7 +213,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         }
 
         // Aggregate cache update pre staré UI zobrazenia
-        await supabase
+        await db
             .from('profiles')
             .update({ credits: (profile.credits || 0) - totalCost })
             .eq('id', user.id);
@@ -268,6 +272,9 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
 
 export async function cancelBooking(bookingId: string) {
     const supabase = await createClient();
+    // Credit tables are no longer writable by clients (RLS); all credit bookkeeping
+    // below runs with the service role after the checks in this action.
+    const db = createAdminClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return { success: false, message: 'Musíte byť prihlásený.' };
@@ -296,7 +303,7 @@ export async function cancelBooking(bookingId: string) {
     const shouldRefund = hoursValues >= 12;
 
     // FÁZA 2: Získame detail o použitých kreditoch (deductions) PRED zmazaním rezervácie
-    const { data: deductions } = await supabase
+    const { data: deductions } = await db
         .from('booking_deductions')
         .select('*')
         .eq('booking_id', bookingId);
@@ -318,9 +325,9 @@ export async function cancelBooking(bookingId: string) {
         if (deductions && deductions.length > 0) {
             // FÁZA 2: Vrátime presné čiastky do jednotlivých batchov
         for (const deduction of deductions) {
-            const { data: batchData } = await supabase.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
+            const { data: batchData } = await db.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
             if (batchData) {
-                await supabase
+                await db
                     .from('credit_batches')
                     .update({ remaining_amount: Number(batchData.remaining_amount) + Number(deduction.amount) })
                     .eq('id', deduction.batch_id);
@@ -331,7 +338,7 @@ export async function cancelBooking(bookingId: string) {
         // Update the cached total in profiles
         const { data: prof } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
         if (prof) {
-            await supabase
+            await db
                 .from('profiles')
                 .update({ credits: (prof.credits || 0) + totalRefund })
                 .eq('id', user.id);
@@ -350,7 +357,7 @@ export async function cancelBooking(bookingId: string) {
 
         if (totalRefund > 0) {
             // Nájdeme batch, ktorý končí najneskôr, a tam to prihodíme
-            const { data: latestBatch } = await supabase
+            const { data: latestBatch } = await db
                 .from('credit_batches')
                 .select('*')
                 .eq('user_id', user.id)
@@ -359,7 +366,7 @@ export async function cancelBooking(bookingId: string) {
                 .single();
 
             if (latestBatch) {
-                await supabase
+                await db
                     .from('credit_batches')
                     .update({ remaining_amount: Number(latestBatch.remaining_amount) + totalRefund })
                     .eq('id', latestBatch.id);
@@ -367,7 +374,7 @@ export async function cancelBooking(bookingId: string) {
                 // Nemá aktívne batche, vytvoríme nový základný na 1 mesiac
                 let endD = new Date();
                 endD.setMonth(endD.getMonth() + 1);
-                await supabase
+                await db
                     .from('credit_batches')
                     .insert({
                         user_id: user.id,
@@ -379,7 +386,7 @@ export async function cancelBooking(bookingId: string) {
 
             // Update prof.credits (cache)
             if (profile) {
-                await supabase
+                await db
                     .from('profiles')
                     .update({ credits: (profile.credits || 0) + totalRefund })
                     .eq('id', user.id);

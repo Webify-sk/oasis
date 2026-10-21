@@ -632,12 +632,26 @@ export async function removeAvailabilityException(exceptionId: string) {
     await requireEmployeeOrAdmin();
     const supabase = await createClient();
 
-    // Ownership check omitted for brevity in this specific call, dependent on RLS or strict controller logic above
-    const { error } = await supabase.from('employee_availability_exceptions').delete().eq('id', exceptionId);
+    // An employee may only remove their own exceptions; admins any.
+    let query = supabase.from('employee_availability_exceptions').delete().eq('id', exceptionId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (profile?.role === 'employee') {
+            const { data: emp } = await supabase.from('employees').select('id').eq('profile_id', user.id).single();
+            if (!emp) return { error: 'Unauthorized' };
+            query = query.eq('employee_id', emp.id);
+        }
+    }
+
+    const { data: removed, error } = await query.select('id');
 
     if (error) {
         console.error('Error removing exception:', error);
         return { error: 'Failed to remove exception' };
+    }
+    if (!removed || removed.length === 0) {
+        return { error: 'Výnimku sa nepodarilo odstrániť — buď neexistuje, alebo patrí inej zamestnankyni.' };
     }
 
     revalidatePath('/dashboard/cosmetics/staff');
@@ -1097,6 +1111,8 @@ export async function getAppointments(employeeId?: string) {
 }
 
 export async function updateAppointmentStatus(id: string, status: 'confirmed' | 'cancelled' | 'completed') {
+    // Staff only. Clients cancel through cancelAppointment, which checks ownership.
+    await requireEmployeeOrAdmin();
     const supabase = await createClient()
 
     const { error } = await supabase
@@ -1182,12 +1198,11 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
 export async function rescheduleAppointment(id: string, newStartTime: string, newEndTime: string) {
     const supabase = await createClient()
 
-    // 1. Check permissions (Employee or Admin)
+    // 1. Who is asking: staff may move any appointment, a client only their own.
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
-
-    // Simple check: Just ensure they are logged in as employee/admin
-    // (Realistically we should check if they own the appointment or are admin, but let's trust role check for now)
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const isStaff = callerProfile?.role === 'admin' || callerProfile?.role === 'employee';
 
     // Normalize input times to real UTC instants. Callers send either a full ISO string with
     // offset ("...Z") or a naive wall-clock string ("2026-08-06T11:00:00") that means Bratislava
@@ -1195,7 +1210,7 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
     const { getRealUtcDate } = await import('@/utils/booking-logic');
     const hasOffset = (s: string) => /(?:Z|[+-]\d{2}:?\d{2})$/.test(s);
     const startInstant = hasOffset(newStartTime) ? new Date(newStartTime) : getRealUtcDate(newStartTime);
-    const endInstant = hasOffset(newEndTime) ? new Date(newEndTime) : getRealUtcDate(newEndTime);
+    let endInstant = hasOffset(newEndTime) ? new Date(newEndTime) : getRealUtcDate(newEndTime);
 
     if (isNaN(startInstant.getTime()) || isNaN(endInstant.getTime())) {
         return { error: 'Neplatný dátum alebo čas.' };
@@ -1212,12 +1227,35 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
 
     const { data: currentApp } = await supabaseAdmin
         .from('cosmetic_appointments')
-        .select('employee_id, service_id')
+        .select('employee_id, service_id, user_id, status, cosmetic_services(duration_minutes)')
         .eq('id', id)
         .single();
 
     if (!currentApp) {
         return { error: 'Rezervácia sa nenašla.' };
+    }
+
+    if (!isStaff) {
+        if (currentApp.user_id !== user.id) {
+            return { error: 'Unauthorized' };
+        }
+        if (currentApp.status !== 'confirmed' && currentApp.status !== 'pending') {
+            return { error: 'Túto rezerváciu už nie je možné presunúť.' };
+        }
+        // Clients get the same rules as a new booking: the deadline, and the length is the
+        // service's own, never whatever the browser sent.
+        const { allowed, deadlineMsg } = isBookingAllowed(startInstant);
+        if (!allowed) {
+            return { error: `Na tento termín sa už nedá presunúť. (Deadline: ${deadlineMsg} vopred)` };
+        }
+        const duration = (currentApp.cosmetic_services as any)?.duration_minutes;
+        if (duration) {
+            endInstant = new Date(startInstant.getTime() + duration * 60000);
+        }
+    }
+
+    if (endInstant.getTime() <= startInstant.getTime()) {
+        return { error: 'Koniec termínu musí byť po jeho začiatku.' };
     }
 
     // Same machine-sharing logic as createAppointment: services on the same machine block each other
@@ -1277,13 +1315,15 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
         return { error: `${ROOM_FULL_MESSAGE} Prosím, vyberte si iný termín.` };
     }
 
-    // 3. Update Appointment
-    const { error, data: updatedAppointment } = await supabase
+    // 3. Update Appointment. Ownership was verified above, so use the service role — the
+    // permissive "any authenticated user may update" policy is being removed.
+    // A pending appointment becomes confirmed by being moved; any other status is kept.
+    const { error, data: updatedAppointment } = await supabaseAdmin
         .from('cosmetic_appointments')
         .update({
             start_time: startInstant.toISOString(),
             end_time: endInstant.toISOString(),
-            status: 'confirmed'
+            status: currentApp.status === 'pending' ? 'confirmed' : currentApp.status
         })
         .eq('id', id)
         .select(`

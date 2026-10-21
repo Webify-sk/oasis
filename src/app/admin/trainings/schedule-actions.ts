@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { requireEmployeeOrAdmin } from '@/utils/check-role';
 import { revalidatePath } from 'next/cache';
 
 export async function getTrainingExceptions(trainingId: string) {
@@ -24,6 +25,7 @@ export async function toggleSessionIndividual(
     sessionStartTime: string,
     isIndividual: boolean
 ) {
+    await requireEmployeeOrAdmin();
     const supabase = await createClient();
 
     // Check if exception already exists
