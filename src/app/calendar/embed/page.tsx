@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { PublicCalendar } from '@/components/public/PublicCalendar';
 import { isBookingLocked } from '@/utils/booking-logic';
 
@@ -43,7 +44,10 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
     // Extend end date by 15 days into next month to cover overlap
     const endDate = new Date(Date.UTC(year, month + 1, 15, 23, 59, 59, 999)).toISOString();
 
-    const { data: monthlyBookings } = await supabase
+    // The embed runs without a session (anon), and bookings have no anon read policy,
+    // so the cookie client always saw zero bookings and every session showed as free.
+    // Only aggregate-safe columns are selected; nothing personal reaches the page.
+    const { data: monthlyBookings } = await createAdminClient()
         .from('bookings')
         .select('training_type_id, start_time, participants_count')
         .gte('start_time', startDate)

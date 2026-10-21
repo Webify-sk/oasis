@@ -5,6 +5,11 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
 
 export async function bookTraining(trainingTypeId: string, startTimeISO: string, participantsCount: number = 1) {
+    // Server actions are plain HTTP endpoints: the UI clamps this, the server must too.
+    // 0 would make the booking free, a negative number would lower the occupancy.
+    if (!Number.isInteger(participantsCount) || participantsCount < 1 || participantsCount > 10) {
+        return { success: false, message: 'Neplatný počet účastníkov.' };
+    }
     const supabase = await createClient();
     // Credit tables are no longer writable by clients (RLS); all credit bookkeeping
     // below runs with the service role after the checks in this action.
@@ -279,17 +284,22 @@ export async function cancelBooking(bookingId: string) {
 
     if (!user) return { success: false, message: 'Musíte byť prihlásený.' };
 
+    // Admins cancel on behalf of clients (admin booking lists call this action too);
+    // the refund then belongs to the booking's owner, never to the admin.
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const isAdmin = callerProfile?.role === 'admin';
+
     // 1. Fetch booking details *before* deletion to get start_time
-    const { data: booking, error: fetchError } = await supabase
+    const { data: booking, error: fetchError } = await db
         .from('bookings')
-        .select('start_time, participants_count, training_type:training_type_id(title, price_credits)')
+        .select('start_time, participants_count, user_id, training_type:training_type_id(title, price_credits)')
         .eq('id', bookingId)
-        .eq('user_id', user.id)
         .single();
 
-    if (fetchError || !booking) {
+    if (fetchError || !booking || (!isAdmin && booking.user_id !== user.id)) {
         return { success: false, message: 'Rezervácia sa nenašla.' };
     }
+    const ownerId: string = booking.user_id;
 
     const trainingTypeData = booking.training_type as any;
     const priceCredits = (Array.isArray(trainingTypeData) ? trainingTypeData[0]?.price_credits : trainingTypeData?.price_credits) ?? 1;
@@ -309,7 +319,7 @@ export async function cancelBooking(bookingId: string) {
         .eq('booking_id', bookingId);
 
     // 3. Delete booking
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await db
         .from('bookings')
         .delete()
         .eq('id', bookingId);
@@ -336,19 +346,19 @@ export async function cancelBooking(bookingId: string) {
         }
         
         // Update the cached total in profiles
-        const { data: prof } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
+        const { data: prof } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', ownerId).single();
         if (prof) {
             await db
                 .from('profiles')
                 .update({ credits: (prof.credits || 0) + totalRefund })
-                .eq('id', user.id);
+                .eq('id', ownerId);
         }
         
     } else if (shouldRefund) {
         // FALLBACK pre staré (historické) rezervácie pred spustením Fázy 2
         // Tie nemajú 'deductions', takže im musíme vrátiť kredit naslepo podľa počtu
         
-        const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', ownerId).single();
         const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
 
         const selfRefund = isUnlimited ? 0 : priceCredits;
@@ -360,7 +370,7 @@ export async function cancelBooking(bookingId: string) {
             const { data: latestBatch } = await db
                 .from('credit_batches')
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', ownerId)
                 .order('expires_at', { ascending: false, nullsFirst: true })
                 .limit(1)
                 .single();
@@ -377,7 +387,7 @@ export async function cancelBooking(bookingId: string) {
                 await db
                     .from('credit_batches')
                     .insert({
-                        user_id: user.id,
+                        user_id: ownerId,
                         amount: totalRefund,
                         remaining_amount: totalRefund,
                         expires_at: endD.toISOString()
@@ -389,7 +399,7 @@ export async function cancelBooking(bookingId: string) {
                 await db
                     .from('profiles')
                     .update({ credits: (profile.credits || 0) + totalRefund })
-                    .eq('id', user.id);
+                    .eq('id', ownerId);
             }
             }
         }
@@ -443,6 +453,11 @@ export async function rescheduleBooking(
     newStartTimeISO: string, 
     participantsCount: number = 1
 ) {
+    // Server actions are plain HTTP endpoints: the UI clamps this, the server must too.
+    // 0 would make the booking free, a negative number would lower the occupancy.
+    if (!Number.isInteger(participantsCount) || participantsCount < 1 || participantsCount > 10) {
+        return { success: false, message: 'Neplatný počet účastníkov.' };
+    }
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

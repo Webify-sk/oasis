@@ -478,6 +478,52 @@ export async function updateEmployeeServices(employeeId: string, serviceIds: str
     return { success: true }
 }
 
+// The same collision rule the client booking uses: the employee's own appointments and
+// any appointment on a service that shares this service's device, both with the 15-min
+// clean-up buffer. Staff paths used to check raw adjacency on the employee only.
+async function hasEmployeeOrDeviceConflict(
+    supabase: any,
+    employeeId: string,
+    serviceId: string,
+    startISO: string,
+    endISO: string,
+    excludeId?: string
+): Promise<boolean> {
+    const { data: service } = await supabase
+        .from('cosmetic_services')
+        .select('machine_id')
+        .eq('id', serviceId)
+        .single();
+
+    let sharedServiceIds: string[] = [];
+    if (service?.machine_id) {
+        const { data: shared } = await supabase
+            .from('cosmetic_services')
+            .select('id')
+            .eq('machine_id', service.machine_id);
+        if (shared) sharedServiceIds = shared.map((x: any) => x.id);
+    }
+
+    const bufferedStart = new Date(new Date(startISO).getTime() - 15 * 60000).toISOString();
+    const bufferedEnd = new Date(new Date(endISO).getTime() + 15 * 60000).toISOString();
+
+    let q = supabase
+        .from('cosmetic_appointments')
+        .select('id')
+        .lt('start_time', bufferedEnd)
+        .gt('end_time', bufferedStart)
+        .neq('status', 'cancelled');
+    if (excludeId) q = q.neq('id', excludeId);
+    if (sharedServiceIds.length > 0) {
+        q = q.or(`employee_id.eq.${employeeId},service_id.in.(${sharedServiceIds.join(',')})`);
+    } else {
+        q = q.eq('employee_id', employeeId);
+    }
+
+    const { data } = await q;
+    return !!(data && data.length > 0);
+}
+
 // All non-cancelled appointments overlapping a window (with the 15-min clean-up buffer),
 // regardless of employee or device — this is what decides whether a room is free.
 async function fetchRoomOccupancy(
@@ -1135,7 +1181,7 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
                     *,
                     cosmetic_services(title),
                     employees(email, name),
-                    profiles(full_name)
+                    profiles(full_name, email)
                 `)
                 .eq('id', id)
                 .single();
@@ -1183,6 +1229,25 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
                     html: html
                 });
                 console.log('Cancellation notification sent to employee:', empEmail);
+            }
+
+            // The client was never told when staff cancelled — only the employee who clicked.
+            // @ts-ignore
+            const clientEmail = booking?.profiles?.email || booking?.client_email;
+            if (clientEmail && booking) {
+                const formattedDate = new Date(startTimeVal).toLocaleString('sk-SK', {
+                    timeZone: 'Europe/Bratislava',
+                    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                const subject = `Zrušenie rezervácie - ${serviceTitle}`;
+                const body = `
+                    <p>Dobrý deň,</p>
+                    <p>vaša rezervácia na službu <strong>${serviceTitle}</strong> dňa <strong>${formattedDate}</strong> bola zrušená.</p>
+                    <p>Ak ste zrušenie nežiadali alebo si chcete vybrať nový termín, prosím kontaktujte nás, alebo si ho zarezervujte cez váš profil.</p>
+                    <p>Ďakujeme za pochopenie,<br>Oasis Lounge</p>
+                `;
+                await sendEmail({ to: clientEmail, subject, html: getEmailTemplate(subject, body) });
+                console.log('Cancellation notification sent to client:', clientEmail);
             }
 
         } catch (emailError) {
@@ -1388,6 +1453,19 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
 export async function deleteEmployee(id: string) {
     await requireAdmin();
     const supabase = await createClient()
+
+    // Deleting sets employee_id to NULL on her appointments: they would keep blocking a room
+    // while disappearing from every staff calendar, and nobody would tell the clients.
+    const { count } = await supabase
+        .from('cosmetic_appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('employee_id', id)
+        .neq('status', 'cancelled')
+        .gte('start_time', new Date().toISOString())
+
+    if ((count ?? 0) > 0) {
+        return { error: `Zamestnankyňa má ešte ${count} budúcich rezervácií. Najprv ich presuňte alebo zrušte, prípadne ju iba deaktivujte.` }
+    }
 
     const { error } = await supabase
         .from('employees')
@@ -2046,6 +2124,9 @@ export async function createManualReservation(prevState: any, formData: FormData
     if (conflictCount > 0) {
         return { error: 'V tomto čase už existuje iná rezervácia.' };
     }
+    if (await hasEmployeeOrDeviceConflict(supabase, employeeId, serviceId, startDateTime.toISOString(), endDateTime.toISOString())) {
+        return { error: 'Prístroj pre túto službu je v tomto čase obsadený inou rezerváciou.' };
+    }
 
     // Two-room limit is only a warning for staff — they may knowingly override it.
     if (formData.get('ignoreRoomWarning') !== '1') {
@@ -2183,22 +2264,12 @@ export async function createAdminCosmeticAppointment(data: {
     await requireAdmin();
     const supabase = await createClient();
 
-    // Verify availability again before inserting (Race condition check)
-    const { data: overlappingAppointments, error: conflictError } = await supabase
-        .from('cosmetic_appointments')
-        .select('id')
-        .eq('employee_id', data.employee_id)
-        .lt('start_time', data.end_time)
-        .gt('end_time', data.start_time)
-        .neq('status', 'cancelled');
-
-    if (conflictError) {
-        console.error('Error checking for conflicting appointments:', conflictError);
-        return { error: 'Nastala chyba pri overovaní dostupnosti termínu.' };
+    if (new Date(data.end_time).getTime() <= new Date(data.start_time).getTime()) {
+        return { error: 'Koniec termínu musí byť po jeho začiatku.' };
     }
 
-    if (overlappingAppointments && overlappingAppointments.length > 0) {
-        return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    if (await hasEmployeeOrDeviceConflict(supabase, data.employee_id, data.service_id, data.start_time, data.end_time)) {
+        return { error: 'Tento termín koliduje s inou rezerváciou (zamestnankyňa alebo prístroj, vrátane 15-min medzery).' };
     }
 
     const vacation = await findEmployeeUnavailability(
@@ -2309,23 +2380,12 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
     await requireAdmin();
     const supabase = await createClient();
 
-    // Verify availability before updating
-    const { data: overlappingAppointments, error: conflictError } = await supabase
-        .from('cosmetic_appointments')
-        .select('id')
-        .eq('employee_id', data.employee_id)
-        .lt('start_time', data.end_time)
-        .gt('end_time', data.start_time)
-        .neq('status', 'cancelled')
-        .neq('id', id); // Ignore the current appointment we are updating
-
-    if (conflictError) {
-        console.error('Error checking for conflicting appointments:', conflictError);
-        return { error: 'Nastala chyba pri overovaní dostupnosti termínu.' };
+    if (new Date(data.end_time).getTime() <= new Date(data.start_time).getTime()) {
+        return { error: 'Koniec termínu musí byť po jeho začiatku.' };
     }
 
-    if (overlappingAppointments && overlappingAppointments.length > 0) {
-        return { error: 'Tento termín už je obsadený iným zákazníkom alebo inou rezerváciou.' };
+    if (await hasEmployeeOrDeviceConflict(supabase, data.employee_id, data.service_id, data.start_time, data.end_time, id)) {
+        return { error: 'Tento termín koliduje s inou rezerváciou (zamestnankyňa alebo prístroj, vrátane 15-min medzery).' };
     }
 
     // Only when the time or the employee changes — editing a note on an appointment that

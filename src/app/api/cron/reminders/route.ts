@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
+import { formatInTimeZone } from 'date-fns-tz';
 import { sendEmail } from '@/utils/email';
 
 export const dynamic = 'force-dynamic';
@@ -11,17 +12,20 @@ export async function GET(request: NextRequest) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Cron requests carry no user cookie; the session client ran as anon and, with no anon
+    // read policy on bookings, never found anything — no reminder was ever sent.
+    const supabase = createAdminClient();
 
-    // 2. Calculate time range
-    // We want to notify for trainings starting in ~24 hours.
-    // Let's pick a window: [NOW + 23h, NOW + 25h] to catch anything in that slot.
-    // Or simpler: >= NOW + 23h AND < NOW + 25h AND reminder_sent = false
-
-    // Postgres interval syntax is robust, but let's use JS dates for query parameters to be explicit.
-    const now = new Date();
-    const startWindow = new Date(now.getTime() + 23 * 60 * 60 * 1000).toISOString();
-    const endWindow = new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString();
+    // 2. Time range: every training on TOMORROW's Bratislava calendar day. Training
+    // start_time is stored as face-value wall time labelled UTC ("18:00Z" means 18:00 in
+    // Bratislava), so the day bounds are built as plain date strings with a Z suffix.
+    // The old [now+23h, now+25h) window, run once a day at 08:00 UTC, could only ever
+    // match sessions between 07:00 and 09:00.
+    const tz = 'Europe/Bratislava';
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const dayAfter = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const startWindow = `${formatInTimeZone(tomorrow, tz, 'yyyy-MM-dd')}T00:00:00Z`;
+    const endWindow = `${formatInTimeZone(dayAfter, tz, 'yyyy-MM-dd')}T00:00:00Z`;
 
     // 3. Fetch bookings
     const { data: bookings, error } = await supabase

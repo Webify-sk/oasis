@@ -12,7 +12,8 @@ export default async function MilestonesPage() {
         const { count, error } = await supabase
             .from('bookings')
             .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .lt('start_time', new Date().toISOString()); // booked ≠ attended
 
         bookingCount = count || 0;
     }
