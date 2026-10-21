@@ -1,5 +1,7 @@
 'use client';
 
+import { getRealUtcDate } from '@/utils/booking-logic';
+
 import React from 'react';
 import { User, Check, AlertCircle, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
@@ -157,9 +159,8 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
 
         // If registered -> Show confirmation modal
         if (session.isUserRegistered) {
-            const start = new Date(session.startTimeISO);
-            const now = new Date();
-            const diffHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
+            // startTimeISO is face-value Bratislava time; compare as a real instant
+            const diffHours = (getRealUtcDate(session.startTimeISO).getTime() - Date.now()) / (1000 * 60 * 60);
             setIsLateCancellation(diffHours < 12);
             setConfirmModalOpen(true);
             return;

@@ -1400,6 +1400,7 @@ export async function rescheduleAppointment(id: string, newStartTime: string, ne
 
     if (error) {
         console.error('Error rescheduling appointment:', error)
+        if ((error as any).code === '23P01') return { error: 'Tento termín sa prekrýva s inou rezerváciou tej istej zamestnankyne. Prosím, vyberte iný termín.' }
         return { error: 'Failed to reschedule' }
     }
 
@@ -2165,6 +2166,7 @@ export async function createManualReservation(prevState: any, formData: FormData
 
     if (error) {
         console.error('Error creating manual reservation:', error);
+        if (error.code === '23P01') return { error: 'Tento termín sa prekrýva s inou rezerváciou tej istej zamestnankyne. Prosím, vyberte iný termín.' };
         return { error: 'Chyba pri vytváraní rezervácie: ' + error.message };
     }
 
@@ -2304,6 +2306,7 @@ export async function createAdminCosmeticAppointment(data: {
 
     if (error) {
         console.error('Error creating admin appointment:', error);
+        if (error.code === '23P01') return { error: 'Tento termín sa prekrýva s inou rezerváciou tej istej zamestnankyne. Prosím, vyberte iný termín.' };
         return { error: 'Nepodarilo sa vytvoriť rezerváciu.' };
     }
 
@@ -2432,6 +2435,7 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
 
     if (error) {
         console.error('Error updating admin appointment:', error);
+        if (error.code === '23P01') return { error: 'Tento termín sa prekrýva s inou rezerváciou tej istej zamestnankyne. Prosím, vyberte iný termín.' };
         return { error: 'Nepodarilo sa upraviť rezerváciu.' };
     }
 

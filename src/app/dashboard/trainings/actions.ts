@@ -2,6 +2,59 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { getRealUtcDate } from '@/utils/booking-logic';
+
+// Bookings made before the FIFO credit batches went live have no booking_deductions rows.
+// Only those may fall back to a price-based refund; anything newer without deductions
+// simply cost nothing (unlimited membership) and refunds nothing.
+const FIFO_CREDITS_SINCE = '2026-04-27';
+
+// Postgres error codes / messages raised by the guards in sql/2026-10-21-integrity-C-up.sql
+function bookingInsertErrorMessage(error: any): string {
+    if (error?.code === '23505') return 'Na tento tréning ste už prihlásený.';
+    if (String(error?.message || '').includes('capacity_exceeded')) return 'Na tréningu nie je dostatok voľných miest.';
+    return 'Chyba pri vytváraní rezervácie: ' + (error?.message || 'unknown');
+}
+
+// Session start_time is face-value Bratislava wall time labelled UTC; compare as real instants.
+function hoursUntil(faceValueISO: string): number {
+    return (getRealUtcDate(faceValueISO).getTime() - Date.now()) / (1000 * 60 * 60);
+}
+
+// Rejects what the UI only greys out: a session reserved as individual for someone else,
+// or one that falls into a trainer's / the studio's vacation.
+async function sessionIsBlocked(db: any, trainingTypeId: string, startTimeISO: string, trainerId: string | null): Promise<string | null> {
+    const { data: exception } = await db
+        .from('training_session_exceptions')
+        .select('is_individual')
+        .eq('training_type_id', trainingTypeId)
+        .eq('session_start_time', startTimeISO)
+        .maybeSingle();
+    if (exception?.is_individual) return 'Tento tréning je individuálny a nedá sa naň prihlásiť online.';
+
+    const { data: vacations } = await db
+        .from('vacations')
+        .select('trainer_id')
+        .lte('start_time', startTimeISO)
+        .gt('end_time', startTimeISO);
+    const hit = (vacations || []).some((v: any) => !v.trainer_id || v.trainer_id === trainerId);
+    if (hit) return 'V tomto termíne je štúdio alebo tréner na dovolenke.';
+    return null;
+}
+
+// Credits go back where they came from, unless that batch has already expired — then into
+// a fresh one-month batch so the client can actually spend them.
+async function refundDeduction(db: any, userId: string, batchId: string, amount: number) {
+    const { data: batch } = await db.from('credit_batches').select('expires_at').eq('id', batchId).single();
+    const expired = batch?.expires_at && new Date(batch.expires_at) < new Date();
+    if (batch && !expired) {
+        await db.rpc('adjust_credit_batch', { p_batch_id: batchId, p_delta: amount });
+        return;
+    }
+    const endD = new Date();
+    endD.setMonth(endD.getMonth() + 1);
+    await db.from('credit_batches').insert({ user_id: userId, amount, remaining_amount: amount, expires_at: endD.toISOString() });
+}
 import { revalidatePath } from 'next/cache';
 
 export async function bookTraining(trainingTypeId: string, startTimeISO: string, participantsCount: number = 1) {
@@ -27,8 +80,8 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         .eq('id', user.id)
         .single();
 
-    // Check if training is in the past
-    const trainingDate = new Date(startTimeISO);
+    // Check if training is in the past (start_time is face value, convert before comparing)
+    const trainingDate = getRealUtcDate(startTimeISO);
     const now = new Date();
     if (trainingDate < now) {
         return { success: false, message: 'Na tento tréning sa už nedá prihlásiť (termín uplynul).' };
@@ -170,7 +223,13 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         }
     }
 
-    // Insert booking
+    if (profileCheck?.role !== 'admin') {
+        const blocked = await sessionIsBlocked(db, trainingTypeId, startTimeISO, resolvedTrainerId);
+        if (blocked) return { success: false, message: blocked };
+    }
+
+    // Insert booking (the DB trigger re-checks capacity under a lock; the unique index
+    // stops a double submit)
     const { data: newBookingParams, error: bookingError } = await supabase
         .from('bookings')
         .insert({
@@ -184,7 +243,7 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
         .single();
 
     if (bookingError || !newBookingParams) {
-        return { success: false, message: 'Chyba pri vytváraní rezervácie: ' + (bookingError?.message || 'unknown') };
+        return { success: false, message: bookingInsertErrorMessage(bookingError) };
     }
 
     const newBookingId = newBookingParams.id;
@@ -199,11 +258,8 @@ export async function bookTraining(trainingTypeId: string, startTimeISO: string,
             const availableInBatch = Number(batch.remaining_amount);
             const deductionAmount = Math.min(availableInBatch, costToDeduct);
             
-            // Znížime zostávajúci amount v batchi
-            await db
-                .from('credit_batches')
-                .update({ remaining_amount: availableInBatch - deductionAmount })
-                .eq('id', batch.id);
+            // Atomic decrement — a parallel booking can no longer overwrite this with a stale value
+            await db.rpc('adjust_credit_batch', { p_batch_id: batch.id, p_delta: -deductionAmount });
                 
             // Zaznamenáme deduction kvôli referencii na vrátenie
             await db
@@ -292,7 +348,7 @@ export async function cancelBooking(bookingId: string) {
     // 1. Fetch booking details *before* deletion to get start_time
     const { data: booking, error: fetchError } = await db
         .from('bookings')
-        .select('start_time, participants_count, user_id, training_type:training_type_id(title, price_credits)')
+        .select('start_time, participants_count, user_id, created_at, training_type:training_type_id(title, price_credits)')
         .eq('id', bookingId)
         .single();
 
@@ -305,12 +361,9 @@ export async function cancelBooking(bookingId: string) {
     const priceCredits = (Array.isArray(trainingTypeData) ? trainingTypeData[0]?.price_credits : trainingTypeData?.price_credits) ?? 1;
     const participantsCount = booking.participants_count || 1;
 
-    // 2. Check 12h rule
-    const startTime = new Date(booking.start_time);
-    const now = new Date();
-    const diffMs = startTime.getTime() - now.getTime();
-    const hoursValues = diffMs / (1000 * 60 * 60);
-    const shouldRefund = hoursValues >= 12;
+    // 2. Check 12h rule (face-value start vs real now was off by 1–2 h before)
+    const shouldRefund = hoursUntil(booking.start_time) >= 12;
+    const isLegacyBooking = booking.created_at < FIFO_CREDITS_SINCE;
 
     // FÁZA 2: Získame detail o použitých kreditoch (deductions) PRED zmazaním rezervácie
     const { data: deductions } = await db
@@ -335,14 +388,8 @@ export async function cancelBooking(bookingId: string) {
         if (deductions && deductions.length > 0) {
             // FÁZA 2: Vrátime presné čiastky do jednotlivých batchov
         for (const deduction of deductions) {
-            const { data: batchData } = await db.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
-            if (batchData) {
-                await db
-                    .from('credit_batches')
-                    .update({ remaining_amount: Number(batchData.remaining_amount) + Number(deduction.amount) })
-                    .eq('id', deduction.batch_id);
-                totalRefund += Number(deduction.amount);
-            }
+            await refundDeduction(db, ownerId, deduction.batch_id, Number(deduction.amount));
+            totalRefund += Number(deduction.amount);
         }
         
         // Update the cached total in profiles
@@ -354,9 +401,10 @@ export async function cancelBooking(bookingId: string) {
                 .eq('id', ownerId);
         }
         
-    } else if (shouldRefund) {
+    } else if (shouldRefund && isLegacyBooking) {
         // FALLBACK pre staré (historické) rezervácie pred spustením Fázy 2
-        // Tie nemajú 'deductions', takže im musíme vrátiť kredit naslepo podľa počtu
+        // Tie nemajú 'deductions', takže im musíme vrátiť kredit naslepo podľa počtu.
+        // Novšie rezervácie bez odpočtu nič nestáli (neobmedzené členstvo) — nič sa nevracia.
         
         const { data: profile } = await supabase.from('profiles').select('credits, unlimited_expires_at').eq('id', ownerId).single();
         const isUnlimited = profile?.unlimited_expires_at && new Date(profile.unlimited_expires_at) > new Date();
@@ -483,15 +531,12 @@ export async function rescheduleBooking(
 
     const db = isAdmin ? (await import('@/utils/supabase/admin')).createAdminClient() : supabase;
 
-    // 2. Check time logic (12h rule) for old booking
-    const oldStartTime = new Date(oldBooking.start_time);
+    // 2. Check time logic (12h rule) for old booking — compared as real instants
     const now = new Date();
-    const diffMs = oldStartTime.getTime() - now.getTime();
-    const hoursValues = diffMs / (1000 * 60 * 60);
-    const shouldRefundOld = isAdmin || hoursValues >= 12;
+    const shouldRefundOld = isAdmin || hoursUntil(oldBooking.start_time) >= 12;
 
     // 3. Check new training capacity
-    const trainingDate = new Date(newStartTimeISO);
+    const trainingDate = getRealUtcDate(newStartTimeISO);
     if (trainingDate < now && !isAdmin) {
         return { success: false, message: 'Na vybraný tréning sa už nedá prihlásiť (termín uplynul).' };
     }
@@ -504,11 +549,13 @@ export async function rescheduleBooking(
 
     if (!newTrainingType) return { success: false, message: 'Nový tréning sa nenašiel.' };
 
+    // Own booking must not count against the target session (rescheduling within the same one)
     const { data: slotBookings } = await supabase
         .from('bookings')
         .select('participants_count')
         .eq('training_type_id', newTrainingTypeId)
-        .eq('start_time', newStartTimeISO);
+        .eq('start_time', newStartTimeISO)
+        .neq('id', bookingId);
 
     const currentOccupancy = slotBookings?.reduce((sum, b) => sum + (b.participants_count || 1), 0) || 0;
 
@@ -575,9 +622,12 @@ export async function rescheduleBooking(
         .select('*')
         .eq('booking_id', bookingId);
         
-    if (shouldRefundOld && deductions) {
+    if (shouldRefundOld && deductions && deductions.length > 0) {
         totalRefund = deductions.reduce((sum, d) => sum + Number(d.amount), 0);
-    } else if (shouldRefundOld && !deductions?.length) {
+    } else if (shouldRefundOld && oldBooking.created_at < FIFO_CREDITS_SINCE) {
+        // Legacy booking from before the FIFO batches: refund by price. Newer bookings
+        // without deductions cost nothing and refund nothing. (The old `&& deductions`
+        // test was always true for an empty array, so this branch never ran.)
         const oldTrainingData = oldBooking.training_type as any;
         const oldPrice = (Array.isArray(oldTrainingData) ? oldTrainingData[0]?.price_credits : oldTrainingData?.price_credits) ?? 1;
         const oldSelfRefund = isUnlimited ? 0 : oldPrice;
@@ -590,20 +640,42 @@ export async function rescheduleBooking(
         return { success: false, message: `Nemáte dostatok kreditov na zmenu termínu (vyžaduje sa ${totalCost}, budete mať ${totalAvailableNow + totalRefund}).` };
     }
 
-    // 6. Delete old booking and process refund
+    if (!isAdmin) {
+        const blocked = await sessionIsBlocked(db, newTrainingTypeId, newStartTimeISO, resolvedTrainerId);
+        if (blocked) return { success: false, message: blocked };
+    }
+
+    // 6. Create the NEW booking first. If that fails nothing has changed yet — the old
+    //    order (delete, refund, then insert) could leave the client with no booking at all.
+    const { data: newBookingParams, error: bookingError } = await db
+        .from('bookings')
+        .insert({
+            user_id: oldBooking.user_id,
+            training_type_id: newTrainingTypeId,
+            start_time: newStartTimeISO,
+            participants_count: participantsCount,
+            trainer_id: resolvedTrainerId
+        })
+        .select('id')
+        .single();
+
+    if (bookingError || !newBookingParams) {
+        console.error('Failed to insert new booking during reschedule:', bookingError);
+        return { success: false, message: bookingInsertErrorMessage(bookingError) };
+    }
+
+    // 7. Delete old booking and process refund
     const { error: deleteError } = await db.from('bookings').delete().eq('id', bookingId);
-    if (deleteError) return { success: false, message: 'Chyba pri rušení pôvodnej rezervácie: ' + deleteError.message };
+    if (deleteError) {
+        // Roll the new one back by hand; the client keeps the original booking.
+        await db.from('bookings').delete().eq('id', newBookingParams.id);
+        return { success: false, message: 'Chyba pri rušení pôvodnej rezervácie: ' + deleteError.message };
+    }
 
     if (totalRefund > 0) {
         if (deductions && deductions.length > 0) {
             for (const deduction of deductions) {
-                const { data: batchData } = await db.from('credit_batches').select('remaining_amount').eq('id', deduction.batch_id).single();
-                if (batchData) {
-                    await db
-                        .from('credit_batches')
-                        .update({ remaining_amount: Number(batchData.remaining_amount) + Number(deduction.amount) })
-                        .eq('id', deduction.batch_id);
-                }
+                await refundDeduction(db, oldBooking.user_id, deduction.batch_id, Number(deduction.amount));
             }
         } else {
             const { data: latestBatch } = await db
@@ -627,24 +699,6 @@ export async function rescheduleBooking(
         await db.from('profiles').update({ credits: (userProfile.credits || 0) + totalRefund }).eq('id', oldBooking.user_id);
     }
 
-    // 7. Create new booking
-    const { data: newBookingParams, error: bookingError } = await db
-        .from('bookings')
-        .insert({
-            user_id: oldBooking.user_id,
-            training_type_id: newTrainingTypeId,
-            start_time: newStartTimeISO,
-            participants_count: participantsCount,
-            trainer_id: resolvedTrainerId
-        })
-        .select('id')
-        .single();
-
-    if (bookingError || !newBookingParams) {
-        console.error('Failed to insert new booking during reschedule:', bookingError);
-        return { success: false, message: 'Pôvodná rezervácia bola zrušená, ale novú sa nepodarilo vytvoriť.' };
-    }
-
     const newBookingId = newBookingParams.id;
 
     // 8. Deduct credits for new booking
@@ -663,7 +717,7 @@ export async function rescheduleBooking(
                 if (costToDeduct <= 0) break;
                 const availableInBatch = Number(batch.remaining_amount);
                 const deductionAmount = Math.min(availableInBatch, costToDeduct);
-                await db.from('credit_batches').update({ remaining_amount: availableInBatch - deductionAmount }).eq('id', batch.id);
+                await db.rpc('adjust_credit_batch', { p_batch_id: batch.id, p_delta: -deductionAmount });
                 await db.from('booking_deductions').insert({ booking_id: newBookingId, batch_id: batch.id, amount: deductionAmount });
                 costToDeduct -= deductionAmount;
             }
