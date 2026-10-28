@@ -2,7 +2,7 @@
 -- NON-DESTRUCTIVE: adds a function, a trigger, constraints and an index. No row is modified.
 -- Every guard that could clash with historical data is limited to rows created/starting after
 -- 2026-10-28, so it can never fail on what is already in the tables.
--- Reverse with 2026-10-28-integrity-C-down.sql.
+-- Reverse with 2026-10-21-integrity-C-down.sql.
 --
 -- Deploy together with the application commit that calls adjust_credit_batch().
 
