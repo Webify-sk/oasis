@@ -1,8 +1,8 @@
 -- Package C — database-level guards against races and bad writes.
 -- NON-DESTRUCTIVE: adds a function, a trigger, constraints and an index. No row is modified.
 -- Every guard that could clash with historical data is limited to rows created/starting after
--- 2026-10-21, so it can never fail on what is already in the tables.
--- Reverse with 2026-10-21-integrity-C-down.sql.
+-- 2026-10-28, so it can never fail on what is already in the tables.
+-- Reverse with 2026-10-28-integrity-C-down.sql.
 --
 -- Deploy together with the application commit that calls adjust_credit_batch().
 
@@ -46,7 +46,7 @@ ALTER TABLE public.bookings
 -- ---------------------------------------------------------------------------
 CREATE UNIQUE INDEX bookings_one_per_user_session
     ON public.bookings (user_id, training_type_id, start_time)
-    WHERE created_at > '2026-10-21';
+    WHERE created_at > '2026-10-28';
 
 -- ---------------------------------------------------------------------------
 -- 4. Capacity enforced inside the database. The advisory lock serialises
@@ -101,6 +101,6 @@ ALTER TABLE public.cosmetic_appointments
         employee_id WITH =,
         tstzrange(start_time - interval '15 minutes', end_time) WITH &&
     )
-    WHERE (status <> 'cancelled' AND employee_id IS NOT NULL AND start_time > '2026-10-21');
+    WHERE (status <> 'cancelled' AND employee_id IS NOT NULL AND start_time > '2026-10-28');
 
 COMMIT;
