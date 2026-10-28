@@ -1,5 +1,6 @@
 -- Package C — database-level guards against races and bad writes.
 -- NON-DESTRUCTIVE: adds a function, a trigger, constraints and an index. No row is modified.
+-- Idempotent: safe to run again after a failed or partial attempt.
 -- Every guard that could clash with historical data is limited to rows created/starting after
 -- 2026-10-28, so it can never fail on what is already in the tables.
 -- Reverse with 2026-10-21-integrity-C-down.sql.
@@ -37,14 +38,20 @@ GRANT EXECUTE ON FUNCTION public.adjust_credit_batch(uuid, numeric) TO service_r
 -- ---------------------------------------------------------------------------
 -- 2. participants_count must be at least 1 (verified: no existing row violates it).
 -- ---------------------------------------------------------------------------
-ALTER TABLE public.bookings
-    ADD CONSTRAINT bookings_participants_positive CHECK (participants_count >= 1);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bookings_participants_positive') THEN
+        ALTER TABLE public.bookings
+            ADD CONSTRAINT bookings_participants_positive CHECK (participants_count >= 1);
+    END IF;
+END
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 3. One booking per client per session. Two historical duplicates exist and
 --    are left alone: the index only covers rows created from today on.
 -- ---------------------------------------------------------------------------
-CREATE UNIQUE INDEX bookings_one_per_user_session
+CREATE UNIQUE INDEX IF NOT EXISTS bookings_one_per_user_session
     ON public.bookings (user_id, training_type_id, start_time)
     WHERE created_at > '2026-10-28';
 
@@ -88,19 +95,26 @@ CREATE TRIGGER trg_enforce_training_capacity
     FOR EACH ROW EXECUTE FUNCTION public.enforce_training_capacity();
 
 -- ---------------------------------------------------------------------------
--- 5. No two appointments of one employee may overlap, 15-minute gap included
---    (range starts 15 min early so adjacent bookings need the gap). New rows
---    only; the app already handles error code 23P01 with a friendly message.
---    Device and room limits stay in the application.
+-- 5. No two appointments of one employee may truly overlap. New rows only; the
+--    app already handles error code 23P01 with a friendly message.
+--    The 15-minute gap, device and room limits stay in the application —
+--    "start_time - interval" is not IMMUTABLE for timestamptz (time-zone
+--    dependent), so Postgres refuses it inside an index/exclusion expression.
 -- ---------------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
-ALTER TABLE public.cosmetic_appointments
-    ADD CONSTRAINT cosmetic_appointments_no_employee_overlap
-    EXCLUDE USING gist (
-        employee_id WITH =,
-        tstzrange(start_time - interval '15 minutes', end_time) WITH &&
-    )
-    WHERE (status <> 'cancelled' AND employee_id IS NOT NULL AND start_time > '2026-10-28');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cosmetic_appointments_no_employee_overlap') THEN
+        ALTER TABLE public.cosmetic_appointments
+            ADD CONSTRAINT cosmetic_appointments_no_employee_overlap
+            EXCLUDE USING gist (
+                employee_id WITH =,
+                tstzrange(start_time, end_time) WITH &&
+            )
+            WHERE (status <> 'cancelled' AND employee_id IS NOT NULL AND start_time > '2026-10-28');
+    END IF;
+END
+$$;
 
 COMMIT;
