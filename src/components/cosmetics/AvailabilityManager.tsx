@@ -40,7 +40,14 @@ export function AvailabilityManager({
         for (let i = 0; i < 7; i++) {
             const daySlots = initialAvailability.filter(s => s.day_of_week === i && s.is_recurring);
             if (daySlots.length > 0) {
-                slots.push(...daySlots);
+                // A stored row can have an empty time (older saves allowed it). Put the
+                // default into the STATE, not only into the input's display value —
+                // otherwise the form shows 09:00 while saving null again.
+                slots.push(...daySlots.map(s => ({
+                    ...s,
+                    start_time: s.start_time ? String(s.start_time).slice(0, 5) : '09:00',
+                    end_time: s.end_time ? String(s.end_time).slice(0, 5) : '17:00'
+                })));
             } else {
                 // Default slot for this day (unavailable)
                 slots.push({
@@ -150,7 +157,7 @@ export function AvailabilityManager({
             setMessage('Rozvrh úspešne uložený ✅');
             setTimeout(() => setMessage(''), 3000);
         } else {
-            alert('Chyba pri ukladaní');
+            alert(res.error || 'Chyba pri ukladaní');
         }
     };
 

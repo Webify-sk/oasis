@@ -772,6 +772,20 @@ export async function updateWeeklyAvailability(employeeId: string, schedule: any
         .eq('is_recurring', true)
     const oldIds = (oldRows || []).map(r => r.id)
 
+    // An available day must have both times — a missing one silently removes the
+    // whole day from booking (the slot generator skips ranges without start/end).
+    const DAY_NAMES = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+    const timeOk = (t: any) => typeof t === 'string' && /^\d{2}:\d{2}/.test(t);
+    for (const slot of schedule) {
+        if (!slot.is_available) continue;
+        if (!timeOk(slot.start_time) || !timeOk(slot.end_time)) {
+            return { error: `${DAY_NAMES[slot.day_of_week] ?? 'Deň'}: doplňte čas od aj do.` };
+        }
+        if (slot.start_time.slice(0, 5) >= slot.end_time.slice(0, 5)) {
+            return { error: `${DAY_NAMES[slot.day_of_week] ?? 'Deň'}: čas „do" musí byť neskôr ako čas „od".` };
+        }
+    }
+
     // 2. Insert new slots
     const inserts = schedule.map(slot => ({
         employee_id: employeeId,
