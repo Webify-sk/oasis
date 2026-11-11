@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { ChevronDown, ChevronLeft } from 'lucide-react';
 import { upsertTrainingType } from '@/app/admin/trainings/actions';
+import { parseDurationMinutes } from '@/utils/booking-logic';
 import styles from './TrainingForm.module.css';
 
 interface Trainer {
@@ -67,8 +68,18 @@ export function TrainingForm({ trainers, initialData, schedule }: { trainers: Tr
                         <label className={styles.label}>Max. počet účastníkov</label>
                         <input name="capacity" type="number" defaultValue={(state?.inputs?.capacity ?? initialData?.capacity) || 8} className={styles.input} />
 
-                        <label className={styles.label}>Dĺžka tréningu</label>
-                        <input name="duration_minutes" defaultValue={state?.inputs?.duration_minutes ?? initialData?.duration_minutes} className={styles.input} placeholder="50-80 minut" />
+                        <label className={styles.label}>Dĺžka tréningu (minúty)</label>
+                        <input
+                            name="duration_minutes"
+                            type="number"
+                            min="5"
+                            max="300"
+                            step="5"
+                            required
+                            defaultValue={parseDurationMinutes(state?.inputs?.duration_minutes ?? initialData?.duration_minutes, 50)}
+                            className={styles.input}
+                            placeholder="50"
+                        />
 
                         <label className={styles.label}>Opis tréningu</label>
                         <textarea

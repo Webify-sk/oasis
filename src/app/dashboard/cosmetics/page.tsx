@@ -15,6 +15,7 @@ export default async function CosmeticsPage(props: any) {
 
     let isEmployeeOrAdmin = false;
     let activeServicesCount = 0;
+    let todayCount = 0;
     let services: any[] = [];
 
     if (user) {
@@ -25,6 +26,28 @@ export default async function CosmeticsPage(props: any) {
             const { getManagedServices } = await import('@/actions/cosmetic-actions');
             services = await getManagedServices();
             activeServicesCount = services.length;
+
+            // Today's appointments (Bratislava calendar day). An employee sees her own,
+            // an admin without an employee record sees the whole salon.
+            const { getRealUtcDate } = await import('@/utils/booking-logic');
+            const { formatInTimeZone } = await import('date-fns-tz');
+            const today = formatInTimeZone(new Date(), 'Europe/Bratislava', 'yyyy-MM-dd');
+            const dayStart = getRealUtcDate(`${today}T00:00:00`);
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+            const { data: ownEmployee } = await supabase
+                .from('employees').select('id').eq('profile_id', user.id).maybeSingle();
+
+            let todayQuery = supabase
+                .from('cosmetic_appointments')
+                .select('id', { count: 'exact', head: true })
+                .neq('status', 'cancelled')
+                .gte('start_time', dayStart.toISOString())
+                .lt('start_time', dayEnd.toISOString());
+            if (ownEmployee) todayQuery = todayQuery.eq('employee_id', ownEmployee.id);
+
+            const { count } = await todayQuery;
+            todayCount = count ?? 0;
         }
     }
 
@@ -57,7 +80,7 @@ export default async function CosmeticsPage(props: any) {
                             border: '1px solid #eee'
                         }}>
                             <h3 style={{ margin: '0 0 1rem 0', color: '#5E715D', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dnešné rezervácie</h3>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#2c3e50' }}>-</div>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#2c3e50' }}>{todayCount}</div>
                             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#95a5a6' }}>Prehľad dňa</p>
                         </div>
 

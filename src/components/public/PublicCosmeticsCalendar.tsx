@@ -30,6 +30,7 @@ export function PublicCosmeticsCalendar({ service, baseUrl }: Props) {
     const [slots, setSlots] = useState<string[]>([]);
     const [availableDates, setAvailableDates] = useState<string[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(true);
+    const [showDescription, setShowDescription] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Tell the embedding page how tall we are, so the iframe can grow with the
@@ -90,6 +91,30 @@ export function PublicCosmeticsCalendar({ service, baseUrl }: Props) {
                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                     <Clock size={14} /> {service.duration_minutes} min
                 </p>
+                {service.description && (
+                    <div>
+                        <button
+                            type="button"
+                            aria-expanded={showDescription}
+                            onClick={() => setShowDescription(!showDescription)}
+                            style={{
+                                marginTop: '0.4rem', padding: 0, background: 'none', border: 'none', color: BRAND,
+                                fontSize: '0.85rem', fontWeight: 500, textDecoration: 'underline',
+                                textUnderlineOffset: '2px', cursor: 'pointer', fontFamily: 'inherit'
+                            }}
+                        >
+                            {showDescription ? 'Skryť popis' : 'Viac o procedúre'}
+                        </button>
+                        {showDescription && (
+                            <p style={{
+                                margin: '0.6rem auto 0 auto', maxWidth: '640px', textAlign: 'left', fontSize: '0.9rem',
+                                color: '#4B5563', lineHeight: 1.55, whiteSpace: 'pre-line'
+                            }}>
+                                {service.description}
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Side by side when there is room; flex-wrap stacks them on a phone. */}

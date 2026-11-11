@@ -1,5 +1,6 @@
 'use client';
 
+import { parseDurationMinutes } from '@/utils/booking-logic';
 import { Edit2, Trash2, Calendar, Eye, ChevronDown, ChevronUp, ChevronRight, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -147,7 +148,7 @@ export function TrainingList({ trainings, scheduleData = [] }: { trainings: Trai
                             </h3>
                             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#666', flexWrap: 'wrap' }}>
                                 <span>{training.level}</span>
-                                <span>{training.duration_minutes} min</span>
+                                <span>{parseDurationMinutes(training.duration_minutes)} min</span>
                                 <span style={{ color: '#4A403A', fontWeight: 500 }}>
                                     Prihlásení: {training.bookingCount}
                                 </span>

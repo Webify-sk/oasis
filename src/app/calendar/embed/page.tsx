@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { PublicCalendar } from '@/components/public/PublicCalendar';
-import { isBookingLocked } from '@/utils/booking-logic';
+import { isBookingLocked, parseDurationMinutes } from '@/utils/booking-logic';
 
 // Force dynamic rendering to handle searchParams properly
 export const dynamic = 'force-dynamic';
@@ -173,7 +173,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                         bookedCount: effectiveBookedCount,
                         isRegistered: false, // Public view never shows registration
                         isIndividual, // Pass flag
-                        duration: tt.duration_minutes || 60, // Pass duration
+                        duration: parseDurationMinutes(tt.duration_minutes),
                         // Deadline Logic
                         ...((() => {
                             // We need an ISO string for isBookingLocked.

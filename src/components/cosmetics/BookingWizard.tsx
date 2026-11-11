@@ -15,7 +15,7 @@ function localToday() {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 }
 
-interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; display_order?: number; }
+interface Service { id: string; title: string; price: number; duration_minutes: number; category: string; display_order?: number; description?: string | null; }
 interface Employee { id: string; name: string; color: string; }
 
 interface BookingWizardProps {
@@ -44,6 +44,8 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
     const [isMorningOpen, setIsMorningOpen] = useState(false);
     const [isAfternoonOpen, setIsAfternoonOpen] = useState(false);
     const [notes, setNotes] = useState('');
+    // Service whose description is expanded in the list (one at a time keeps the list short)
+    const [openDescriptionId, setOpenDescriptionId] = useState<string | null>(null);
 
     // Initial Fetch
     useEffect(() => {
@@ -302,14 +304,42 @@ export function BookingWizard({ initialServiceId }: BookingWizardProps) {
                                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                             >
-                                <div>
+                                <div style={{ minWidth: 0, paddingRight: '1rem' }}>
                                     <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>{service.title}</h3>
                                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
                                         <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} />
                                         {service.duration_minutes} min
                                     </span>
+                                    {service.description && service.description.trim() !== '' && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                aria-expanded={openDescriptionId === service.id}
+                                                onClick={(e) => {
+                                                    // the whole card selects the service — the toggle must not
+                                                    e.stopPropagation();
+                                                    setOpenDescriptionId(openDescriptionId === service.id ? null : service.id);
+                                                }}
+                                                style={{
+                                                    display: 'block', marginTop: '0.4rem', padding: 0, background: 'none', border: 'none',
+                                                    color: '#93745F', fontSize: '0.82rem', fontWeight: 500, textDecoration: 'underline',
+                                                    textUnderlineOffset: '2px', cursor: 'pointer', fontFamily: 'inherit'
+                                                }}
+                                            >
+                                                {openDescriptionId === service.id ? 'Skryť popis' : 'Viac o procedúre'}
+                                            </button>
+                                            {openDescriptionId === service.id && (
+                                                <p style={{
+                                                    margin: '0.6rem 0 0 0', fontSize: '0.9rem', color: '#4B5563',
+                                                    lineHeight: 1.55, whiteSpace: 'pre-line'
+                                                }}>
+                                                    {service.description}
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
-                                <span style={{ fontWeight: 'bold', color: '#5E715D' }}>{service.price} €</span>
+                                <span style={{ fontWeight: 'bold', color: '#5E715D', flex: '0 0 auto' }}>{service.price} €</span>
                             </div>
                         ))}
                         {services.filter(s => (s.category || 'beauty') === selectedCategory).length === 0 && (

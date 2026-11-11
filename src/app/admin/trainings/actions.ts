@@ -1,5 +1,6 @@
 'use server';
 
+import { parseDurationMinutes } from '@/utils/booking-logic';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -13,7 +14,8 @@ export async function upsertTrainingType(prevState: any, formData: FormData) {
         const level = formData.get('level') as string;
         const capacity = formData.get('capacity') as string;
         const muscle_group = formData.get('muscle_group') as string;
-        const duration_minutes = formData.get('duration_minutes') as string;
+        // Stored as plain minutes ("50"), never "50min" — views append the unit.
+        const duration_minutes = String(parseDurationMinutes(formData.get('duration_minutes')));
         const description = formData.get('description') as string;
         const perex = formData.get('perex') as string;
         const schedule = formData.get('schedule') as string; // JSON string

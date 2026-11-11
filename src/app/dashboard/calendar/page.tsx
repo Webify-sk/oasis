@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { parseDurationMinutes } from '@/utils/booking-logic';
 import { MonthlyCalendar } from '@/components/dashboard/MonthlyCalendar';
 
 interface PageProps {
@@ -158,7 +159,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         date: dateObj,
                         isRegistered,
                         isIndividual, // Add flag
-                        duration: tt.duration_minutes || 60, // Default to 60 if missing
+                        duration: parseDurationMinutes(tt.duration_minutes),
                         level: tt.level || 'All levels',
                         occupancy: {
                             current: currentOccupancy,

@@ -49,3 +49,14 @@ export function isBookingLocked(startTimeISO: string | Date): { isLocked: boolea
         deadlineMsg: trainingHour <= 11 ? '12 hodín' : '3 hodiny'
     };
 }
+
+/**
+ * Training duration is stored as free text typed by the admin ("50", "50min", "80 min ").
+ * Returns the number of minutes, so views can append the unit themselves without
+ * producing "50min min".
+ */
+export function parseDurationMinutes(value: unknown, fallback = 60): number {
+    const match = String(value ?? '').match(/\d+/);
+    const minutes = match ? parseInt(match[0], 10) : NaN;
+    return Number.isFinite(minutes) && minutes > 0 ? minutes : fallback;
+}

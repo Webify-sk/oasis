@@ -11,6 +11,7 @@ export interface PublicServiceInfo {
     title: string;
     duration_minutes: number;
     price: number;
+    description: string | null;
     /** Active employees who perform this service — decides whether choosing one makes sense. */
     staff_count: number;
 }
@@ -34,7 +35,7 @@ export async function getPublicServiceInfo(serviceId: string): Promise<PublicSer
     const supabase = await adminClientPromise();
     const { data } = await supabase
         .from('cosmetic_services')
-        .select('id, title, duration_minutes, price, is_active')
+        .select('id, title, duration_minutes, price, description, is_active')
         .eq('id', serviceId)
         .single();
 
@@ -51,6 +52,7 @@ export async function getPublicServiceInfo(serviceId: string): Promise<PublicSer
         title: data.title,
         duration_minutes: data.duration_minutes,
         price: Number(data.price),
+        description: data.description && String(data.description).trim() !== '' ? data.description : null,
         staff_count: count ?? 0
     };
 }
