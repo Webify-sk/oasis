@@ -18,6 +18,7 @@ interface TrainingSession {
     isLocked?: boolean;
     deadlineMsg?: string;
     duration?: number;
+    about?: string | null;
 }
 
 const MobileDateHeader = ({ date }: { date: Date }) => {
@@ -315,6 +316,15 @@ export function PublicCalendar({ currentDate, events }: PublicCalendarProps) {
                             <p style={{ marginBottom: '4px' }}>🕒 <strong>{selectedEvent.time}</strong></p>
                             <p style={{ marginBottom: '4px' }}>📅 {selectedEvent.date.toLocaleDateString('sk-SK')}</p>
                             <p style={{ marginBottom: '4px' }}>👤 Tréner: {selectedEvent.trainer}</p>
+                            {selectedEvent.about && (
+                                <div style={{
+                                    marginTop: '0.75rem', padding: '0.75rem 0.9rem', backgroundColor: '#FAF8F6',
+                                    border: '1px solid #EFEAE5', borderRadius: '8px', color: '#4B5563',
+                                    maxHeight: '200px', overflowY: 'auto', whiteSpace: 'pre-line', lineHeight: 1.55
+                                }}>
+                                    {selectedEvent.about}
+                                </div>
+                            )}
 
                             {selectedEvent.isIndividual ? (
                                 <div style={{

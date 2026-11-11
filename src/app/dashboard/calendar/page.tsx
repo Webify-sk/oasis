@@ -153,6 +153,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
                         id: `${tt.id}-${term.id}-${dateObj.getDate()}-${dateObj.getMonth()}`,
                         time: term.time,
                         title: tt.title,
+                        about: tt.description || null,
                         trainer: trainersMap.get(term.trainer_id) || '?',
                         date: dateObj,
                         isRegistered,

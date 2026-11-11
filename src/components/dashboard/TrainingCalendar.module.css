@@ -263,3 +263,34 @@
         min-width: 120px;
     }
 }
+/* Training description: a quiet toggle under the name, text expands below the row */
+.aboutToggle {
+    display: block;
+    margin-top: 0.3rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #93745F;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.aboutText {
+    padding: 0.9rem 2rem 1.1rem 2rem;
+    background-color: #FAF8F6;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    color: #4B5563;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+@media (max-width: 768px) {
+    .aboutText {
+        padding: 0.8rem 1rem 1rem 1rem;
+    }
+}

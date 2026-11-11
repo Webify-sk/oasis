@@ -15,6 +15,7 @@ interface TrainingSession {
     date: Date;
     type?: 'training' | 'vacation';
     description?: string | null;
+    about?: string | null; // training description from the admin (description = vacation note)
     vacStart?: string;
     vacEnd?: string;
     isRegistered?: boolean;
@@ -472,6 +473,15 @@ export function MonthlyCalendar({ currentDate, events }: MonthlyCalendarProps) {
                             <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 👤 Tréner: <strong>{selectedEvent.trainer}</strong>
                             </p>
+                            {selectedEvent.about && (
+                                <div style={{
+                                    marginTop: '12px', padding: '0.75rem 0.9rem', backgroundColor: '#FAF8F6',
+                                    border: '1px solid #EFEAE5', borderRadius: '8px', fontSize: '0.9rem', color: '#4B5563',
+                                    maxHeight: '200px', overflowY: 'auto', whiteSpace: 'pre-line', lineHeight: 1.55
+                                }}>
+                                    {selectedEvent.about}
+                                </div>
+                            )}
                             {selectedEvent.occupancy && (
                                 <p style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', color: selectedEvent.occupancy.current >= selectedEvent.occupancy.max ? '#DC2626' : '#666' }}>
                                     👥 Obsadenosť: <strong>{selectedEvent.occupancy.current}/{selectedEvent.occupancy.max}</strong>

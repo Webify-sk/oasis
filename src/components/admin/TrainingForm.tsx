@@ -20,6 +20,7 @@ const initialState: { message: string | null, inputs: any } = {
 export function TrainingForm({ trainers, initialData, schedule }: { trainers: Trainer[], initialData?: any, schedule?: any[] }) {
     const [state, formAction] = useActionState(upsertTrainingType, initialState as any);
     const [isMobile, setIsMobile] = useState(false);
+    const [descriptionLength, setDescriptionLength] = useState<number>((initialData?.description || '').length);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -70,8 +71,17 @@ export function TrainingForm({ trainers, initialData, schedule }: { trainers: Tr
                         <input name="duration_minutes" defaultValue={state?.inputs?.duration_minutes ?? initialData?.duration_minutes} className={styles.input} placeholder="50-80 minut" />
 
                         <label className={styles.label}>Opis tréningu</label>
-                        <textarea name="description" rows={6} defaultValue={state?.inputs?.description ?? initialData?.description} className={`${styles.input} ${styles.textarea}`} />
-                        <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>87/200</div>
+                        <textarea
+                            name="description"
+                            rows={6}
+                            defaultValue={state?.inputs?.description ?? initialData?.description}
+                            onChange={(e) => setDescriptionLength(e.target.value.length)}
+                            className={`${styles.input} ${styles.textarea}`}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>
+                            <span>Klientom sa zobrazí po rozkliknutí tréningu v rozvrhu.</span>
+                            <span style={{ flex: '0 0 auto' }}>{descriptionLength} znakov</span>
+                        </div>
 
                         <label className={styles.label} style={{ marginTop: '1rem' }}>Cena (kredity)</label>
                         <input name="price_credits" type="number" min="0" defaultValue={(state?.inputs?.price_credits ?? initialData?.price_credits) ?? 1} className={styles.input} />

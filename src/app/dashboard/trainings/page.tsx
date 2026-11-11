@@ -228,6 +228,7 @@ export default async function TrainingsPage({ searchParams }: { searchParams: Pr
                         name: tt.title,
                         trainer: trainersMap.get(term.trainer_id) || 'Neznámy tréner',
                         level: tt.level || 'Všetky úrovne',
+                        description: tt.description || null,
                         priceCredits: tt.price_credits ?? 1,
                         occupancy: {
                             current: isVacation ? (tt.capacity || 10) : currentOccupancy, // If vacation, show as FULL

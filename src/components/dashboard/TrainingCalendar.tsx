@@ -23,6 +23,7 @@ interface Session {
     name: string;
     trainer: string;
     level: string;
+    description?: string | null;
     priceCredits: number;
     occupancy: {
         current: number;
@@ -50,6 +51,14 @@ interface TrainingCalendarProps {
 export function TrainingCalendar({ schedule, userCredits, currentDays, isUnlimited = false }: TrainingCalendarProps) {
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlightId');
+    // Which sessions have their description expanded (kept collapsed so the list stays short on a phone)
+    const [openAbout, setOpenAbout] = React.useState<Set<string>>(new Set());
+    const toggleAbout = (rawId: string | number) => setOpenAbout(prev => {
+        const id = String(rawId);
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+    });
 
     useEffect(() => {
         if (highlightId) {
@@ -87,8 +96,8 @@ export function TrainingCalendar({ schedule, userCredits, currentDays, isUnlimit
 
                     <div className={styles.sessionList}>
                         {day.sessions.map((session) => (
+                            <React.Fragment key={session.id}>
                             <div
-                                key={session.id}
                                 id={`session-${session.id}`}
                                 className={styles.sessionRow}
                             >
@@ -99,6 +108,16 @@ export function TrainingCalendar({ schedule, userCredits, currentDays, isUnlimit
                                         <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '0.5rem', fontWeight: 'normal' }}>
                                             ({session.priceCredits} kr.)
                                         </span>
+                                    )}
+                                    {session.description && (
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleAbout(session.id)}
+                                            aria-expanded={openAbout.has(String(session.id))}
+                                            className={styles.aboutToggle}
+                                        >
+                                            {openAbout.has(String(session.id)) ? 'Skryť popis' : 'Viac o tréningu'}
+                                        </button>
                                     )}
                                 </div>
                                 <div className={styles.colTrainer}>{session.trainer}</div>
@@ -117,6 +136,10 @@ export function TrainingCalendar({ schedule, userCredits, currentDays, isUnlimit
                                     />
                                 </div>
                             </div>
+                            {session.description && openAbout.has(String(session.id)) && (
+                                <div className={styles.aboutText}>{session.description}</div>
+                            )}
+                            </React.Fragment>
                         ))}
                     </div>
                 </div>
@@ -302,6 +325,19 @@ function ActionButton({ session, userCredits, isUnlimited }: { session: Session,
                 title="Prihlásenie na tréning"
             >
                 <div style={{ padding: '1rem 0', textAlign: 'center' }}>
+                    <p style={{ margin: '0 0 0.75rem 0', fontWeight: 600, color: '#4A403A' }}>
+                        {session.name} · {session.time}
+                    </p>
+                    {session.description && (
+                        <div style={{
+                            textAlign: 'left', fontSize: '0.9rem', color: '#4B5563', backgroundColor: '#FAF8F6',
+                            border: '1px solid #EFEAE5', borderRadius: '8px', padding: '0.75rem 0.9rem',
+                            marginBottom: '1.25rem', maxHeight: '180px', overflowY: 'auto',
+                            whiteSpace: 'pre-line', lineHeight: 1.55
+                        }}>
+                            {session.description}
+                        </div>
+                    )}
                     <p style={{ marginBottom: '1.5rem', color: '#4B5563' }}>
                         Koľko osôb chcete prihlásiť?
                     </p>

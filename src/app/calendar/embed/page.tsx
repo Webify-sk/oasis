@@ -166,6 +166,7 @@ export default async function EmbedCalendarPage({ searchParams }: PageProps) {
                         id: `${tt.id}-${term.id}-${dateObj.getDate()}-${dateObj.getMonth()}`, // Unique ID with month
                         time: term.time,
                         title: tt.title,
+                        about: tt.description || null,
                         trainer: trainersMap.get(term.trainer_id) || '?',
                         date: displayDate,
                         totalCapacity: maxOccupancy,
