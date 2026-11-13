@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { sendEmail } from '@/utils/email';
 import { getEmailTemplate } from '@/utils/email-template';
 
@@ -34,24 +35,29 @@ async function requireStaff() {
 export async function uploadNewsletterImage(formData: FormData) {
     const auth = await requireStaff();
     if ('error' in auth) return { error: auth.error };
-    const { supabase } = auth;
+    // The storage policy on this bucket only lets admins write, but employees send
+    // newsletters too. The role was checked above, so upload with the service role.
+    const supabase = createAdminClient();
 
     const file = formData.get('image');
     if (!(file instanceof File) || file.size === 0) {
         return { error: 'Žiadny obrázok.' };
     }
-    if (!file.type.startsWith('image/')) {
-        return { error: 'Súbor musí byť obrázok.' };
+    // Raster formats only: an SVG can carry script and the bucket is public.
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+        return { error: 'Podporované sú obrázky JPG, PNG, GIF a WebP.' };
     }
     if (file.size > 5 * 1024 * 1024) {
         return { error: 'Obrázok je príliš veľký (max. 5 MB).' };
     }
 
-    const safeName = `newsletter/${Date.now()}_${file.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.\-_/]/g, '')}`;
+    // Random name: nothing from the original file name reaches the public URL
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/gif' ? 'gif' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const safeName = `newsletter/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(safeName, file, { upsert: true });
+        .upload(safeName, file, { upsert: false, contentType: file.type });
 
     if (uploadError) {
         console.error('Newsletter image upload error:', uploadError);

@@ -59,6 +59,35 @@ function cleanHtml(dirty: string): string {
     return doc.body.innerHTML;
 }
 
+// Photos straight from a phone are 2–8 MB; a server action accepts 1 MB by default and an
+// e-mail should not carry more than a few hundred kB anyway. Shrink to a sensible width and
+// re-encode as JPEG before uploading. createImageBitmap applies the EXIF rotation.
+const MAX_IMAGE_WIDTH = 1200;
+
+async function shrinkImage(file: File): Promise<File> {
+    if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file; // keep animation / vectors
+
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, MAX_IMAGE_WIDTH / bitmap.width);
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.fillStyle = '#ffffff'; // transparent PNG areas would turn black in JPEG
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    if (!blob) return file;
+    const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], name, { type: 'image/jpeg' });
+}
+
 const btnStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -92,6 +121,9 @@ export function RichTextEditor({ initialValue = '', onChange }: RichTextEditorPr
     const [uploading, setUploading] = useState(false);
     const [mode, setMode] = useState<'visual' | 'html'>('visual');
     const [htmlDraft, setHtmlDraft] = useState(initialValue);
+    // Caret position at the moment the file dialog opens; the dialog steals focus, and
+    // without this the picture landed at the very top of the e-mail.
+    const savedRange = useRef<Range | null>(null);
 
     // Current content, kept outside React state on purpose — see the effect below.
     const valueRef = useRef(initialValue);
@@ -152,6 +184,11 @@ export function RichTextEditor({ initialValue = '', onChange }: RichTextEditorPr
     };
 
     const handleImageClick = () => {
+        const sel = window.getSelection();
+        savedRange.current =
+            sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)
+                ? sel.getRangeAt(0).cloneRange()
+                : null;
         fileInputRef.current?.click();
     };
 
@@ -164,27 +201,47 @@ export function RichTextEditor({ initialValue = '', onChange }: RichTextEditorPr
             alert('Vyberte prosím obrázok.');
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Obrázok je príliš veľký (max. 5 MB).');
+        if (file.size > 25 * 1024 * 1024) {
+            alert('Obrázok je príliš veľký (max. 25 MB).');
             return;
         }
 
         setUploading(true);
         try {
+            let toUpload = file;
+            try {
+                toUpload = await shrinkImage(file);
+            } catch {
+                // e.g. HEIC that this browser cannot decode — fall through with the original
+            }
+            if (toUpload.size > 900 * 1024) {
+                alert('Tento obrázok sa nepodarilo zmenšiť. Skúste ho prosím uložiť ako JPG alebo PNG a nahrať znova.');
+                return;
+            }
+
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('image', toUpload);
             const res = await uploadNewsletterImage(formData);
             if (res?.error || !res?.url) {
                 alert(res?.error || 'Nepodarilo sa nahrať obrázok.');
                 return;
             }
             editorRef.current?.focus();
+            if (savedRange.current) {
+                const sel = window.getSelection();
+                sel?.removeAllRanges();
+                sel?.addRange(savedRange.current);
+            }
             document.execCommand(
                 'insertHTML',
                 false,
                 `<img src="${res.url}" alt="" style="max-width:100%;height:auto;border-radius:8px;margin:12px 0;" /><br/>`
             );
             emit();
+        } catch (err) {
+            // A thrown server action (network, size limit) used to vanish without a word.
+            console.error('Newsletter image upload failed:', err);
+            alert('Obrázok sa nepodarilo nahrať. Skontrolujte pripojenie a skúste to znova.');
         } finally {
             setUploading(false);
         }
