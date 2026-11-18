@@ -163,7 +163,7 @@ export function WeeklyScheduler({ initialAppointments, employees }: WeeklySchedu
                                                 onClick={() => setSelectedAppointment(app)}
                                             >
                                                 <div style={{ fontWeight: 'bold', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {app.profiles?.full_name || app.client_name || 'Hosť'}
+                                                    {app.profiles?.full_name || app.client_name || 'Bez mena'}
                                                 </div>
                                                 <div style={{ color: '#555', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     {app.cosmetic_services?.title}

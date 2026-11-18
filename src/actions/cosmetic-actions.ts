@@ -1224,7 +1224,7 @@ export async function updateAppointmentStatus(id: string, status: 'confirmed' | 
             // @ts-ignore
             const serviceTitle = booking?.cosmetic_services?.title;
             // @ts-ignore
-            const clientName = booking?.profiles?.full_name || 'Klient';
+            const clientName = booking?.profiles?.full_name || booking?.client_name || 'Klient';
             // @ts-ignore
             const startTimeVal = booking?.start_time;
 
@@ -2128,6 +2128,10 @@ export async function createManualReservation(prevState: any, formData: FormData
     if (!serviceId || !employeeId || !date || !time) {
         return { error: 'Chýbajú povinné údaje (služba, zamestnanec, dátum, čas).' };
     }
+    // A reservation without a name shows up everywhere as an unknown client.
+    if (!clientName || !clientName.trim()) {
+        return { error: 'Zadajte meno klienta.' };
+    }
 
     // Construct timestamps
     const { getRealUtcDate } = await import('@/utils/booking-logic');
@@ -2296,6 +2300,10 @@ export async function createAdminCosmeticAppointment(data: {
     await requireAdmin();
     const supabase = await createClient();
 
+    if (!data.client_name || !data.client_name.trim()) {
+        return { error: 'Zadajte meno klienta.' };
+    }
+
     if (new Date(data.end_time).getTime() <= new Date(data.start_time).getTime()) {
         return { error: 'Koniec termínu musí byť po jeho začiatku.' };
     }
@@ -2412,6 +2420,10 @@ export async function updateAdminCosmeticAppointment(id: string, data: {
 }) {
     await requireAdmin();
     const supabase = await createClient();
+
+    if (!data.client_name || !data.client_name.trim()) {
+        return { error: 'Zadajte meno klienta.' };
+    }
 
     if (new Date(data.end_time).getTime() <= new Date(data.start_time).getTime()) {
         return { error: 'Koniec termínu musí byť po jeho začiatku.' };

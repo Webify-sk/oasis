@@ -324,7 +324,7 @@ function AppointmentCard({ appointment, onCancel, onReschedule, loading, readOnl
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <User size={16} />
                             {isEmployeeView
-                                ? (appointment.profiles?.full_name || appointment.client_name || 'Neznámy klient')
+                                ? (appointment.profiles?.full_name || appointment.client_name || 'Bez mena')
                                 : (appointment.employees?.name || 'Neznámy')
                             }
                         </div>

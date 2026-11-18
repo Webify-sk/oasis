@@ -149,3 +149,15 @@ window.addEventListener('message', function (e) {
 - Kalendár ukazuje iba voľné termíny, žiadne mená ani údaje klientok.
 - Kliknutie na čas otvorí rezerváciu v novej záložke s predvyplnenou procedúrou, dátumom aj časom.
 - Keď pribudne nová procedúra, jej kód skopírujete v administrácii (nie je potrebné nič programovať).
+
+## Darčekové poukážky
+
+Na stránku „Darčekové poukážky" vložte tento kód (namiesto textu „Čoskoro sa tu objavia…").
+Zoznam sa berie z administrácie — čo tam pridáte alebo upravíte, objaví sa na webe samo.
+Výšku dorovnáva ten istý skript z časti 1, preto musí zostať trieda `oasis-terminy`.
+
+```html
+<iframe src="https://profil.oasislounge.sk/vouchers/embed"
+        class="oasis-terminy" style="width:100%;border:0" height="1400"
+        title="Darčekové poukážky"></iframe>
+```

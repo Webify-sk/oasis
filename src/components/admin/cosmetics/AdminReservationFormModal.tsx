@@ -128,6 +128,10 @@ export default function AdminReservationFormModal({
             setErrorMessage('Prosím vyplňte dátum a čas (od - do).');
             return;
         }
+        if (!clientName.trim()) {
+            setErrorMessage('Zadajte meno klienta.');
+            return;
+        }
 
         setLoading(true);
 
@@ -324,11 +328,12 @@ export default function AdminReservationFormModal({
                     {/* Klient - Name & Phone */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>Meno Klienta</label>
+                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>Meno Klienta *</label>
                             <input
                                 type="text"
                                 value={clientName}
                                 onChange={(e) => setClientName(e.target.value)}
+                                required
                                 placeholder="Jozef Čmrko"
                                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px' }}
                             />

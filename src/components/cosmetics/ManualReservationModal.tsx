@@ -285,13 +285,14 @@ export function ManualReservationModal() {
                                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151' }}>Údaje o klientovi (Voliteľné)</h3>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.5rem' }}>Meno a priezvisko</label>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.5rem' }}>Meno a priezvisko *</label>
                                     <div style={{ position: 'relative' }}>
                                         <User size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
                                         <input
                                             type="text"
                                             value={clientName}
                                             onChange={(e) => setClientName(e.target.value)}
+                                            required
                                             placeholder="Jozef Mrkvička"
                                             style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', borderRadius: '6px', border: '1px solid #d1d5db' }}
                                         />

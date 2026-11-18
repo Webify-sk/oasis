@@ -117,7 +117,7 @@ export default function AdminReservationsManager({
                                 const endDate = new Date(app.end_time);
 
                                 // Priority styling based on status could be added here
-                                const clientName = app.profiles?.full_name || app.client_name || 'Neznámy klient';
+                                const clientName = app.profiles?.full_name || app.client_name || 'Bez mena';
                                 const clientPhone = app.profiles?.phone || app.client_phone || '';
                                 const clientEmail = app.profiles?.email || app.client_email || '';
 

@@ -87,7 +87,7 @@ export function AppointmentCalendar({ initialAppointments }: { initialAppointmen
                                 </h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
                                     <User size={14} />
-                                    <span>{app.profiles?.full_name || app.client_name || 'Neznámy klient'} ({app.profiles?.phone || app.client_phone || 'Bez tel.'})</span>
+                                    <span>{app.profiles?.full_name || app.client_name || 'Bez mena'} ({app.profiles?.phone || app.client_phone || 'Bez tel.'})</span>
                                 </div>
                             </div>
 

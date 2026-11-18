@@ -15,6 +15,8 @@ interface Appointment {
     start_time: string;
     end_time: string;
     status: string;
+    client_name?: string | null;
+    client_phone?: string | null;
     cosmetic_services: {
         title: string;
         price: number;
@@ -246,7 +248,7 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                             {/* Details */}
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                                    <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>{app.profiles?.full_name || 'Neznámy klient'}</h4>
+                                                    <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>{app.profiles?.full_name || app.client_name || 'Bez mena'}</h4>
                                                     <div style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                                         {/* Actions */}
                                                         {app.status !== 'cancelled' && (
@@ -295,8 +297,8 @@ export function EmployeeDashboard({ appointments, employeeName, activeServicesCo
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.85rem', color: '#999' }}>
                                                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={14} /> {app.cosmetic_services?.duration_minutes} min</span>
-                                                    {app.profiles?.phone && (
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><User size={14} /> {app.profiles.phone}</span>
+                                                    {(app.profiles?.phone || app.client_phone) && (
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><User size={14} /> {app.profiles?.phone || app.client_phone}</span>
                                                     )}
                                                 </div>
                                             </div>

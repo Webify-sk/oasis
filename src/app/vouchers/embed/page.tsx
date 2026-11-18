@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { PublicVoucherList } from '@/components/public/PublicVoucherList';
+import { EmbedAutoHeight } from '@/components/public/EmbedAutoHeight';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,12 +27,14 @@ export default async function EmbedVouchersPage({
     }
 
     return (
-        <div style={{ backgroundColor: 'transparent', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        // No min-height here: with 100vh the page would always be as tall as the frame and
+        // the frame could never shrink back (e.g. from the purchase form to the list).
+        <EmbedAutoHeight>
             <PublicVoucherList
                 vouchers={vouchers || []}
                 success={showSuccess}
                 canceled={showCanceled}
             />
-        </div>
+        </EmbedAutoHeight>
     );
 }
