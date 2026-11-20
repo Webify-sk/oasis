@@ -25,61 +25,37 @@ export function PublicVoucherList({ vouchers, success, canceled }: PublicVoucher
         setSelectedProduct(product);
     };
 
-    const isBeauty = (v: VoucherProduct) => {
-        const t = v.title.toLowerCase();
+    // Sections follow the category set in the admin. Guessing from the title put every
+    // "…balíček" into beauty, including the pilates packages.
+    const isTraining = (v: VoucherProduct) => {
         const c = (v.category || '').toLowerCase();
-        return t.includes('glow') ||
-            c.includes('kozmetika') ||
-            c.includes('beauty') ||
-            t.includes('skin') ||
-            t.includes('pleť') ||
-            t.includes('body') ||
-            c.includes('telo') ||
-            t.includes('masáž') ||
-            t.includes('masaz') ||
-            t.includes('beauty') ||
-            t.includes('manik') ||
-            t.includes('pedik') ||
-            c.includes('epilácia') ||
-            t.includes('epil') ||
-            t.includes('smooth') ||
-            t.includes('balíček') ||
-            t.includes('balicek') ||
-            t.includes('mega');
+        if (c) return c.includes('train') || c.includes('trén') || c.includes('pohyb') || c.includes('pilates');
+        // No category set: fall back to the title
+        const t = v.title.toLowerCase();
+        return t.includes('pilates') || t.includes('tréning') || t.includes('trening') || t.includes('vstup');
     };
 
+    // Photos are served from our own /public/vouchers — the stock-photo links this used
+    // to point at can disappear (the pilates one did, leaving an empty card).
     const getBackgroundImage = (voucher: VoucherProduct) => {
-        if (isBeauty(voucher)) {
-            const t = voucher.title.toLowerCase();
-            if (t.includes('body') || t.includes('telo') || t.includes('masáž') || t.includes('masaz')) {
-                return 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=2070&auto=format&fit=crop';
-            }
-            if (t.includes('smooth') || t.includes('epil')) {
-                return 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=2070&auto=format&fit=crop';
-            }
-            // Default Beauty
-            return 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop';
-        } else {
-            const t = voucher.title.toLowerCase();
-            if (t.includes('yoga') || t.includes('pilates') || t.includes('joga')) {
-                return 'https://images.unsplash.com/photo-1599447421405-0c323d275204?q=80&w=2070&auto=format&fit=crop';
-            }
-            if (t.includes('viano') || t.includes('gift') || t.includes('darček')) {
-                // Festive / Gift
-                return 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?q=80&w=2070&auto=format&fit=crop';
-            }
-            // Default Training / Gym
-            return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop';
+        const t = voucher.title.toLowerCase();
+        if (isTraining(voucher)) {
+            return '/vouchers/training.png';
         }
+        if (t.includes('masáž') || t.includes('masaz') || t.includes('body') || t.includes('telo') || t.includes('rituál')) {
+            return '/vouchers/massage.jpg';
+        }
+        return '/vouchers/beauty.jpg';
     };
 
-    const beautyVouchers = vouchers.filter(isBeauty);
-    const trainingVouchers = vouchers.filter(v => !isBeauty(v));
+    const trainingVouchers = vouchers.filter(isTraining);
+    const beautyVouchers = vouchers.filter(v => !isTraining(v));
 
     const renderGrid = (items: VoucherProduct[]) => (
         <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            // auto-fill (not auto-fit): a lone card keeps its size instead of stretching full width
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
             gap: '1.5rem',
         }}>
             {items.map((voucher) => {
@@ -123,7 +99,7 @@ export function PublicVoucherList({ vouchers, success, canceled }: PublicVoucher
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            background: 'linear-gradient(to bottom, rgba(94, 80, 74, 0.3), rgba(94, 80, 74, 0.6))',
+                            background: 'linear-gradient(to bottom, rgba(60, 50, 46, 0.5), rgba(60, 50, 46, 0.72))',
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'center',
