@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
 
 export async function addTrainerVacation(trainerId: string, startDateISO: string, endDateISO: string, description: string) {
@@ -22,7 +23,13 @@ export async function addTrainerVacation(trainerId: string, startDateISO: string
         return { success: false, error: 'Unauthorized' };
     }
 
-    const { error } = await supabase.from('vacations').insert({
+    if (!(new Date(endDateISO).getTime() > new Date(startDateISO).getTime())) {
+        return { success: false, error: 'Koniec voľna musí byť po jeho začiatku.' };
+    }
+
+    // Trainers have the role 'trainer', which the vacations write policy does not include
+    // (it admits staff only). Ownership was verified above, so write with the service role.
+    const { error } = await createAdminClient().from('vacations').insert({
         trainer_id: trainerId,
         start_time: startDateISO,
         end_time: endDateISO,
@@ -58,7 +65,7 @@ export async function removeTrainerVacation(vacationId: string, trainerId: strin
         return { success: false, error: 'Unauthorized' };
     }
 
-    const { error } = await supabase.from('vacations')
+    const { error } = await createAdminClient().from('vacations')
         .delete()
         .eq('id', vacationId)
         .eq('trainer_id', trainerId); // Extra check to ensure we only delete this trainer's vacation
@@ -119,4 +126,36 @@ export async function checkTrainerBookings(trainerId: string, startDateISO: stri
     }
 
     return count || 0;
+}
+
+export type VacationFormState = { ok?: boolean; error?: string; at?: number };
+
+/**
+ * Form entry point for the trainer dashboard. Times are entered in Bratislava wall time
+ * and stored face-value ("18:00" -> "...T18:00:00Z"), like every other training time;
+ * building the string explicitly keeps that independent of the server's time zone.
+ */
+export async function addTrainerVacationFromForm(
+    trainerId: string,
+    _prev: VacationFormState,
+    formData: FormData
+): Promise<VacationFormState> {
+    const startDate = String(formData.get('startDate') || '');
+    const startTime = String(formData.get('startTime') || '00:00');
+    const endDate = String(formData.get('endDate') || '');
+    const endTime = String(formData.get('endTime') || '23:59');
+    const description = String(formData.get('description') || '').slice(0, 200);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)
+        || !/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
+        return { error: 'Vyplňte dátum a čas od aj do.', at: Date.now() };
+    }
+
+    const res = await addTrainerVacation(
+        trainerId,
+        `${startDate}T${startTime}:00.000Z`,
+        `${endDate}T${endTime}:00.000Z`,
+        description
+    );
+    return res.success ? { ok: true, at: Date.now() } : { error: res.error, at: Date.now() };
 }

@@ -2,7 +2,8 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { Dumbbell, Users, Calendar, Clock, Trash2, Plus, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { getTrainerVacations, removeTrainerVacation, addTrainerVacation, checkTrainerBookings } from '@/actions/trainer-vacations';
+import { getTrainerVacations, removeTrainerVacation, checkTrainerBookings } from '@/actions/trainer-vacations';
+import { TrainerVacationForm } from '@/components/dashboard/TrainerVacationForm';
 
 export async function TrainerDashboardView() {
     const supabase = await createClient();
@@ -207,53 +208,7 @@ export async function TrainerDashboardView() {
                 <h2 style={{ fontFamily: 'serif', color: '#4A403A', fontSize: '1.5rem', marginBottom: '1.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #E5E0DD' }}>Moje voľno / Dovolenka</h2>
                 
                 <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '1.5rem', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                    <form action={async (formData) => {
-                        'use server';
-                        const startDate = formData.get('startDate') as string;
-                        const startTime = formData.get('startTime') as string;
-                        const endDate = formData.get('endDate') as string;
-                        const endTime = formData.get('endTime') as string;
-                        const description = formData.get('description') as string;
-
-                        if (!startDate || !endDate) return;
-
-                        const startIso = new Date(`${startDate}T${startTime}:00`).toISOString();
-                        const endIso = new Date(`${endDate}T${endTime}:00`).toISOString();
-
-                        // Warning logic would normally require a client component for confirm(), 
-                        // but since we want to just add it and let admin handle bookings, we add directly.
-                        // We will rely on server actions.
-                        await addTrainerVacation(trainer.id, startIso, endIso, description);
-                    }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#4B5563', marginBottom: '0.25rem' }}>Od (Dátum)</label>
-                                <input type="date" name="startDate" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#4B5563', marginBottom: '0.25rem' }}>Čas Od</label>
-                                <input type="time" name="startTime" defaultValue="08:00" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#4B5563', marginBottom: '0.25rem' }}>Do (Dátum)</label>
-                                <input type="date" name="endDate" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#4B5563', marginBottom: '0.25rem' }}>Čas Do</label>
-                                <input type="time" name="endTime" defaultValue="20:00" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', color: '#4B5563', marginBottom: '0.25rem' }}>Poznámka (nepovinné)</label>
-                            <input type="text" name="description" placeholder="Napr. Choroba, Dovolenka..." style={{ width: '100%', padding: '0.6rem', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-                        </div>
-                        
-                        <button type="submit" style={{ backgroundColor: '#5E715D', color: 'white', padding: '0.7rem 1.5rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Plus size={16} /> Pridať voľno
-                        </button>
-                    </form>
+                    <TrainerVacationForm trainerId={trainer.id} />
 
                     {vacations.length > 0 ? (
                         <div style={{ display: 'grid', gap: '1rem' }}>
