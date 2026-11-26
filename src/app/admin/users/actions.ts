@@ -3,8 +3,10 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requireAdmin } from '@/utils/check-role';
 
 export async function upsertUser(prevState: any, formData: FormData) {
+    await requireAdmin();
     const supabase = await createClient();
 
     const id = formData.get('id') as string;
@@ -119,9 +121,17 @@ export async function upsertUser(prevState: any, formData: FormData) {
         }
     } else if (role === 'trainer') {
         const email = formData.get('email') as string;
-        if (email) {
-            const { promoteToTrainer } = await import('@/app/admin/trainers/actions');
-            await promoteToTrainer(id, full_name, email, phone);
+        const trainerLink = (formData.get('trainer_link') as string) || '';
+        const { promoteToTrainer } = await import('@/app/admin/trainers/actions');
+        const res = await promoteToTrainer(id, full_name, email, phone, trainerLink);
+        if (res?.needsChoice) {
+            return {
+                message: 'Rola je uložená, ale účet ešte nie je prepojený so záznamom trénera. Vyberte nižšie, ku ktorému trénerovi patrí, alebo zvoľte nový záznam, a uložte znova.',
+                inputs: { full_name, phone, credits, role, email }
+            };
+        }
+        if (res?.error) {
+            return { message: res.error, inputs: { full_name, phone, credits, role, email } };
         }
     }
 
@@ -132,6 +142,8 @@ export async function upsertUser(prevState: any, formData: FormData) {
 import { createAdminClient } from '@/utils/supabase/admin';
 
 export async function createUser(fromState: any, formData: FormData) {
+    // Creates accounts (any role) with the service role — admins only.
+    await requireAdmin();
     const supabaseAdmin = createAdminClient();
 
     const email = formData.get('email') as string;
@@ -225,7 +237,8 @@ export async function createUser(fromState: any, formData: FormData) {
             await promoteToEmployee(user.id, full_name, email);
         } else if (role === 'trainer') {
             const { promoteToTrainer } = await import('@/app/admin/trainers/actions');
-            await promoteToTrainer(user.id, full_name, email, phone);
+            const res = await promoteToTrainer(user.id, full_name, email, phone);
+            if (res?.needsChoice) await promoteToTrainer(user.id, full_name, email, phone, 'new');
         }
 
     } catch (e) {
@@ -237,21 +250,38 @@ export async function createUser(fromState: any, formData: FormData) {
     redirect('/admin/users');
 }
 
-export async function deleteUser(userId: string) {
+// Accounts are deactivated, never deleted: deleting cascades to the client's bookings,
+// credits and invoices and rewrites the statistics. A deactivated account cannot sign in
+// (banned at the auth level) and is marked in the user list.
+export async function setUserActive(userId: string, active: boolean) {
+    await requireAdmin();
+    const supabase = await createClient();
+    const { data: { user: me } } = await supabase.auth.getUser();
+    if (me?.id === userId && !active) {
+        return { success: false, message: 'Vlastný účet nie je možné deaktivovať.' };
+    }
+
     const supabaseAdmin = createAdminClient();
 
-    try {
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-
-        if (error) {
-            console.error('Delete User Error:', error);
-            return { success: false, message: 'Nepodarilo sa vymazať užívateľa: ' + error.message };
-        }
-
-        revalidatePath('/admin/users');
-        return { success: true };
-    } catch (e) {
-        console.error('Delete User Exception:', e);
-        return { success: false, message: 'Nastala neočakávaná chyba.' };
+    const { error: flagError } = await supabaseAdmin
+        .from('profiles')
+        .update({ is_active: active, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+    if (flagError) {
+        console.error('setUserActive flag error:', flagError);
+        return { success: false, message: 'Zmenu sa nepodarilo uložiť: ' + flagError.message };
     }
+
+    // ~100 years; 'none' lifts the ban
+    const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        ban_duration: active ? 'none' : '876000h'
+    });
+    if (banError) {
+        console.error('setUserActive ban error:', banError);
+        await supabaseAdmin.from('profiles').update({ is_active: !active }).eq('id', userId);
+        return { success: false, message: 'Prihlásenie sa nepodarilo ' + (active ? 'povoliť' : 'zablokovať') + ': ' + banError.message };
+    }
+
+    revalidatePath('/admin/users');
+    return { success: true, message: active ? 'Účet je znova aktívny.' : 'Účet je deaktivovaný a nedá sa naň prihlásiť.' };
 }

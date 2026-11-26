@@ -116,7 +116,6 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
         const employeesMap = new Map(employeesData?.map(e => [e.id, e]) || []);
         const trainersMap = new Map(trainersData?.map(t => [t.id, t]) || []);
 
-        const trainerProfileIds = new Set(trainersData?.map(t => t.profile_id).filter(Boolean) as string[]);
 
         // Process Trainings
         const trainingSessionsMap = new Map<string, StatItem>();
@@ -160,8 +159,10 @@ export async function getAdminStatistics(): Promise<{ items: StatItem[], error?:
 
             // Identify admins and trainers to exclude them from calculations (fictitious bookings)
             const STAFF_EMAILS = ['leskovjanskal@gmail.com', 'leonahochel@gmail.com'];
+            // Internal bookings (admins, employees, the two owner addresses) are not paying
+            // participants. Trainers are: when a trainer attends a colleague's class she pays
+            // with her own credits, so those count.
             const isAdminOrTrainer = user?.role === 'admin' || user?.role === 'employee' || 
-                (b.user_id && trainerProfileIds.has(b.user_id)) || 
                 (user?.email && STAFF_EMAILS.includes(user.email.toLowerCase()));
                 
             const realParticipantsCount = isAdminOrTrainer ? 0 : (b.participants_count || 1);

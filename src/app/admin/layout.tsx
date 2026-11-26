@@ -19,9 +19,13 @@ export default async function AdminLayout({
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', user.id)
         .single();
+
+    if (profile?.is_active === false) {
+        redirect('/?deaktivovany=1');
+    }
 
     if (profile?.role !== 'admin' && profile?.role !== 'employee') {
         redirect('/dashboard/trainings'); // Redirect non-admins/non-employees

@@ -4,8 +4,12 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requireAdmin } from '@/utils/check-role';
 
 export async function upsertTrainer(prevState: any, formData: FormData) {
+    // Parts of this action run with the service role (account linking and creation),
+    // so the caller's role has to be checked here, not left to RLS.
+    await requireAdmin();
     const supabase = await createClient();
 
     try {
@@ -235,59 +239,107 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
     redirect('/admin/trainers');
 }
 
-export async function deleteTrainer(id: string) {
+// Trainers are deactivated, never deleted: deleting would strip the trainer's name from
+// every past session in the statistics.
+export async function setTrainerActive(id: string, active: boolean) {
+    await requireAdmin();
     const supabase = await createClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('trainers')
-        .delete()
-        .eq('id', id);
+        .update({ is_active: active })
+        .eq('id', id)
+        .select('full_name')
+        .maybeSingle();
 
     if (error) {
-        return { message: 'Chyba pri mazaní trénera: ' + error.message };
+        console.error('setTrainerActive error:', error);
+        return { error: 'Zmenu sa nepodarilo uložiť: ' + error.message };
+    }
+    if (!data) return { error: 'Tréner sa nenašiel.' };
+
+    let futureTerms = 0;
+    if (!active) {
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: tts } = await supabase.from('training_types').select('schedule');
+        for (const tt of tts || []) {
+            for (const term of (Array.isArray(tt.schedule) ? tt.schedule : [])) {
+                if (term.trainer_id === id && term.active !== false && term.date && String(term.date).slice(0, 10) >= today) futureTerms++;
+            }
+        }
     }
 
     revalidatePath('/admin/trainers');
-    return { message: 'Tréner bol úspešne vymazaný.' };
+    const name = String(data.full_name).trim();
+    if (active) return { message: `Tréner ${name} je znova aktívny.` };
+    return {
+        message: futureTerms > 0
+            ? `Tréner ${name} je deaktivovaný. V rozvrhu má ešte ${futureTerms} budúcich termínov — tie ostávajú, priraďte ich inému trénerovi alebo ich zrušte.`
+            : `Tréner ${name} je deaktivovaný.`
+    };
 }
 
-export async function promoteToTrainer(userId: string, name: string, email: string, phone: string) {
+// Gives an account the trainer role and links it to a trainer record.
+//
+// `link` says which record: a trainer id, 'new' to create one, or empty to decide here.
+// Deciding here never creates a record while unlinked trainers exist — that is how the
+// duplicates arose (schedule on one record, login on another). In that case the caller
+// gets `needsChoice` and must ask the admin.
+export async function promoteToTrainer(userId: string, name: string, email: string, phone: string, link: string = '') {
+    await requireAdmin();
     const supabaseAdmin = createAdminClient();
 
-    // 1. Check if trainer record already exists
-    const { data: existing } = await supabaseAdmin
-        .from('trainers')
-        .select('id')
-        .or(`email.eq.${email},profile_id.eq.${userId}`)
-        .maybeSingle();
+    const setRole = async () => {
+        const { data: prof } = await supabaseAdmin.from('profiles').select('role').eq('id', userId).single();
+        if (prof && prof.role !== 'admin' && prof.role !== 'trainer') {
+            await supabaseAdmin.from('profiles').update({ role: 'trainer' }).eq('id', userId);
+        }
+    };
 
-    if (existing) {
-        // Trainer record exists, ensure it's linked
-        await supabaseAdmin.from('trainers').update({ profile_id: userId, email, phone }).eq('id', existing.id);
-    } else {
-        // Create new trainer record
+    // 1. Already linked: nothing to create, ever.
+    const { data: linked } = await supabaseAdmin.from('trainers').select('id').eq('profile_id', userId);
+    if (linked && linked.length > 0) {
+        await setRole();
+        revalidatePath('/admin/trainers');
+        return { success: true };
+    }
+
+    const { data: unlinked } = await supabaseAdmin
+        .from('trainers')
+        .select('id, full_name, email, phone')
+        .is('profile_id', null);
+    const candidates = unlinked || [];
+
+    let target = link && link !== 'new' ? candidates.find(t => t.id === link) : undefined;
+    if (link && link !== 'new' && !target) {
+        return { error: 'Vybraný záznam trénera už má účet alebo neexistuje.' };
+    }
+
+    // 2. No explicit choice: an unlinked record with the same e-mail is the same person.
+    if (!link && email) {
+        target = candidates.find(t => (t.email || '').trim().toLowerCase() === email.trim().toLowerCase());
+    }
+
+    if (target) {
+        await supabaseAdmin.from('trainers')
+            .update({ profile_id: userId, email: email || target.email, phone: target.phone || phone || null })
+            .eq('id', target.id);
+    } else if (link === 'new' || candidates.length === 0) {
         const { error: createError } = await supabaseAdmin.from('trainers').insert({
             full_name: name || 'Tréner',
-            email: email,
-            phone: phone,
+            email: email || null,
+            phone: phone || null,
             profile_id: userId
         });
         if (createError) {
             console.error('Error creating linked trainer:', createError);
-            return { error: 'Failed to create trainer record' };
+            return { error: 'Záznam trénera sa nepodarilo vytvoriť.' };
         }
+    } else {
+        return { needsChoice: true };
     }
 
-    // 2. Update Profile Role
-    const { error: roleError } = await supabaseAdmin
-        .from('profiles')
-        .update({ role: 'trainer' })
-        .eq('id', userId);
-
-    if (roleError) {
-        console.error('Error updating profile role:', roleError);
-    }
-
+    await setRole();
     revalidatePath('/admin/trainers');
     return { success: true };
 }

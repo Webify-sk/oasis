@@ -529,7 +529,10 @@ export async function rescheduleBooking(
         return { success: false, message: 'Nemáte oprávnenie upraviť túto rezerváciu.' };
     }
 
-    const db = isAdmin ? (await import('@/utils/supabase/admin')).createAdminClient() : supabase;
+    // Ownership was checked above. Credit tables are writable by the service role only, so a
+    // client's own reschedule has to use it too — with the session client the refund and the
+    // new deduction silently did nothing.
+    const db = createAdminClient();
 
     // 2. Check time logic (12h rule) for old booking — compared as real instants
     const now = new Date();

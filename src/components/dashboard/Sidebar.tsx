@@ -80,20 +80,8 @@ export function Sidebar() {
                     if (hiddenForEmployee.includes(item.href)) return false;
                 }
 
-                if (role === 'trainer') {
-                    const hiddenForTrainer = [
-                        '/dashboard/trainings',
-                        '/dashboard/calendar',
-                        '/dashboard/credit',
-                        '/dashboard/milestones',
-                        '/dashboard/gift-vouchers',
-                        '/dashboard/invoices',
-                        '/dashboard/cosmetics',
-                        '/dashboard/cosmetics/appointments',
-                        '/dashboard/cosmetics/availability'
-                    ];
-                    if (hiddenForTrainer.includes(item.href)) return false;
-                }
+                // Trainers see everything a client does (they book classes with their own
+                // credits too), plus the trainer zone below.
 
                 if (role !== 'employee' && role !== 'admin') {
                     // @ts-ignore

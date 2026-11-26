@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, User, Calendar, Eye } from 'lucide-react';
-import { deleteEmployee } from '@/actions/cosmetic-actions';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
 import Link from 'next/link';
 import buttonStyles from '@/components/ui/Button.module.css';
 import clsx from 'clsx';
@@ -19,25 +16,8 @@ interface Employee {
 
 export function StaffManager({ initialEmployees }: { initialEmployees: Employee[] }) {
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-    const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    const handleDeleteClick = (id: string) => {
-        setDeleteId(id);
-    };
-
-    const confirmDelete = async () => {
-        if (!deleteId) return;
-        setIsDeleting(true);
-        try {
-            await deleteEmployee(deleteId);
-            window.location.reload();
-        } catch (e) {
-            console.error(e);
-            alert('Chyba pri mazaní.');
-            setIsDeleting(false);
-        }
-    };
+    // Employees are not deleted here (past appointments and statistics hang on them);
+    // an employee who leaves is switched to inactive in the edit form.
 
     return (
         <div>
@@ -155,47 +135,10 @@ export function StaffManager({ initialEmployees }: { initialEmployees: Employee[
                                 <Eye size={16} />
                                 Detail
                             </Link>
-                            <button
-                                onClick={() => handleDeleteClick(employee.id)}
-                                style={{
-                                    padding: '0.6rem',
-                                    background: '#fff5f5',
-                                    border: '1px solid #ffcdd2',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    color: '#c62828'
-                                }}
-                                title="Vymazať"
-                            >
-                                <Trash2 size={16} />
-                            </button>
                         </div>
                     </div>
                 ))}
             </div>
-
-            <Modal
-                isOpen={!!deleteId}
-                onClose={() => setDeleteId(null)}
-                title="Zmazať zamestnanca"
-                actions={
-                    <>
-                        <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={isDeleting}>
-                            Zrušiť
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={confirmDelete}
-                            disabled={isDeleting}
-                            style={{ backgroundColor: '#dc2626', color: 'white' }}
-                        >
-                            {isDeleting ? 'Mažem...' : 'Zmazať'}
-                        </Button>
-                    </>
-                }
-            >
-                <p>Naozaj chcete vymazať tohto zamestnanca? Táto akcia je nevratná.</p>
-            </Modal>
         </div>
     );
 }

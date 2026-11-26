@@ -58,7 +58,14 @@ export function UserList({ users }: { users: Profile[] }) {
                     <tbody>
                         {filteredUsers.map((user) => (
                             <tr key={user.id} className={styles.tr}>
-                                <td className={styles.td}>{user.full_name || 'Nezadané'}</td>
+                                <td className={styles.td}>
+                                    {user.full_name || 'Nezadané'}
+                                    {(user as any).is_active === false && (
+                                        <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', fontWeight: 600, color: '#6B7280', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '999px', padding: '0.1rem 0.5rem' }}>
+                                            Neaktívny
+                                        </span>
+                                    )}
+                                </td>
                                 <td className={styles.tdSecondary}>{user.email}</td>
                                 <td className={styles.tdSecondary}>{user.phone || '-'}</td>
                                 <td className={styles.tdSecondary}>

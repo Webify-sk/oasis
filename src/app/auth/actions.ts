@@ -23,6 +23,9 @@ export async function login(formData: FormData) {
 
     if (error) {
         console.error('Login Error:', error)
+        if (/banned/i.test(error.message)) {
+            return { error: 'Tento účet bol deaktivovaný. Ak si myslíte, že ide o omyl, kontaktujte nás prosím.' }
+        }
         return { error: error.message }
     }
 

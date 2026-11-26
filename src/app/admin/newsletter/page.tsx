@@ -5,10 +5,14 @@ export default async function AdminNewsletterPage() {
     const supabase = await createClient();
 
     // Fetch users (profiles) to allow selection
-    const { data: users } = await supabase
+    const { data: usersRaw } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('*')
         .order('full_name');
+    // Deactivated accounts get no mail; pass on only the fields the form needs.
+    const users = (usersRaw || [])
+        .filter(u => u.is_active !== false)
+        .map(u => ({ id: u.id as string, full_name: u.full_name as string | null, email: u.email as string | null }));
 
     // Fetch training types (for filtering recipients by attended lesson)
     const { data: trainings } = await supabase

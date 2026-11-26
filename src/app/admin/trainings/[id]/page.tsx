@@ -26,9 +26,14 @@ export default async function EditTrainingPage({ params }: { params: Promise<{ i
     const exceptions = await getTrainingExceptions(id);
 
     // Fetch trainers for the dropdown
-    const { data: trainers } = await supabase
+    // select('*') so this keeps working before the is_active column exists
+    const { data: trainersRaw } = await supabase
         .from('trainers')
-        .select('id, full_name');
+        .select('*');
+    const trainers = (trainersRaw || [])
+        .map(t => ({ id: t.id as string, full_name: t.is_active === false ? `${String(t.full_name).trim()} (neaktívny)` : t.full_name as string, inactive: t.is_active === false }))
+        .sort((a, b) => Number(a.inactive) - Number(b.inactive))
+        .map(({ id, full_name }) => ({ id, full_name }));
 
     return (
         <div style={{ padding: '0rem' }}>

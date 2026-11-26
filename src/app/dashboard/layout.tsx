@@ -21,9 +21,15 @@ export default async function DashboardLayout({
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('email_verified, role, phone')
+        .select('*')
         .eq('id', user.id)
         .single();
+
+    // Deactivated accounts are banned at the auth level; this closes the gap while an
+    // already issued session is still valid.
+    if (profile?.is_active === false) {
+        redirect('/?deaktivovany=1');
+    }
 
     // Logic: Exempt if employee/admin OR if explicitly verified
     const isStaff = profile?.role === 'employee' || profile?.role === 'admin';

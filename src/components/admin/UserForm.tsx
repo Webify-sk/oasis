@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { upsertUser, deleteUser } from '@/app/admin/users/actions';
+import { upsertUser, setUserActive } from '@/app/admin/users/actions';
 import { User, Phone, Mail, CreditCard, Shield } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useRouter } from 'next/navigation';
@@ -22,6 +22,7 @@ interface UserFormProps {
         credits: number | null;
         credits_expire_at?: string | null;
         role: string | null;
+        is_active?: boolean | null;
         batches?: {
             id: string;
             amount: number;
@@ -29,25 +30,34 @@ interface UserFormProps {
             expires_at: string | null;
         }[];
     } | null;
+    /** Trainer record this account is linked to, if any */
+    linkedTrainerName?: string | null;
+    /** Trainer records that have no account yet (candidates for linking) */
+    trainersWithoutAccount?: { id: string; full_name: string }[];
 }
 
-export function UserForm({ initialData }: UserFormProps) {
+export function UserForm({ initialData, linkedTrainerName, trainersWithoutAccount = [] }: UserFormProps) {
     const [state, formAction] = useActionState(upsertUser, initialState);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedRole, setSelectedRole] = useState<string>(initialData?.role ?? 'user');
     const router = useRouter();
 
+    const isActive = initialData?.is_active !== false;
+
+    // Accounts are never deleted (bookings, credits and invoices hang on them) — only
+    // deactivated, which blocks signing in and can be undone.
     const handleDelete = async () => {
         if (!initialData?.id) return;
         setIsDeleting(true);
-        const res = await deleteUser(initialData.id);
+        const res = await setUserActive(initialData.id, !isActive);
         setIsDeleting(false);
+        setShowDeleteModal(false);
 
         if (res.success) {
-            router.push('/admin/users');
             router.refresh();
         } else {
-            alert(res.message); // Should ideally use a toast or set error state, but alert is fine for now as per "simple admin"
+            alert(res.message);
         }
     };
 
@@ -67,6 +77,12 @@ export function UserForm({ initialData }: UserFormProps) {
                     border: `1px solid ${state.message.includes('úspeš') ? '#bbf7d0' : '#fecaca'}`
                 }}>
                     {state.message}
+                </div>
+            )}
+
+            {initialData?.id && !isActive && (
+                <div style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderRadius: '4px', backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB', fontSize: '0.9rem' }}>
+                    Tento účet je <strong>deaktivovaný</strong> — nedá sa naň prihlásiť.
                 </div>
             )}
 
@@ -204,7 +220,8 @@ export function UserForm({ initialData }: UserFormProps) {
                             <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#8D8D8D' }} />
                             <select
                                 name="role"
-                                defaultValue={state?.inputs?.role ?? initialData?.role ?? 'user'}
+                                value={selectedRole}
+                                onChange={(e) => setSelectedRole(e.target.value)}
                                 style={{
                                     width: '100%',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',
@@ -223,6 +240,34 @@ export function UserForm({ initialData }: UserFormProps) {
                                 <option value="trainer">Trainer</option>
                             </select>
                         </div>
+
+                        {selectedRole === 'trainer' && initialData?.id && (
+                            linkedTrainerName ? (
+                                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#166534' }}>
+                                    Účet je prepojený so záznamom trénera <strong>{linkedTrainerName}</strong>.
+                                </p>
+                            ) : (
+                                <div style={{ marginTop: '0.75rem', padding: '0.9rem 1rem', backgroundColor: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '6px' }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#9A3412', marginBottom: '0.4rem' }}>
+                                        Záznam trénera, ku ktorému tento účet patrí
+                                    </label>
+                                    <select
+                                        name="trainer_link"
+                                        defaultValue=""
+                                        style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #FED7AA', borderRadius: '4px', fontSize: '0.95rem', backgroundColor: '#fff', color: '#4A403A' }}
+                                    >
+                                        <option value="">— vyberte —</option>
+                                        {trainersWithoutAccount.map(t => (
+                                            <option key={t.id} value={t.id}>{t.full_name.trim()} (existujúci tréner bez účtu)</option>
+                                        ))}
+                                        <option value="new">Vytvoriť nový záznam trénera</option>
+                                    </select>
+                                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#9A3412', lineHeight: 1.5 }}>
+                                        Ak tento človek už v rozvrhu učí, vyberte jeho existujúci záznam — inak by po prihlásení nevidel svoje tréningy.
+                                    </p>
+                                </div>
+                            )
+                        )}
                     </div>
 
                 <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
@@ -230,10 +275,10 @@ export function UserForm({ initialData }: UserFormProps) {
                         <Button
                             type="button"
                             variant="primary"
-                            style={{ backgroundColor: '#DC2626', color: 'white' }}
+                            style={{ backgroundColor: isActive ? '#8C4848' : '#5E715D', color: 'white' }}
                             onClick={() => setShowDeleteModal(true)}
                         >
-                            Vymazať užívateľa
+                            {isActive ? 'Deaktivovať užívateľa' : 'Aktivovať užívateľa'}
                         </Button>
                     )}
 
@@ -251,7 +296,7 @@ export function UserForm({ initialData }: UserFormProps) {
             <Modal
                 isOpen={showDeleteModal}
                 onClose={() => setShowDeleteModal(false)}
-                title="Vymazať užívateľa"
+                title={isActive ? 'Deaktivovať užívateľa' : 'Aktivovať užívateľa'}
                 actions={(
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', width: '100%' }}>
                         <Button type="button" variant="ghost" onClick={() => setShowDeleteModal(false)}>
@@ -260,16 +305,23 @@ export function UserForm({ initialData }: UserFormProps) {
                         <Button
                             type="button"
                             variant="primary"
-                            style={{ backgroundColor: '#DC2626', color: 'white' }}
+                            style={{ backgroundColor: '#93745F', color: 'white' }}
                             onClick={handleDelete}
                             disabled={isDeleting}
                         >
-                            {isDeleting ? 'Mažem...' : 'Potvrdiť vymazanie'}
+                            {isDeleting ? 'Ukladám…' : 'Potvrdiť'}
                         </Button>
                     </div>
                 )}
             >
-                <p>Naozaj chcete vymazať tohto užívateľa? Táto akcia je nevratná.</p>
+                {isActive ? (
+                    <p>
+                        Užívateľ sa po deaktivácii nebude môcť prihlásiť. Jeho rezervácie, kredity, faktúry
+                        aj štatistiky ostanú zachované a účet môžete kedykoľvek znova aktivovať.
+                    </p>
+                ) : (
+                    <p>Užívateľ sa bude môcť znova prihlásiť.</p>
+                )}
             </Modal>
         </form>
     );
