@@ -19,7 +19,7 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
         const passwordConfirm = formData.get('password_confirm') as string;
         const photo = formData.get('photo') as File;
 
-        if (!id && password && password !== passwordConfirm) {
+        if (password && password !== passwordConfirm) {
             return {
                 message: 'Heslá sa nezhodujú.',
                 inputs: { full_name, specialties: specialtiesString, bio, email, phone }
@@ -65,22 +65,46 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
             phone: phone || null,
         };
 
-        // Ak upravujeme existujúceho trénera a je zadaný email, pokúsime sa prepojiť profil
-        if (id && email) {
+        const formInputs = { full_name, specialties: specialtiesString, bio, email, phone };
+        let accountExists = false;
+
+        // Ak je zadaný email, pokúsime sa prepojiť existujúci účet (pri úprave aj pri novom trénerovi)
+        if (email) {
             const supabaseAdmin = createAdminClient();
             const { data: existingProfiles } = await supabaseAdmin
                 .from('profiles')
-                .select('id')
-                .eq('email', email.toLowerCase().trim());
-            
+                .select('id, role')
+                // case-insensitive exact match; % and _ are wildcards in ilike, so escape them
+                .ilike('email', email.trim().replace(/[\\%_]/g, c => '\\' + c));
+
             if (existingProfiles && existingProfiles.length > 0) {
+                accountExists = true;
+
+                // One account, one trainer record. Linking the same account to a second record
+                // leaves the schedule on one and the login on the other — the trainer then
+                // sees an empty dashboard.
+                const { data: alreadyLinked } = await supabaseAdmin
+                    .from('trainers')
+                    .select('id, full_name')
+                    .eq('profile_id', existingProfiles[0].id);
+                const other = (alreadyLinked || []).find(t => t.id !== id);
+                if (other) {
+                    return {
+                        message: `Účet s týmto e-mailom je už prepojený s trénerom „${other.full_name.trim()}“. Upravte ten záznam, alebo z neho e-mail najprv odstráňte.`,
+                        inputs: formInputs
+                    };
+                }
+
                 data.profile_id = existingProfiles[0].id;
                 
-                // Uistíme sa, že prepojený profil má rolu trénera
-                await supabaseAdmin
-                    .from('profiles')
-                    .update({ role: 'trainer' })
-                    .eq('id', data.profile_id);
+                // Uistíme sa, že prepojený profil má rolu trénera — ale nikdy neznižujeme
+                // rolu adminovi alebo zamestnancovi, ktorý je zároveň trénerom.
+                if (!['admin', 'employee'].includes(existingProfiles[0].role)) {
+                    await supabaseAdmin
+                        .from('profiles')
+                        .update({ role: 'trainer' })
+                        .eq('id', data.profile_id);
+                }
             }
         }
 
@@ -124,8 +148,9 @@ export async function upsertTrainer(prevState: any, formData: FormData) {
             };
         }
 
-        // Create user account if requested
-        if (!id && email && password) {
+        // Create user account if requested — for a new trainer, and also for an existing
+        // trainer who has no account yet (so nobody needs to create a duplicate record).
+        if (email && password && !accountExists) {
             const supabaseAdmin = createAdminClient();
 
             const { data: { user }, error: authError } = await supabaseAdmin.auth.admin.createUser({

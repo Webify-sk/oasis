@@ -24,12 +24,23 @@ export async function TrainerDashboardView() {
          redirect('/dashboard');
     }
 
-    // Fetch trainer record linked to this user
-    const { data: trainer } = await supabase
+    // Fetch trainer record(s) linked to this user. An account can end up linked to more
+    // than one trainer row (a duplicate created in the admin); .single() then failed and
+    // the trainer saw "no trainer profile". Prefer the row the schedule actually uses.
+    const { data: linkedTrainers } = await supabase
         .from('trainers')
         .select('*')
         .eq('profile_id', user.id)
-        .single();
+        .order('created_at', { ascending: true });
+
+    const { data: allTrainingTypes } = await supabase
+        .from('training_types')
+        .select('*');
+
+    const termCount = (trainerId: string) => (allTrainingTypes || []).reduce((n, tt) =>
+        n + (Array.isArray(tt.schedule) ? tt.schedule.filter((x: any) => x.trainer_id === trainerId && x.active !== false).length : 0), 0);
+
+    const trainer = (linkedTrainers || []).slice().sort((a, b) => termCount(b.id) - termCount(a.id))[0];
 
     if (!trainer) {
         return (
@@ -43,10 +54,7 @@ export async function TrainerDashboardView() {
         );
     }
 
-    // Fetch Training Types
-    const { data: trainingTypes } = await supabase
-        .from('training_types')
-        .select('*');
+    const trainingTypes = allTrainingTypes;
 
     // Filter to ones where this trainer teaches
     const myTrainingTypes = trainingTypes?.filter(tt => {
@@ -255,7 +263,15 @@ export async function TrainerDashboardView() {
                             <Dumbbell size={40} color="#9CA3AF" />
                         </div>
                         <h3 style={{ fontSize: '1.25rem', color: '#374151', margin: '0 0 0.5rem 0' }}>Žiadne naplánované tréningy</h3>
-                        <p style={{ color: '#6B7280', margin: 0, maxWidth: '400px', marginInline: 'auto' }}>Na najbližších 14 dní nemáte v rozvrhu žiadne aktívne tréningy.</p>
+                        {myTrainingTypes.length === 0 ? (
+                            <p style={{ color: '#6B7280', margin: 0, maxWidth: '460px', marginInline: 'auto' }}>
+                                K vášmu trénerskému profilu ({trainer.full_name}) nie sú v rozvrhu priradené žiadne tréningy.
+                                Ak tréningy vediete, kontaktujte prosím administrátora — váš účet je pravdepodobne
+                                prepojený s iným záznamom trénera, než aký je použitý v rozvrhu.
+                            </p>
+                        ) : (
+                            <p style={{ color: '#6B7280', margin: 0, maxWidth: '400px', marginInline: 'auto' }}>Na najbližších 14 dní nemáte v rozvrhu žiadne aktívne tréningy.</p>
+                        )}
                     </div>
                 ) : (
                     sessionsWithBookings.map((session) => {
