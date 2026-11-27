@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { sendEmail } from '@/utils/email';
 import { getEmailTemplate } from '@/utils/email-template';
+import { unsubscribePageUrl, unsubscribeOneClickUrl, htmlToText } from '@/utils/newsletter';
 
 interface SendBulkEmailParams {
     targetUserIds: string[];
@@ -11,8 +12,10 @@ interface SendBulkEmailParams {
     emailHtml: string;
 }
 
-// Send emails in batches to avoid overwhelming the SMTP server
-const BATCH_SIZE = 20;
+// The form sends recipients in small groups (one call per group) so a single
+// request never runs long enough to hit the hosting time limit.
+const MAX_PER_CALL = 25;
+const SEND_PAUSE_MS = 300;
 
 // Verify the current user is an admin/employee. Returns the supabase client on success.
 async function requireStaff() {
@@ -91,59 +94,73 @@ export async function sendBulkEmailAction({ targetUserIds, emailSubject, emailHt
             return { error: 'Vyberte aspoň jedného príjemcu.' };
         }
 
-        // Fetch recipient emails
+        if (targetUserIds.length > MAX_PER_CALL) {
+            return { error: `Naraz je možné odoslať najviac ${MAX_PER_CALL} emailov.` };
+        }
+
+        // Fetch recipients. select('*') so the code also runs before the
+        // newsletter_subscribed column exists (then everyone counts as subscribed).
         const { data: users, error: usersError } = await supabase
             .from('profiles')
-            .select('id, email, full_name')
+            .select('*')
             .in('id', targetUserIds);
 
         if (usersError || !users) {
             return { error: 'Nepodarilo sa načítať príjemcov.' };
         }
 
-        const recipients = users.filter(u => !!u.email);
+        // The form already hides these people, but the server decides: nobody who
+        // unsubscribed or was deactivated gets a newsletter.
+        const recipients = users.filter(u => !!u.email && u.newsletter_subscribed !== false && u.is_active !== false);
+        const skipped = targetUserIds.length - recipients.length;
 
-        if (recipients.length === 0) {
-            return { error: 'Žiadny z vybraných príjemcov nemá emailovú adresu.' };
-        }
+        const body = `
+            ${emailHtml}
 
-        const fullHtml = getEmailTemplate(
-            emailSubject,
-            `
-                ${emailHtml}
+            <p style="margin-top: 30px;">
+                <a href="https://www.oasislounge.sk/" class="button" style="display: inline-block; background-color: #93745F; color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    Rezervovať termín
+                </a>
+            </p>
+        `;
 
-                <p style="margin-top: 30px;">
-                    <a href="https://www.oasislounge.sk/" class="button" style="display: inline-block; background-color: #93745F; color: white !important; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                        Rezervovať termín
-                    </a>
-                </p>
-            `
-        );
-
-        // Send in batches
+        // One at a time with a short pause: a burst of parallel connections from a
+        // shared mail server is what throttling and spam filters react to.
         let sent = 0;
-        let failed = 0;
+        const failedEmails: string[] = [];
 
-        for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-            const batch = recipients.slice(i, i + BATCH_SIZE);
-            const results = await Promise.allSettled(
-                batch.map(u => sendEmail({
-                    to: u.email as string,
-                    subject: emailSubject,
-                    html: fullHtml
-                }))
+        for (const u of recipients) {
+            const html = getEmailTemplate(
+                emailSubject,
+                body,
+                '',
+                `Tento e-mail ste dostali, pretože máte účet v rezervačnom systéme Oasis Lounge. ` +
+                `Ak si novinky neželáte dostávať, môžete sa <a href="${unsubscribePageUrl(u.id)}" style="color:#888888;text-decoration:underline;">odhlásiť z odberu</a>.`
             );
 
-            results.forEach(r => {
-                if (r.status === 'fulfilled' && (r.value as any)?.success) {
-                    sent++;
-                } else {
-                    failed++;
-                }
+            const res = await sendEmail({
+                to: u.email as string,
+                subject: emailSubject,
+                html,
+                text: htmlToText(html),
+                bulk: true,
+                replyTo: process.env.NEWSLETTER_REPLY_TO || undefined,
+                headers: {
+                    // Lets Gmail/Outlook show their own Unsubscribe button, so an
+                    // uninterested reader has an alternative to "Report spam".
+                    'List-Unsubscribe': `<${unsubscribeOneClickUrl(u.id)}>`,
+                    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+                    'Precedence': 'bulk',
+                },
             });
+
+            if (res.success) sent++;
+            else failedEmails.push(u.email as string);
+
+            await new Promise(r => setTimeout(r, SEND_PAUSE_MS));
         }
 
-        return { success: true, sent, failed, total: recipients.length };
+        return { success: true, sent, failed: failedEmails.length, failedEmails, skipped, total: targetUserIds.length };
 
     } catch (error: any) {
         console.error('Error sending bulk email:', error);

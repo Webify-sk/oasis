@@ -1,6 +1,11 @@
-export function getEmailTemplate(title: string, bodyContent: string, previewText: string = '') {
+// footerNote replaces the default "automatically generated" line — the newsletter
+// puts its reason-for-receiving text and the unsubscribe link there.
+export function getEmailTemplate(title: string, bodyContent: string, previewText: string = '', footerNote?: string) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://profil.oasislounge.sk';
     const logoUrl = `${baseUrl}/Logo_Brown.png`;
+    // The visible link text must be the address the link really opens: a label
+    // showing a different domain than the href is a classic phishing signal.
+    const baseLabel = baseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
     return `
 <!DOCTYPE html>
@@ -35,8 +40,8 @@ export function getEmailTemplate(title: string, bodyContent: string, previewText
             </div>
             <div class="footer">
                 <p>&copy; ${new Date().getFullYear()} Oasis Lounge. Všetky práva vyhradené.</p>
-                <p>Toto je automaticky generovaný e-mail, prosím neodpovedajte naň.</p>
-                <p><a href="${baseUrl}">www.oasis-lounge.sk</a></p>
+                <p>${footerNote ?? 'Toto je automaticky generovaný e-mail, prosím neodpovedajte naň.'}</p>
+                <p><a href="${baseUrl}">${baseLabel}</a></p>
             </div>
         </div>
     </div>

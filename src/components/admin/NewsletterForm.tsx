@@ -25,11 +25,16 @@ interface Booking {
     training_type_id: string;
 }
 
-export function NewsletterForm({ users, trainings, bookings }: { users: User[], trainings: Training[], bookings: Booking[] }) {
+// Recipients go to the server in small groups, so no single request runs long
+// and the progress can be shown while sending.
+const CHUNK_SIZE = 10;
+
+export function NewsletterForm({ users, trainings, bookings, unsubscribedCount = 0 }: { users: User[], trainings: Training[], bookings: Booking[], unsubscribedCount?: number }) {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [result, setResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
+    const [result, setResult] = useState<{ sent: number; failed: number; skipped: number; total: number; failedEmails: string[] } | null>(null);
+    const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
     const [showConfirm, setShowConfirm] = useState(false);
 
     const [selectedTrainingId, setSelectedTrainingId] = useState<string>('');
@@ -104,23 +109,48 @@ export function NewsletterForm({ users, trainings, bookings }: { users: User[], 
         setShowConfirm(false);
         setLoading(true);
 
-        try {
-            const res = await sendBulkEmailAction({
-                targetUserIds: Array.from(selectedUsers),
-                emailSubject,
-                emailHtml
-            });
+        const ids = Array.from(selectedUsers);
+        const totals = { sent: 0, failed: 0, skipped: 0, total: ids.length, failedEmails: [] as string[] };
+        setProgress({ done: 0, total: ids.length });
 
-            if (res?.error) {
-                setError(res.error);
-            } else if (res?.success) {
-                setResult({ sent: res.sent ?? 0, failed: res.failed ?? 0, total: res.total ?? 0 });
-                setSelectedUsers(new Set());
+        try {
+            for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+                const chunk = ids.slice(i, i + CHUNK_SIZE);
+                const res = await sendBulkEmailAction({
+                    targetUserIds: chunk,
+                    emailSubject,
+                    emailHtml
+                });
+
+                if (res?.error) {
+                    // Stop and say how far it got. People already served are
+                    // unselected below, so a retry does not mail them twice.
+                    setError(i === 0
+                        ? res.error
+                        : `${res.error} Odosielanie sa zastavilo po ${i} z ${ids.length} príjemcov – zvyšní ostali označení.`);
+                    break;
+                }
+
+                totals.sent += res?.sent ?? 0;
+                totals.failed += res?.failed ?? 0;
+                totals.skipped += res?.skipped ?? 0;
+                totals.failedEmails.push(...(res?.failedEmails ?? []));
+
+                setSelectedUsers(prev => {
+                    const next = new Set(prev);
+                    chunk.forEach(id => next.delete(id));
+                    return next;
+                });
+                setProgress({ done: Math.min(i + CHUNK_SIZE, ids.length), total: ids.length });
             }
         } catch (err: any) {
-            setError(err.message || 'Nastala neočakávaná chyba.');
+            setError((err.message || 'Nastala neočakávaná chyba.') + ' Príjemcovia, ktorým email ešte neodišiel, ostali označení.');
         } finally {
+            if (totals.sent + totals.failed + totals.skipped > 0) {
+                setResult(totals);
+            }
             setLoading(false);
+            setProgress(null);
         }
     };
 
@@ -137,7 +167,8 @@ export function NewsletterForm({ users, trainings, bookings }: { users: User[], 
                     <CheckCircle2 size={20} />
                     <span>
                         Email odoslaný: <strong>{result.sent}</strong> z {result.total} príjemcov.
-                        {result.failed > 0 && ` (${result.failed} sa nepodarilo odoslať)`}
+                        {result.skipped > 0 && ` Vynechaných: ${result.skipped} (odhlásení alebo bez emailu).`}
+                        {result.failed > 0 && ` Nepodarilo sa odoslať (${result.failed}): ${result.failedEmails.join(', ')}`}
                     </span>
                 </div>
             )}
@@ -153,6 +184,12 @@ export function NewsletterForm({ users, trainings, bookings }: { users: User[], 
                         <Users size={14} /> Vybraných: {selectedUsers.size}
                     </span>
                 </div>
+
+                {unsubscribedCount > 0 && (
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                        Odhlásení z odberu: {unsubscribedCount}. V zozname sa nezobrazujú a newsletter im neodíde.
+                    </p>
+                )}
 
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ flex: 1, position: 'relative' }}>
@@ -297,7 +334,7 @@ export function NewsletterForm({ users, trainings, bookings }: { users: User[], 
                         <RichTextEditor initialValue={DEFAULT_EMAIL_HTML} onChange={setEmailHtml} />
                         <p style={{ marginTop: '0.4rem', fontSize: '0.85rem', color: '#6b7280' }}>
                             Text môžete formátovať (tučné, kurzíva, nadpisy, zoznamy, odkazy) a vložiť obrázok cez ikonu na lište.
-                            Email sa odošle v štandardnej Oasis Lounge šablóne, pod text bude vložené tlačidlo pre rezerváciu.
+                            Email sa odošle v štandardnej Oasis Lounge šablóne, pod text bude vložené tlačidlo pre rezerváciu a do pätičky odkaz na odhlásenie z odberu.
                         </p>
                     </div>
                 </div>
@@ -313,7 +350,7 @@ export function NewsletterForm({ users, trainings, bookings }: { users: User[], 
                     {loading ? (
                         <>
                             <Loader2 className="animate-spin" size={18} style={{ marginRight: '0.5rem' }} />
-                            Odosielam...
+                            {progress ? `Odosielam ${progress.done} / ${progress.total}…` : 'Odosielam...'}
                         </>
                     ) : (
                         <>

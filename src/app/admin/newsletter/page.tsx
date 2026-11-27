@@ -1,6 +1,9 @@
 import { createClient } from '@/utils/supabase/server';
 import { NewsletterForm } from '@/components/admin/NewsletterForm';
 
+// Sending runs as server actions of this page; give each group of emails room.
+export const maxDuration = 60;
+
 export default async function AdminNewsletterPage() {
     const supabase = await createClient();
 
@@ -10,8 +13,11 @@ export default async function AdminNewsletterPage() {
         .select('*')
         .order('full_name');
     // Deactivated accounts get no mail; pass on only the fields the form needs.
-    const users = (usersRaw || [])
-        .filter(u => u.is_active !== false)
+    const activeUsers = (usersRaw || []).filter(u => u.is_active !== false);
+    // People who unsubscribed are not offered as recipients at all.
+    const unsubscribedCount = activeUsers.filter(u => u.newsletter_subscribed === false).length;
+    const users = activeUsers
+        .filter(u => u.newsletter_subscribed !== false)
         .map(u => ({ id: u.id as string, full_name: u.full_name as string | null, email: u.email as string | null }));
 
     // Fetch training types (for filtering recipients by attended lesson)
@@ -45,6 +51,7 @@ export default async function AdminNewsletterPage() {
                     users={users || []}
                     trainings={trainings || []}
                     bookings={bookings || []}
+                    unsubscribedCount={unsubscribedCount}
                 />
             </div>
         </div>
